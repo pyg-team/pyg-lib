@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+
+recursive-include torch_geometric *.jinja
+
+recursive-exclude test *
+recursive-exclude examples *
+recursive-exclude docs *
+recursive-exclude benchmark *
