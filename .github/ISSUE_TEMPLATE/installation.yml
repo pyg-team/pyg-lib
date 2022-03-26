@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: >
-        #### Before submitting an installation problem, please make sure the issue hasn't been already reported by searching through [the existing and past issues](https://github.com/pyg-team/pytorch_geometric/issues).
+        #### Before submitting an installation problem, please make sure the issue hasn't been already reported by searching through [the existing and past issues](https://github.com/pyg-team/pyg-lib/issues).
         #
   - type: textarea
     attributes:
@@ -21,12 +21,12 @@ body:
     attributes:
       label: Environment
       description: |
-        Please provide as much information as possible about your environment, such as your PyG (`print(torch_geometric.__version__)`) and PyTorch version (`print(torch.__version__)`), your OS (*e.g.*, Linux), and your Python version (*e.g.*, `3.9`):
+        Please provide as much information as possible about your environment, such as your `pyg-lib` (`print(pyg_lib.__version__)`) and PyTorch version (`print(torch.__version__)`), your OS (*e.g.*, Linux), and your Python version (*e.g.*, `3.9`):
       value: |
-        * PyG version:
+        * `pyg-lib` version:
         * PyTorch version:
         * OS:
         * Python version:
         * CUDA/cuDNN version:
-        * How you installed PyTorch and PyG (`conda`, `pip`, source):
-        * Any other relevant information (*e.g.*, version of `torch-scatter`):
+        * How you installed PyTorch and `pyg-lib` (`conda`, `pip`, source):
+        * Any other relevant information:
