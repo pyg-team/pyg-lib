@@ -17,7 +17,7 @@ dev_requires = test_requires + [
 setup(
     name='pyg_lib',
     version=__version__,
-    description='Low-level Graph Neural Network Operators for PyG',
+    description='Low-Level Graph Neural Network Operators for PyG',
     author='Matthias Fey',
     author_email='matthias.fey@tu-dortmund.de',
     url=URL,
