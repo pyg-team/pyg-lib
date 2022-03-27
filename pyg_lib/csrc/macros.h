@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#if defined(pyg_lib_EXPORTS)
+#if defined(pyg_EXPORTS)
 #define PYG_API __declspec(dllexport)
 #else
 #define PYG_API __declspec(dllimport)
