@@ -19,8 +19,6 @@ endif()
 
 find_package(Torch REQUIRED)
 
-include(CMakePackageConfigHelpers)
-
 set(CSRC pyg_lib/csrc)
 file(GLOB ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.*)
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
@@ -33,5 +31,3 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
   EXPORT_NAME PyG
   INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
-
-include_directories(${CSRC})
