@@ -1,6 +1,7 @@
 #pragma once
 
 #include "macros.h"
+#include <cstdint>
 
 namespace pyg {
 

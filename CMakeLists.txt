@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(PYG_VERSION 0.0.0)
 
 option(WITH_CUDA "Enable CUDA support" OFF)
-option(USE_PYTHON "Link to Python when building" OFF)
+option(USE_PYTHON "Link to Python when building" ON)
 
 if(WITH_CUDA)
   enable_language(CUDA)
