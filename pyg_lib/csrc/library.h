@@ -1,7 +1,7 @@
 #pragma once
 
-#include "macros.h"
 #include <cstdint>
+#include "macros.h"
 
 namespace pyg {
 
@@ -14,5 +14,5 @@ extern "C" PYG_INLINE_VARIABLE auto _register_ops = &cuda_version;
 #pragma comment(linker, "/include:_register_ops")
 #endif
 
-} // namespace detail
-} // namespace pyg
+}  // namespace detail
+}  // namespace pyg
