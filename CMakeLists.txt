@@ -40,6 +40,6 @@ IF(TEST_WITH_CUDA)
   add_definitions(-DTEST_WITH_CUDA)
 ENDIF()
 
-IF(BUILD_TEST)
+if(BUILD_TEST)
   INCLUDE(cmake/test.cmake)
 ENDIF()
