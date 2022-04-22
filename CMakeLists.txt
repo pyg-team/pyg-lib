@@ -23,11 +23,10 @@ find_package(Torch REQUIRED)
 
 set(CSRC pyg_lib/csrc)
 file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp ${CSRC}/*.cu)
-file(GLOB ALL_HEADERS ${CSRC}/*.h)
+file(GLOB_RECURSE ALL_HEADERS ${CSRC}/*.h)
 
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${CSRC}/include)
 
 if (USE_PYTHON)
   target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)

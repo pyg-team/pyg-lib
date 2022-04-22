@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <pyg/library.h>
+#include "../../pyg_lib/csrc/library.h"
 
 TEST(CudaVersionTest, BasicAssertions) {
 #ifdef TEST_WITH_CUDA
