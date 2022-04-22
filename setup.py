@@ -1,3 +1,4 @@
+import importlib
 import os
 import os.path as osp
 import subprocess
@@ -10,8 +11,25 @@ __version__ = '0.0.0'
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
+# A CMakeExtension needs a sourcedir instead of a file list.
+# The name must be the _single_ output extension from the CMake build.
+# If you need multiple extensions, see scikit-build.
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=""):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
+
+
 class CMakeBuild(build_ext):
+    def get_ext_filename(self, ext_name):
+        # Remove Python ABI suffix:
+        ext_filename = super().get_ext_filename(ext_name)
+        ext_filename_parts = ext_filename.split('.')
+        ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
+        return '.'.join(ext_filename_parts)
+
     def build_extension(self, ext):
+        extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
 
         if self.debug is None:
             self.debug = bool(int(os.environ.get('DEBUG', 0)))
@@ -21,14 +39,19 @@ class CMakeBuild(build_ext):
 
         cmake_args = [
             '-DUSE_PYTHON=ON',
+            f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
             f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
         ]
-        subprocess.check_call(['cmake', osp.abspath('.')] + cmake_args,
-                              cwd=self.build_temp)
+
+        if importlib.util.find_spec('ninja') is not None:
+            cmake_args += ['-GNinja']
 
         build_args = []
+
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
+                              cwd=self.build_temp)
         subprocess.check_call(['cmake', '--build', '.'] + build_args,
                               cwd=self.build_temp)
 
@@ -66,7 +89,7 @@ setup(
         'dev': dev_requires,
     },
     packages=find_packages(),
-    ext_modules=[Extension('pyg_lib', sources=[])],
+    ext_modules=[CMakeExtension('libpyg')],
     cmdclass={'build_ext': CMakeBuild},
     include_package_data=True,
 )
