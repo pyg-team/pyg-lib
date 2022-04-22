@@ -3,7 +3,6 @@ import os
 import os.path as osp
 import subprocess
 
-import torch
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
@@ -26,6 +25,8 @@ class CMakeBuild(build_ext):
         return '.'.join(ext_filename_parts)
 
     def build_extension(self, ext):
+        import torch
+
         extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
 
         if self.debug is None:
