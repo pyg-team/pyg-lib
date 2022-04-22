@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(googletest)
 
 
 enable_testing()
-FILE(GLOB cpp_tests pyg_lib/test/cpp/test_*.cpp)
+FILE(GLOB tests test/csrc/test_*.cpp)
 
 include(GoogleTest)
 foreach(t ${cpp_tests})
