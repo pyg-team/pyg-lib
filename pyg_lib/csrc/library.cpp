@@ -1,4 +1,4 @@
-#include <pyg/library.h>
+#include "library.h"
 
 #ifdef USE_PYTHON
 #include <Python.h>
