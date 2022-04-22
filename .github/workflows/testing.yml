@@ -34,7 +34,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build build
+          cmake --build build --config DEBUG
 
       - name: Run tests
         run: |
