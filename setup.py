@@ -1,7 +1,6 @@
 import os
 import os.path as osp
 import subprocess
-import sys
 
 import torch
 from setuptools import Extension, find_packages, setup
@@ -13,32 +12,23 @@ URL = 'https://github.com/pyg-team/pyg-lib'
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
 
         if self.debug is None:
             self.debug = bool(int(os.environ.get('DEBUG', 0)))
 
-        print('-------------')
-        print(extdir)
-        print('-------------')
-
-        cmake_args = [
-            f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
-            # f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
-            # f'-DPYTHON_EXECUTABLE={sys.executable}',
-            f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
-        ]
-
-        if os.name == 'nt':  # Use Ninja generator for Windows
-            cmake_args += ['-GNinja']
-
-        build_args = []
-
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        cmake_args = [
+            '-DUSE_PYTHON=ON',
+            f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
+            f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
+            f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
+        ]
         subprocess.check_call(['cmake', osp.abspath('.')] + cmake_args,
                               cwd=self.build_temp)
+
+        build_args = []
         subprocess.check_call(['cmake', '--build', '.'] + build_args,
                               cwd=self.build_temp)
 
