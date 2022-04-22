@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(PYG_VERSION 0.0.0)
 
 option(WITH_CUDA "Enable CUDA support" OFF)
-option(USE_PYTHON "Link to Python when building" ON)
-option(BUILD_TEST "Enable testing" ON)
+option(USE_PYTHON "Link to Python when building" OFF)
+option(WITH_TEST "Enable testing" OFF)
 
 if(WITH_CUDA)
   enable_language(CUDA)
@@ -35,6 +35,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   EXPORT_NAME PyG
   INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
 
-if(BUILD_TEST)
+if(WITH_TEST)
   INCLUDE(cmake/test.cmake)
 endif()

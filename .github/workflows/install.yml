@@ -29,14 +29,14 @@ jobs:
           pip install torch==${{ matrix.torch-version}}+cpu -f https://download.pytorch.org/whl/torch_stable.html
       - name: Configure
         run: |
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake -S . -B build -DCMAKE_BUILD_TYPE=DEBUG
       - name: Build
         run: |
-          cmake --build build --config Debug
+          cmake --build build --config DEBUG
       - name: Test
         run: |
           cd build
-          ctest -C Debug --output-on-failure --verbose
+          ctest -C DEBUG --output-on-failure --verbose
           cd ..
 
       - name: Install main package

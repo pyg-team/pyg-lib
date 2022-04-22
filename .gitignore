@@ -1,6 +1,7 @@
 __pycache__/
 .pytest_cache/
 build/
+Testing/
 dist/
 alpha/
 .cache/
