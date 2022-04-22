@@ -42,4 +42,4 @@ ENDIF()
 
 if(BUILD_TEST)
   INCLUDE(cmake/test.cmake)
-ENDIF()
+endif()
