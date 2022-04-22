@@ -7,7 +7,7 @@ alpha/
 .cache/
 .eggs/
 *.egg-info/
-.ipynb_checkpoints
+*.so
 .coverage
 .coverage.*
 .vscode
