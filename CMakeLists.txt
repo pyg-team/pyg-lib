@@ -5,6 +5,7 @@ set(PYG_VERSION 0.0.0)
 
 option(WITH_CUDA "Enable CUDA support" OFF)
 option(USE_PYTHON "Link to Python when building" ON)
+option(BUILD_TEST "Enable testing" ON)
 
 if(WITH_CUDA)
   enable_language(CUDA)
@@ -20,7 +21,9 @@ endif()
 find_package(Torch REQUIRED)
 
 set(CSRC pyg_lib/csrc)
-file(GLOB ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.*)
+file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp ${CSRC}/*.cu)
+file(GLOB_RECURSE ALL_HEADERS ${CSRC}/*.h)
+
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
@@ -31,3 +34,7 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
   EXPORT_NAME PyG
   INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
+
+if(BUILD_TEST)
+  INCLUDE(cmake/test.cmake)
+endif()
