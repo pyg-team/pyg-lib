@@ -4,8 +4,8 @@
 
 TEST(CudaVersionTest, BasicAssertions) {
 #ifdef WITH_CUDA
-  EXPECT_NE(pyg::cuda_version(), (int64_t)-1);
+  EXPECT_NE(pyg::cuda_version(), -1);
 #else
-  EXPECT_EQ(pyg::cuda_version(), (int64_t)-1);
+  EXPECT_EQ(pyg::cuda_version(), -1);
 #endif
 }
