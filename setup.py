@@ -66,6 +66,12 @@ dev_requires = test_requires + [
     'pre-commit',
 ]
 
+if not bool(os.getenv('BUILD_DOCS', 0)):
+    ext_modules = [CMakeExtension('libpyg')]
+    cmdclass = {'build_ext': CMakeBuild}
+else:
+    ext_modules = cmdclass = None
+
 setup(
     name='pyg_lib',
     version=__version__,
@@ -88,7 +94,7 @@ setup(
         'dev': dev_requires,
     },
     packages=find_packages(),
-    ext_modules=[CMakeExtension('libpyg')],
-    cmdclass={'build_ext': CMakeBuild},
+    ext_modules=ext_modules,
+    cmdclass=cmdclass,
     include_package_data=True,
 )
