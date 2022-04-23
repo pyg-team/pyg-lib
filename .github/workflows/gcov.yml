@@ -47,9 +47,6 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage/reports/
-          path_to_write_report: ./coverage/codecov_report.txt
+          token: 4d0292e4-57e6-47d2-a0c9-679036681fef
           fail_ci_if_error: false
-          gcov: true
           files: cov.txt
