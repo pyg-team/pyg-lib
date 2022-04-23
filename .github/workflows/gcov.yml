@@ -42,6 +42,7 @@ jobs:
         run: |
           pip install gcovr
           gcovr -f pyg_lib/csrc/*.cpp --output cov.txt
+          cat cov.txt
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
