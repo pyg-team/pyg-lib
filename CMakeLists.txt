@@ -6,11 +6,16 @@ set(PYG_VERSION 0.0.0)
 option(WITH_CUDA "Enable CUDA support" OFF)
 option(USE_PYTHON "Link to Python when building" ON)
 option(BUILD_TEST "Enable testing" ON)
+option(WITH_COV "Enable coverage" OFF)
 
 if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+endif()
+
+if(WITH_COV)
+  set(CMAKE_CXX_FLAGS --coverage)
 endif()
 
 if (USE_PYTHON)
