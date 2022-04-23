@@ -1,4 +1,4 @@
-name: Minimal Installation
+name: Documentation
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -8,13 +8,13 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
 
-  import:
+  make_html:
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.9]
+        python-version: [3.8]
         torch-version: [1.11.0]
 
     steps:
@@ -28,10 +28,14 @@ jobs:
         run: |
           pip install torch==${{ matrix.torch-version}}+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
+      - name: Install dependencies
+        run: |
+          pip install sphinx sphinx_rtd_theme
+
       - name: Install package
         run: |
-          pip install -e .
+          BUILD_DOCS=1 pip install -e .
 
-      - name: Test imports
+      - name: Build documentation
         run: |
-          python -c 'import pyg_lib;print(pyg_lib.cuda_version())'
+          cd docs && make clean && make html SPHINXOPTS="-W"  # Fail on warning.
