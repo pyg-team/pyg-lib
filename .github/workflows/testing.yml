@@ -44,12 +44,11 @@ jobs:
 
       - name: Collect coverage
         run: |
-          pip install gcovr
-          gcovr -f pyg_lib/csrc/*.cpp --output .coverage.txt
-          cat .coverage.txt
+          sudo apt-get install lcov
+          lcov --directory . --capture --output-file .coverage.info
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
-          files: .coverage.txt
+          files: .coverage.info
           fail_ci_if_error: false

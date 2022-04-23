@@ -1,8 +1,0 @@
-[run]
-source=pyg_lib
-[report]
-exclude_lines =
-    pragma: no cover
-    raise
-    except
-    warn

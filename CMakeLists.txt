@@ -15,7 +15,7 @@ if(WITH_CUDA)
 endif()
 
 if(WITH_COV)
-  set(CMAKE_CXX_FLAGS --coverage)
+  set(CMAKE_CXX_FLAGS "-g -O0 --coverage")
 endif()
 
 if (USE_PYTHON)
