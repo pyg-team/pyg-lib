@@ -30,4 +30,3 @@ jobs:
       - name: Build documentation
         run: |
           cd docs && make clean && make html SPHINXOPTS="-W"  # Fail on warning.
-
