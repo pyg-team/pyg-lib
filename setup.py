@@ -70,7 +70,8 @@ if not bool(os.getenv('BUILD_DOCS', 0)):
     ext_modules = [CMakeExtension('libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
 else:
-    ext_modules = cmdclass = None
+    ext_modules = None
+    cmdclass = {}
 
 setup(
     name='pyg_lib',
