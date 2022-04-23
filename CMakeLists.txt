@@ -3,8 +3,8 @@ project(pyg)
 set(CMAKE_CXX_STANDARD 14)
 set(PYG_VERSION 0.0.0)
 
+option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
-option(USE_PYTHON "Link to Python when building" ON)
 option(BUILD_TEST "Enable testing" ON)
 
 if(WITH_CUDA)
