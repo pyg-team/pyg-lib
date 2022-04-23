@@ -46,7 +46,7 @@ jobs:
         run: |
           sudo apt-get install lcov
           lcov --directory . --capture --output-file .coverage.info
-          lcov --remove .coverage.info 'test/*' --output-file .coverage.info
+          lcov --remove .coverage.info '*/test/*' --output-file .coverage.info
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
