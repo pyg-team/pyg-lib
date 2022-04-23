@@ -3,8 +3,6 @@ import os
 import os.path as osp
 import warnings
 
-import torch
-
 __version__ = '0.0.0'
 
 # * `libpyg.so`: The name of the shared library file.
@@ -16,6 +14,8 @@ __version__ = '0.0.0'
 def load_library(lib_name: str):
     if bool(os.getenv('BUILD_DOCS', 0)):
         return
+
+    import torch
 
     loader_details = (importlib.machinery.ExtensionFileLoader,
                       importlib.machinery.EXTENSION_SUFFIXES)
