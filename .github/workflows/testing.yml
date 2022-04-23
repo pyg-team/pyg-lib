@@ -45,11 +45,11 @@ jobs:
       - name: Collect coverage
         run: |
           pip install gcovr
-          gcovr -f pyg_lib/csrc/*.cpp --output .coverage.txt
-          cat .coverage.txt
+          gcovr -f pyg_lib/csrc/*.cpp --output cov.txt
+          cat cov.txt
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
-          files: .coverage.txt
+          files: cov.txt
           fail_ci_if_error: false
