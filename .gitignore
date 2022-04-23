@@ -8,7 +8,8 @@ alpha/
 .eggs/
 *.egg-info/
 *.so
-cov.txt
+.coverage
+.coverage.*
 .vscode
 .idea
 .venv
