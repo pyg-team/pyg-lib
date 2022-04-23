@@ -1,4 +1,4 @@
-name: Minimal Installation
+name: Cpp Code Coverage
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -41,10 +41,10 @@ jobs:
       - name: Gcov
         run: |
           pip install gcovr
-          gcovr -r pyg_lib/csrc --xml cov.xml
+          gcovr -f pyg_lib/csrc/*.cpp --output cov.txt
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
           fail_ci_if_error: false
-          files: cov.xml
+          files: cov.txt
