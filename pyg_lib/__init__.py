@@ -1,5 +1,8 @@
-import os.path as osp
 import importlib
+import os
+import os.path as osp
+import warnings
+
 import torch
 
 __version__ = '0.0.0'
@@ -9,13 +12,25 @@ __version__ = '0.0.0'
 # * `pyg_lib`: The name of the Python package.
 # TODO Make naming more consistent.
 
-loader_details = (importlib.machinery.ExtensionFileLoader,
-                  importlib.machinery.EXTENSION_SUFFIXES)
 
-path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
-ext_finder = importlib.machinery.FileFinder(path, loader_details)
-spec = ext_finder.find_spec('libpyg')
-torch.ops.load_library(spec.origin)
+def load_library(lib_name: str):
+    if bool(os.getenv('BUILD_DOCS', 0)):
+        return
+
+    loader_details = (importlib.machinery.ExtensionFileLoader,
+                      importlib.machinery.EXTENSION_SUFFIXES)
+
+    path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
+    ext_finder = importlib.machinery.FileFinder(path, loader_details)
+    spec = ext_finder.find_spec(lib_name)
+
+    if spec is None:
+        warnings.warn(f"Could not find shared library '{lib_name}'")
+    else:
+        torch.ops.load_library(spec.origin)
+
+
+load_library('libpyg')
 
 
 def cuda_version() -> int:
