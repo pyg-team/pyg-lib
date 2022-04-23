@@ -17,7 +17,11 @@ ext_finder = importlib.machinery.FileFinder(path, loader_details)
 spec = ext_finder.find_spec('libpyg')
 torch.ops.load_library(spec.origin)
 
-cuda_version = torch.ops.pyg.cuda_version
+
+def cuda_version() -> int:
+    r"""Returns the CUDA version for which :obj:`pyg_lib` was compiled with."""
+    return torch.ops.pyg.cuda_version()
+
 
 __all__ = [
     '__version__',
