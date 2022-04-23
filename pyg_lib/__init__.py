@@ -35,6 +35,7 @@ load_library('libpyg')
 
 def cuda_version() -> int:
     r"""Returns the CUDA version for which :obj:`pyg_lib` was compiled with."""
+    import torch
     return torch.ops.pyg.cuda_version()
 
 
