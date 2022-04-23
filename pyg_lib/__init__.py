@@ -4,6 +4,11 @@ import torch
 
 __version__ = '0.0.0'
 
+# * `libpyg.so`: The name of the shared library file.
+# * `torch.ops.pyg`: The used namespace.
+# * `pyg_lib`: The name of the Python package.
+# TODO Make naming more consistent.
+
 loader_details = (importlib.machinery.ExtensionFileLoader,
                   importlib.machinery.EXTENSION_SUFFIXES)
 
