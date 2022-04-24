@@ -6,7 +6,7 @@
 namespace pyg {
 namespace sampler {
 
-PYG_API at::Tensor random_walk(const at::Tensor& crow,
+PYG_API at::Tensor random_walk(const at::Tensor& rowptr,
                                const at::Tensor& col,
                                const at::Tensor& seed,
                                int64_t walk_length,

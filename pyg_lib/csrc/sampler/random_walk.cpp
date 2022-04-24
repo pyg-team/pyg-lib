@@ -5,7 +5,7 @@
 namespace pyg {
 namespace sampler {
 
-at::Tensor random_walk(const at::Tensor& crow,
+at::Tensor random_walk(const at::Tensor& rowptr,
                        const at::Tensor& col,
                        const at::Tensor& seed,
                        int64_t walk_length,
@@ -14,12 +14,11 @@ at::Tensor random_walk(const at::Tensor& crow,
   return seed;
 }
 
-/* TORCH_LIBRARY_FRAGMENT(pyg, m) { */
-/*   m.def(TORCH_SELECTIVE_SCHEMA( */
-/*       "pyg:random_walk(Tensor crow, Tensor col, Tensor seed, int walk_length,
- * " */
-/*       "float p, float q) -> Tensor")); */
-/* } */
+TORCH_LIBRARY_FRAGMENT(pyg, m) {
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::random_walk(Tensor rowptr, Tensor col, Tensor seed, int "
+      "walk_length, float p, float q) -> Tensor"));
+}
 
 }  // namespace sampler
 }  // namespace pyg
