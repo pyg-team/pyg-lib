@@ -8,10 +8,12 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
-FILE(GLOB cpp_tests test/csrc/test_*.cpp)
-
 include(GoogleTest)
-foreach(t ${cpp_tests})
+
+set(CTEST test/csrc)
+file(GLOB_RECURSE ALL_TESTS ${CTEST}/*.cpp)
+
+foreach(t ${ALL_TESTS})
     get_filename_component(name ${t} NAME_WE)
     add_executable(${name} ${t})
     target_link_libraries(${name} ${PROJECT_NAME} gtest_main)

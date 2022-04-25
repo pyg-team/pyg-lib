@@ -1,5 +1,6 @@
 #include "random_walk.h"
 
+#include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
 
 namespace pyg {
@@ -11,7 +12,10 @@ at::Tensor random_walk(const at::Tensor& rowptr,
                        int64_t walk_length,
                        double p,
                        double q) {
-  return seed;
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::random_walk", "")
+                       .typed<decltype(random_walk)>();
+  return op.call(rowptr, col, seed, walk_length, p, q);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
