@@ -26,7 +26,10 @@ if (USE_PYTHON)
 endif()
 
 set(CSRC pyg_lib/csrc)
-file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp ${CSRC}/*.cu)
+file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp)
+if (WITH_CUDA)
+  file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.cu)
+endif()
 file(GLOB_RECURSE ALL_HEADERS ${CSRC}/*.h)
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 
