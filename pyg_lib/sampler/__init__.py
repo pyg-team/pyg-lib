@@ -17,7 +17,7 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
         p (float, optional): Likelihood of immediately revisiting a node in the
             walk. (default: :obj:`1.0`)
         q (float, optional): Control parameter to interpolate between
-            breadth-first strategy and depth-first strategy
+            breadth-first strategy and depth-first strategy.
             (default: :obj:`1.0`)
     """
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)

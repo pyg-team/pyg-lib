@@ -14,5 +14,5 @@ TEST(RandomWalkTest, BasicAssertions) {
   EXPECT_EQ(out.size(1), 6);
 
   auto dist = (out.narrow(/*dim=*/1, 1, 5) - out.narrow(/*dim=*/1, 0, 5)).abs();
-  EXPECT_TRUE(torch::all((dist == 1) | (dist == 3)).item<bool>());
+  EXPECT_EQ(torch::all((dist == 1) | (dist == 3)).item<bool>(), true);
 }
