@@ -15,7 +15,7 @@ if(WITH_CUDA)
 endif()
 
 if(WITH_COV)
-  set(CMAKE_CXX_FLAGS "-g -O0 --coverage")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
 endif()
 
 if (USE_PYTHON)
@@ -23,14 +23,18 @@ if (USE_PYTHON)
   find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
 
-find_package(Torch REQUIRED)
-
 set(CSRC pyg_lib/csrc)
 file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp ${CSRC}/*.cu)
 file(GLOB_RECURSE ALL_HEADERS ${CSRC}/*.h)
-
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
+
+find_package(Torch REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 if (USE_PYTHON)
   target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
