@@ -17,7 +17,7 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
 
   const auto out = rowptr.new_empty({seed.size(0), walk_length + 1});
 
-  AT_DISPATCH_INTEGRAL_TYPES(rowptr.scalar_type(), "random_walk_kernel", [&] {
+  AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "random_walk_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
     const auto col_data = col.data_ptr<scalar_t>();
     const auto seed_data = seed.data_ptr<scalar_t>();
@@ -26,14 +26,14 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
     auto grain_size = at::internal::GRAIN_SIZE / walk_length;
     at::parallel_for(0, seed.size(0), grain_size, [&](int64_t _s, int64_t _e) {
       for (auto i = _s; i < _e; i++) {
-        scalar_t v = seed_data[i], row_start, row_end, rand;
-        out_data[i * out.size(1) + 0] = v;  // Set seed node.
+        scalar_t v = seed_data[i];
+        out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
 
-        for (auto j = 1; j < out.size(1); j++) {
-          row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
+        for (auto j = 1; j < walk_length + 1; j++) {
+          scalar_t row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
           if (row_end - row_start > 0)
             v = col_data[randint<scalar_t>(row_start, row_end)];
-          auto rand = out_data[i * out.size(1) + j] = v;
+          out_data[i * (walk_length + 1) + j] = v;
         }
       }
     });
