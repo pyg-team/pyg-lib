@@ -1,8 +1,26 @@
 #include <gtest/gtest.h>
 
+#include <set>
 #include <vector>
 
 #include "../../../pyg_lib/csrc/random/cpu/randint_engine.h"
+
+TEST(RandintRandomTest, BasicAssertions) {
+  pyg::random::RandintEngine<int64_t> eng;
+
+  // Test if it is roughly random
+  std::set<int> picked;
+
+  int iter = 10000;
+  int beg = 0;
+  int end = 99999999;
+
+  for (int i = 0; i < iter; i++) {
+    auto res = eng(beg, end);
+    picked.insert(res);
+  }
+  EXPECT_EQ(iter, picked.size());
+}
 
 TEST(RandintPrefetchTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng;

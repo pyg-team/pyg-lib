@@ -14,9 +14,10 @@ const int RAND_PREFETCH_BITS = 64;
 
 class PrefetchedRandint {
  public:
-  PrefetchedRandint(int size = RAND_PREFETCH_THRESHOLD,
-                    int bits = RAND_PREFETCH_BITS) {
-    prefetch_();
+  PrefetchedRandint()
+      : PrefetchedRandint(RAND_PREFETCH_THRESHOLD, RAND_PREFETCH_BITS) {}
+  PrefetchedRandint(int size, int bits) : size_(size), bits_(bits) {
+    prefetch(size_);
   }
 
   template <typename T>
@@ -24,19 +25,19 @@ class PrefetchedRandint {
     unsigned needed = 64;
 
     // Mutiple levels of range to save prefetched bits
-    if (range <= (1 << 15)) {
+    if (range < (1 << 16)) {
       needed = 16;
-    } else if (range <= (1UL << 31)) {
+    } else if (range < (1UL << 32)) {
       needed = 32;
     }
 
     if (bits_ < needed) {
-      if (size_ > 0) {
+      if (size_ > 1) {
         size_--;
         bits_ = RAND_PREFETCH_BITS;
       } else {
         // Prefetch if no enough bits
-        prefetch_();
+        prefetch(prefetched_randint_.size(0));
       }
     }
 
@@ -44,7 +45,7 @@ class PrefetchedRandint {
     uint64_t* prefetch_ptr =
         reinterpret_cast<uint64_t*>(prefetched_randint_.data_ptr<int64_t>());
     uint64_t mask = (needed == 64) ? std::numeric_limits<uint64_t>::max()
-                                   : (1ULL << needed) - 1;
+                                   : ((1ULL << needed) - 1);
     uint64_t res = (prefetch_ptr[size_ - 1] & mask) % range;
     prefetch_ptr[size_ - 1] >>= needed;
     bits_ -= needed;
@@ -52,12 +53,12 @@ class PrefetchedRandint {
   }
 
  private:
-  void prefetch_() {
-    prefetched_randint_ = torch::randint(
-        std::numeric_limits<int64_t>::min(),
-        std::numeric_limits<int64_t>::max(), {RAND_PREFETCH_THRESHOLD},
-        torch::TensorOptions().dtype(torch::kInt64));
-    size_ = RAND_PREFETCH_THRESHOLD;
+  void prefetch(int size) {
+    prefetched_randint_ =
+        torch::randint(std::numeric_limits<int64_t>::min(),
+                       std::numeric_limits<int64_t>::max(), {size},
+                       torch::TensorOptions().dtype(torch::kInt64));
+    size_ = size;
     bits_ = RAND_PREFETCH_BITS;
   }
 
