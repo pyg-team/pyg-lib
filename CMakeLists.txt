@@ -10,13 +10,6 @@ option(WITH_CUDA "Enable CUDA support" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
 
-if(BUILD_TEST)
-  include(cmake/test.cmake)
-  if(WITH_COV)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
-  endif()
-endif()
-
 if (USE_PYTHON)
   add_definitions(-DUSE_PYTHON)
   find_package(Python3 REQUIRED COMPONENTS Development)
@@ -51,3 +44,10 @@ endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES
   EXPORT_NAME PyG
   INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
+
+if(BUILD_TEST)
+  if(WITH_COV)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
+  endif()
+  include(cmake/test.cmake)
+endif()
