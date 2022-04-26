@@ -12,6 +12,13 @@ const int RAND_PREFETCH_THRESHOLD = 128;
 // Use torch::randint to generate 64-bit random numbers
 const int RAND_PREFETCH_BITS = 64;
 
+/**
+ * Amortized O(1) uniform random within a range.
+ *
+ * Reduced torch random overheads by prefetching large random bits in advance.
+ * Prefetched random bits are consumed on demand.
+ *
+ */
 class PrefetchedRandint {
  public:
   PrefetchedRandint()
@@ -67,6 +74,10 @@ class PrefetchedRandint {
   int bits_;
 };
 
+/**
+ * Randint functor for uniform integer distribution.
+ * Wrapped PrefetchedRandint as its efficient core implementation.
+ */
 template <typename T>
 class RandintEngine {
  public:

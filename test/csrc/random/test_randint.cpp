@@ -11,9 +11,9 @@ TEST(RandintRandomTest, BasicAssertions) {
   // Test if it is roughly random
   std::set<int> picked;
 
-  int iter = 10000;
+  int iter = 1000;
   int beg = 0;
-  int end = 99999999;
+  int end = 9999999;
 
   for (int i = 0; i < iter; i++) {
     auto res = eng(beg, end);
