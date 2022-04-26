@@ -26,12 +26,14 @@ jobs:
 
       - name: Install PyTorch ${{ matrix.torch-version }}+cpu
         run: |
+          pip install numpy
           pip install torch==${{ matrix.torch-version}}+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
       - name: Install package
         run: |
-          pip install -e .
+          pip install --verbose -e .
 
       - name: Test imports
         run: |
           python -c 'import pyg_lib;print(pyg_lib.cuda_version())'
+          python -c "import pyg_lib.sampler"

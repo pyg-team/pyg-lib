@@ -8,13 +8,15 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
-FILE(GLOB cpp_tests test/csrc/test_*.cpp)
-
 include(GoogleTest)
-foreach(t ${cpp_tests})
-    get_filename_component(name ${t} NAME_WE)
-    add_executable(${name} ${t})
-    target_link_libraries(${name} ${PROJECT_NAME} gtest_main)
+
+set(CTEST test/csrc)
+file(GLOB_RECURSE ALL_TESTS ${CTEST}/*.cpp)
+
+foreach(test ${ALL_TESTS})
+    get_filename_component(name ${test} NAME_WE)
+    add_executable(${name} ${test})
+    target_link_libraries(${name} ${PROJECT_NAME} gtest_main torch)
     target_include_directories(${name} PRIVATE ${CSRC}/include)
     gtest_discover_tests(${name})
 endforeach()

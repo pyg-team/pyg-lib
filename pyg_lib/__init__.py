@@ -5,6 +5,8 @@ import warnings
 
 import torch
 
+import pyg_lib.sampler  # noqa
+
 __version__ = '0.0.0'
 
 # * `libpyg.so`: The name of the shared library file.
