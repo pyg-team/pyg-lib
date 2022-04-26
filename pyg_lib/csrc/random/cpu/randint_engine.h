@@ -26,7 +26,7 @@ class PrefetchedRandint {
     // Mutiple levels of range to save prefetched bits
     if (range <= (1 << 15)) {
       needed = 16;
-    } else if (range <= (1 << 31)) {
+    } else if (range <= (1UL << 31)) {
       needed = 32;
     }
 
