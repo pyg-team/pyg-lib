@@ -36,12 +36,12 @@ class CMakeBuild(build_ext):
             os.makedirs(self.build_temp)
 
         cmake_args = [
-            '-DUSE_PYTHON=ON',
             '-DBUILD_TEST=OFF',
+            '-DUSE_PYTHON=ON',
+            f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
-            f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
         ]
 
         if importlib.util.find_spec('ninja') is not None:

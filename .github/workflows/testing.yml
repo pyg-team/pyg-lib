@@ -31,7 +31,7 @@ jobs:
 
       - name: Configure
         run: |
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake -S . -B build -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake -S . -B build -DBUILD_TEST=ON -DCMAKE_BUILD_TYPE=DEBUG
 
       - name: Build
         run: |
