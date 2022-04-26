@@ -4,7 +4,6 @@
 
 template <typename scalar_t>
 inline scalar_t randint(scalar_t low, scalar_t high) {
-  TORCH_CHECK(low <= high, "Illegal random range");
   // TODO Avoid explicit tensor creation.
   const auto dtype = c10::CppTypeToScalarType<scalar_t>::value;
   const auto options = torch::TensorOptions().dtype(dtype);
