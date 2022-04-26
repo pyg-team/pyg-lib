@@ -9,13 +9,15 @@ torch::Tensor random_walk(const torch::Tensor& rowptr,
                           int64_t walk_length,
                           double p,
                           double q) {
-  at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
-  at::TensorArg col_t{col, "col", 1};
-  at::TensorArg seed_t{seed, "seed", 1};
+  return rowptr;
 
-  at::CheckedFrom c = "random_walk";
-  at::checkAllDefined(c, {rowptr_t, col_t, seed_t});
-  at::checkAllSameType(c, {rowptr_t, col_t, seed_t});
+  /* at::TensorArg rowptr_t{rowptr, "rowtpr", 1}; */
+  /* at::TensorArg col_t{col, "col", 1}; */
+  /* at::TensorArg seed_t{seed, "seed", 1}; */
+
+  /* at::CheckedFrom c = "random_walk"; */
+  /* at::checkAllDefined(c, {rowptr_t, col_t, seed_t}); */
+  /* at::checkAllSameType(c, {rowptr_t, col_t, seed_t}); */
 
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::random_walk", "")
