@@ -19,6 +19,10 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
         q (float, optional): Control parameter to interpolate between
             breadth-first strategy and depth-first strategy.
             (default: :obj:`1.0`)
+
+    Returns:
+        torch.Tensor: A tensor of shape :obj:`[seed.size(0), walk_length + 1]`
+        holding the nodes indices of each walk for each seed node.
     """
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 

@@ -33,6 +33,8 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
           scalar_t row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
           if (row_end - row_start > 0)
             v = col_data[randint<scalar_t>(row_start, row_end)];
+          // For isolated nodes, this will add a fake self-loop.
+          // This does not do any harm when used in within a `node2vec` model.
           out_data[i * (walk_length + 1) + j] = v;
         }
       }
