@@ -1,14 +1,15 @@
 #include <gtest/gtest.h>
 
 #include "../../../pyg_lib/csrc/sampler/random_walk.h"
+#include "../graph.h"
 
 TEST(RandomWalkTest, BasicAssertions) {
-  const auto options = torch::TensorOptions().dtype(torch::kInt64);
-  const auto rowptr = torch::tensor({0, 2, 4, 6, 8}, options);
-  const auto col = torch::tensor({1, 3, 0, 2, 1, 3, 2, 0}, options);
-  const auto seed = torch::arange(4, options);
+  const auto graph = cycle_graph(/*num_nodes=*/4);
+  const auto seed = torch::arange(4);
 
-  auto out = pyg::sampler::random_walk(rowptr, col, seed, /*walk_length=*/5);
+  auto out = pyg::sampler::random_walk(/*rowptr=*/std::get<0>(graph),
+                                       /*col=*/std::get<1>(graph), seed,
+                                       /*walk_length=*/5);
 
   EXPECT_EQ(out.size(0), 4);
   EXPECT_EQ(out.size(1), 6);
