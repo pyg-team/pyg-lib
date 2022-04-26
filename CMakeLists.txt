@@ -41,13 +41,13 @@ if (USE_PYTHON)
   target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-  EXPORT_NAME PyG
-  INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
-
 if(BUILD_TEST)
   if(WITH_COV)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
   endif()
   include(cmake/test.cmake)
 endif()
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  EXPORT_NAME PyG
+  INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
