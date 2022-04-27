@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 
-#include "utils.h"
+#include "./utils.h"
 
 namespace pyg {
 namespace sampler {
