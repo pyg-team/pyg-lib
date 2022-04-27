@@ -18,8 +18,7 @@ jobs:
         python-version: ['3.9']
         # python-version: ['3.7', '3.8', '3.9', '3.10']
         torch-version: [1.11.0]
-        cuda-version: ['cpu']
-        # cuda-version: ['cpu', 'cu102', 'cu113', 'cu115']
+        cuda-version: ['cpu', 'cu102', 'cu113', 'cu115']
 
     steps:
       - uses: actions/checkout@v2

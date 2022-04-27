@@ -7,7 +7,7 @@ import torch
 
 import pyg_lib.sampler  # noqa
 
-__version__ = '0.0.0'
+__version__ = '0.1.0'
 
 # * `libpyg.so`: The name of the shared library file.
 # * `torch.ops.pyg`: The used namespace.
