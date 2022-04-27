@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "pyg_lib/csrc/sampler/random_walk.h"
-#include "test/graph.h"
+#include "test/csrc/graph.h"
 
 TEST(RandomWalkTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);

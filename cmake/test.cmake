@@ -12,7 +12,6 @@ include(GoogleTest)
 
 set(CTEST test/csrc)
 file(GLOB_RECURSE ALL_TESTS ${CTEST}/*.cpp)
-target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 foreach(test ${ALL_TESTS})
     get_filename_component(name ${test} NAME_WE)
