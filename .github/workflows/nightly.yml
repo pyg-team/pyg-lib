@@ -62,7 +62,8 @@ jobs:
           cd dist
           ls -lah
           pip install *.whl
-          python -c "import pyg_lib; print(pyg_lib.__version__)"
+          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
+          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
 
       - name: Configure AWS
