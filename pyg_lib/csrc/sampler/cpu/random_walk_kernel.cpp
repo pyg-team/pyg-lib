@@ -1,18 +1,23 @@
-#include <torch/torch.h>
+#include <ATen/ATen.h>
+#include <ATen/Parallel.h>
+#include <torch/library.h>
 
-#include "utils.h"
+#include "./utils.h"
 
 namespace pyg {
 namespace sampler {
 
 namespace {
 
-torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
-                                 const torch::Tensor& col,
-                                 const torch::Tensor& seed,
-                                 int64_t walk_length,
-                                 double p,
-                                 double q) {
+at::Tensor random_walk_kernel(const at::Tensor& rowptr,
+                              const at::Tensor& col,
+                              const at::Tensor& seed,
+                              int64_t walk_length,
+                              double p,
+                              double q) {
+  TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
+  TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
+  TORCH_CHECK(seed.is_cpu(), "'seed' must be a CPU tensor");
   TORCH_CHECK(p == 1 && q == 1, "Uniform sampling required for now");
 
   const auto out = rowptr.new_empty({seed.size(0), walk_length + 1});
@@ -26,11 +31,11 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
     auto grain_size = at::internal::GRAIN_SIZE / walk_length;
     at::parallel_for(0, seed.size(0), grain_size, [&](int64_t _s, int64_t _e) {
       for (auto i = _s; i < _e; ++i) {
-        scalar_t v = seed_data[i];
+        auto v = seed_data[i];
         out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
 
         for (auto j = 1; j < walk_length + 1; ++j) {
-          scalar_t row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
+          auto row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
           if (row_end - row_start > 0)
             v = col_data[randint(row_start, row_end)];
           // For isolated nodes, this will add a fake self-loop.
