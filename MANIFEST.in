@@ -1,6 +1,1 @@
-include README.md
 include LICENSE
-
-recursive-exclude csrc *
-recursive-exclude test *
-recursive-exclude docs *
