@@ -51,6 +51,7 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
   TORCH_CHECK(p == 1 && q == 1, "Uniform sampling required for now");
 
   const auto stream = at::cuda::getCurrentCUDAStream();
+  // Ensure contiguous access by transposing `out` matrix:
   const auto out = rowptr.new_empty({walk_length + 1, seed.size(0)});
   const auto rand = torch::rand({walk_length, seed.size(0)},
                                 seed.options().dtype(torch::kFloat));
@@ -62,10 +63,9 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
     const auto rand_data = rand.data_ptr<float>();
     auto out_data = out.data_ptr<scalar_t>();
 
-    random_walk_kernel_impl<scalar_t>
-        <<<BLOCKS(seed.size(0)), THREADS, 0, stream>>>(
-            rowptr_data, col_data, seed_data, rand_data, out_data, seed.size(0),
-            walk_length);
+    random_walk_kernel_impl<<<BLOCKS(seed.size(0)), THREADS, 0, stream>>>(
+        rowptr_data, col_data, seed_data, rand_data, out_data, seed.size(0),
+        walk_length);
   });
 
   return out.t().contiguous();
