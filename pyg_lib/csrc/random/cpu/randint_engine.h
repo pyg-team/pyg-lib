@@ -1,6 +1,7 @@
 #pragma once
 
-#include <torch/torch.h>
+#include <ATen/ATen.h>
+#include <torch/library.h>
 
 #include <limits.h>
 
@@ -9,7 +10,7 @@ namespace random {
 
 const int RAND_PREFETCH_SIZE = 128;
 
-// Use torch::randint to generate 64-bit random numbers
+// Use at::randint to generate 64-bit random numbers
 const int RAND_PREFETCH_BITS = 64;
 
 /**
@@ -60,7 +61,7 @@ class PrefetchedRandint {
     uint64_t* prefetch_ptr =
         reinterpret_cast<uint64_t*>(prefetched_randint_.data_ptr<int64_t>());
 
-    // Take the lower bits of current 64-bit number to fit the range.
+    // Take the lower bits of current 64-bit number to fit in the range.
     uint64_t mask = (needed == 64) ? std::numeric_limits<uint64_t>::max()
                                    : ((1ULL << needed) - 1);
     uint64_t res = (prefetch_ptr[size_] & mask) % range;
@@ -76,9 +77,9 @@ class PrefetchedRandint {
   void prefetch(int size, int bits) {
     if (prefetched_randint_.size(0) != size) {
       prefetched_randint_ =
-          torch::randint(std::numeric_limits<int64_t>::min(),
-                         std::numeric_limits<int64_t>::max(), {size},
-                         torch::TensorOptions().dtype(torch::kInt64));
+          at::randint(std::numeric_limits<int64_t>::min(),
+                      std::numeric_limits<int64_t>::max(), {size},
+                      at::TensorOptions().dtype(at::kLong));
     } else {
       prefetched_randint_.random_(std::numeric_limits<int64_t>::min(),
                                   std::numeric_limits<int64_t>::max());
@@ -87,7 +88,7 @@ class PrefetchedRandint {
     bits_ = bits;
   }
 
-  torch::Tensor prefetched_randint_;
+  at::Tensor prefetched_randint_;
   int size_;
   int bits_;
 };

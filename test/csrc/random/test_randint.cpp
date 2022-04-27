@@ -81,7 +81,7 @@ TEST(RandintSeedTest, BasicAssertions) {
   int64_t beg = 12345678;
   int64_t end = 87654321;
 
-  torch::manual_seed(147);
+  at::manual_seed(147);
   pyg::random::RandintEngine<int64_t> eng1;
 
   std::vector<int64_t> res;
@@ -89,7 +89,7 @@ TEST(RandintSeedTest, BasicAssertions) {
     res.push_back(eng1(beg, end));
   }
 
-  torch::manual_seed(147);
+  at::manual_seed(147);
   pyg::random::RandintEngine<int64_t> eng2;
   for (auto r : res) {
     EXPECT_EQ(eng2(beg, end), r);
