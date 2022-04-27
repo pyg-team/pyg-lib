@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 
-#include "../random/cpu/randint_engine.h"
+#include "../../random/cpu/randint_engine.h"
 
 namespace pyg {
 namespace sampler {
