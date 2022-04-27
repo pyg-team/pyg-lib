@@ -10,9 +10,9 @@ namespace {
 #define THREADS 1024
 #define BLOCKS(N) (N + THREADS - 1) / THREADS
 
-#define CUDA_1D_KERNEL_LOOP(scalar_t, i, n)                       \
-  for (scalar_t i = blockIdx.x * blockDim.x + threadIdx.x; i < n; \
-       i += blockDim.x * gridDim.x)
+#define CUDA_1D_KERNEL_LOOP(scalar_t, i, n)                           \
+  for (scalar_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); \
+       i += (blockDim.x * gridDim.x))
 
 template <typename scalar_t>
 __global__ void random_walk_kernel_impl(
