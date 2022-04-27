@@ -15,7 +15,8 @@ Then, build the library via:
 mkdir build
 cd build
 export Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
-cmake .. -GNinja -DBUILD_TEST=ON -DWITH_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75
+export CUDA_ARCH_LIST=75
+cmake .. -GNinja -DBUILD_TEST=ON -DWITH_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH_LIST}
 cmake --build .
 ```
 
