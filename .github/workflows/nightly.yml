@@ -52,5 +52,5 @@ jobs:
 
       - name: Test wheel
         run: |
-          cd dist && pip install "*.whl"
+          cd dist && pip install *.whl
           python -c "import pyg_lib; print(pyg_lib.__version__)"
