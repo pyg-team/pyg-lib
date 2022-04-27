@@ -8,7 +8,7 @@ option(WITH_COV "Enable code coverage" OFF)
 option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0 -DCAFFE2_USE_CUDNN=OFF")
 
 if (USE_PYTHON)
   add_definitions(-DUSE_PYTHON)
