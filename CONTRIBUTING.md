@@ -25,4 +25,4 @@ Finally, run tests via:
 ctest --verbose --output-on-failure
 ```
 
-You can also build `pyg-lib` as a Python library via `pip install -e .` from the root directory which uses a `CMakeExtension` to build the C++ library internally.
+You can also build `pyg-lib` as a Python library via `pip install -e .` which uses a `CMakeExtension` to build the C++ library internally.
