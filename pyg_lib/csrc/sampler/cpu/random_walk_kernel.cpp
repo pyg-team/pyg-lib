@@ -1,4 +1,6 @@
-#include <torch/torch.h>
+#include <ATen/ATen.h>
+#include <ATen/Parallel.h>
+#include <torch/library.h>
 
 #include "./utils.h"
 
@@ -7,12 +9,12 @@ namespace sampler {
 
 namespace {
 
-torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
-                                 const torch::Tensor& col,
-                                 const torch::Tensor& seed,
-                                 int64_t walk_length,
-                                 double p,
-                                 double q) {
+at::Tensor random_walk_kernel(const at::Tensor& rowptr,
+                              const at::Tensor& col,
+                              const at::Tensor& seed,
+                              int64_t walk_length,
+                              double p,
+                              double q) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(seed.is_cpu(), "'seed' must be a CPU tensor");
