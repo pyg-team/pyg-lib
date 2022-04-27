@@ -41,8 +41,8 @@ class CMakeBuild(build_ext):
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DUSE_PYTHON=ON',
-            '-DUSE_CUDNN=OFF',
-            '-DCAFFE2_USE_CUDNN=OFF',
+            '-DUSE_CUDNN=ON',
+            '-DCAFFE2_USE_CUDNN=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
