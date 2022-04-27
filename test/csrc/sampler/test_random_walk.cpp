@@ -9,8 +9,8 @@ TEST(RandomWalkTest, BasicAssertions) {
   options = options.device(torch::kCUDA);
 #endif
 
-  auto graph = cycle_graph(/*num_nodes=*/4, options);
   auto seed = torch::arange(4, options);
+  auto graph = cycle_graph(/*num_nodes=*/4, options);
 
   auto out = pyg::sampler::random_walk(/*rowptr=*/std::get<0>(graph),
                                        /*col=*/std::get<1>(graph), seed,
@@ -18,6 +18,8 @@ TEST(RandomWalkTest, BasicAssertions) {
 
   EXPECT_EQ(out.size(0), 4);
   EXPECT_EQ(out.size(1), 6);
+
+  EXPECT_TRUE(torch::all(seed == out.select(/*dim=*/1, 0)).item<bool>());
 
   auto dist = (out.narrow(/*dim=*/1, 1, 5) - out.narrow(/*dim=*/1, 0, 5)).abs();
   EXPECT_TRUE(torch::all((dist == 1) | (dist == 3)).item<bool>());

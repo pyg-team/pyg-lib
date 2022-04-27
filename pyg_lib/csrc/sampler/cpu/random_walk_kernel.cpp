@@ -29,11 +29,11 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
     auto grain_size = at::internal::GRAIN_SIZE / walk_length;
     at::parallel_for(0, seed.size(0), grain_size, [&](int64_t _s, int64_t _e) {
       for (auto i = _s; i < _e; ++i) {
-        scalar_t v = seed_data[i];
+        auto v = seed_data[i];
         out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
 
         for (auto j = 1; j < walk_length + 1; ++j) {
-          scalar_t row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
+          auto row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
           if (row_end - row_start > 0)
             v = col_data[randint(row_start, row_end)];
           // For isolated nodes, this will add a fake self-loop.
