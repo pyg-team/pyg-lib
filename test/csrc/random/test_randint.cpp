@@ -8,7 +8,7 @@
 TEST(RandintRandomTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng;
 
-  // Test if it is roughly random
+  // Test if it is roughly random:
   std::set<int> picked;
 
   int iter = 1000;
@@ -25,8 +25,7 @@ TEST(RandintRandomTest, BasicAssertions) {
 TEST(RandintPrefetchTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng;
 
-  // Test many times to enable prefetching
-
+  // Test many times to enable prefetching:
   int iter = 10000;
   int64_t beg = 86421357;
   int64_t end = 97538642;
@@ -41,8 +40,7 @@ TEST(RandintPrefetchTest, BasicAssertions) {
 TEST(RandintValidTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng;
 
-  // Test ranges
-
+  // Test ranges:
   std::vector<unsigned> test_bits{10, 20, 30, 40, 50};
 
   for (auto b : test_bits) {
@@ -53,8 +51,7 @@ TEST(RandintValidTest, BasicAssertions) {
     EXPECT_GE(res, beg);
   }
 
-  // Test types
-
+  // Test types:
   pyg::random::RandintEngine<unsigned short> eng_short_unsigned;
   int64_t beg = 12345;
   int64_t end = 54321;

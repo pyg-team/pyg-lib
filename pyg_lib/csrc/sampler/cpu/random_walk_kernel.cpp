@@ -2,7 +2,7 @@
 #include <ATen/Parallel.h>
 #include <torch/library.h>
 
-#include "./utils.h"
+#include "../../random/cpu/randint_engine.h"
 
 namespace pyg {
 namespace sampler {
@@ -30,6 +30,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
 
     auto grain_size = at::internal::GRAIN_SIZE / walk_length;
     at::parallel_for(0, seed.size(0), grain_size, [&](int64_t _s, int64_t _e) {
+      pyg::random::RandintEngine<scalar_t> eng;
       for (auto i = _s; i < _e; ++i) {
         auto v = seed_data[i];
         out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
@@ -37,7 +38,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
         for (auto j = 1; j < walk_length + 1; ++j) {
           auto row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
           if (row_end - row_start > 0)
-            v = col_data[randint(row_start, row_end)];
+            v = col_data[eng(row_start, row_end)];
           // For isolated nodes, this will add a fake self-loop.
           // This does not do any harm when used in within a `node2vec` model.
           out_data[i * (walk_length + 1) + j] = v;
