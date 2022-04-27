@@ -57,12 +57,7 @@ class CMakeBuild(build_ext):
 
 install_requires = []
 
-test_requires = [
-    'pytest',
-    'pytest-cov',
-]
-
-dev_requires = test_requires + [
+dev_requires = [
     'pre-commit',
 ]
 
@@ -82,7 +77,7 @@ setup(
     url=URL,
     download_url=f'{URL}/archive/{__version__}.tar.gz',
     keywords=[
-        'deep-learning'
+        'deep-learning',
         'pytorch',
         'geometric-deep-learning',
         'graph-neural-networks',
@@ -91,7 +86,6 @@ setup(
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
-        'test': test_requires,
         'dev': dev_requires,
     },
     packages=find_packages(),
