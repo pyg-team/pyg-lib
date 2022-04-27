@@ -45,11 +45,32 @@ jobs:
           python -c "import torch; print('CUDA:', torch.version.cuda)"
 
       - name: Build wheel
+        if: ${{ matrix.cuda-version == 'cpu' }}
         run: |
           pip install wheel
           python setup.py bdist_wheel --dist-dir=dist
 
+      - name: Build wheel
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          pip install wheel
+          FORCE_CUDA=1 python setup.py bdist_wheel --dist-dir=dist
+
       - name: Test wheel
         run: |
-          cd dist && pip install *.whl
+          cd dist
+          ls -lah
+          pip install *.whl
           python -c "import pyg_lib; print(pyg_lib.__version__)"
+          cd ..
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+
+      - name: Upload wheel
+        run: |
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers

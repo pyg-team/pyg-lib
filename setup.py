@@ -35,10 +35,13 @@ class CMakeBuild(build_ext):
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        WITH_CUDA = torch.cuda.is_available()
+        WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DUSE_PYTHON=ON',
-            f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
+            f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
