@@ -1,6 +1,6 @@
 ## Build & Test
 
-`pyg-lib` can be build as a standalone C++/CUDA library.
+`pyg-lib` can be built as a standalone C++/CUDA library.
 For this, we adopt [CMake](https://cmake.org/) to build and [GoogleTest](https://github.com/google/googletest) to test.
 
 First, install all requirements:
