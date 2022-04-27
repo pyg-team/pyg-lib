@@ -12,8 +12,8 @@ TEST(RandintRandomTest, BasicAssertions) {
   std::set<int> picked;
 
   int iter = 1000;
-  int beg = 0;
-  int end = 9999999;
+  int beg = 11111111;
+  int end = 99999999;
 
   for (int i = 0; i < iter; i++) {
     auto res = eng(beg, end);

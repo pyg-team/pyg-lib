@@ -7,7 +7,7 @@
 namespace pyg {
 namespace random {
 
-const int RAND_PREFETCH_THRESHOLD = 128;
+const int RAND_PREFETCH_SIZE = 128;
 
 // Use torch::randint to generate 64-bit random numbers
 const int RAND_PREFETCH_BITS = 64;
@@ -22,51 +22,69 @@ const int RAND_PREFETCH_BITS = 64;
 class PrefetchedRandint {
  public:
   PrefetchedRandint()
-      : PrefetchedRandint(RAND_PREFETCH_THRESHOLD, RAND_PREFETCH_BITS) {}
-  PrefetchedRandint(int size, int bits) : size_(size), bits_(bits) {
-    prefetch(size_);
-  }
+      : PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS) {}
+  PrefetchedRandint(int size, int bits) { prefetch(size, bits); }
 
+  /**
+   * Generate next random number in a range uniformly
+   *
+   * @tparam T user type of random numbers
+   *
+   * @param range the range of uniform distribution
+   *
+   * @returns the chosen number in that range
+   */
   template <typename T>
   T next(T range) {
     unsigned needed = 64;
 
-    // Mutiple levels of range to save prefetched bits
+    // Mutiple levels of range to save prefetched bits.
     if (range < (1 << 16)) {
       needed = 16;
     } else if (range < (1UL << 32)) {
       needed = 32;
     }
 
+    // Consume some bits
     if (bits_ < needed) {
-      if (size_ > 1) {
+      if (size_ > 0) {
         size_--;
         bits_ = RAND_PREFETCH_BITS;
       } else {
         // Prefetch if no enough bits
-        prefetch(prefetched_randint_.size(0));
+        prefetch(prefetched_randint_.size(0), RAND_PREFETCH_BITS);
       }
     }
 
-    // Currently torch could only make 64-bit signed numbers
+    // Currently torch could only make 64-bit signed random numbers.
     uint64_t* prefetch_ptr =
         reinterpret_cast<uint64_t*>(prefetched_randint_.data_ptr<int64_t>());
+
+    // Take the lower bits of current 64-bit number to fit the range.
     uint64_t mask = (needed == 64) ? std::numeric_limits<uint64_t>::max()
                                    : ((1ULL << needed) - 1);
-    uint64_t res = (prefetch_ptr[size_ - 1] & mask) % range;
-    prefetch_ptr[size_ - 1] >>= needed;
+    uint64_t res = (prefetch_ptr[size_] & mask) % range;
+
+    // Update the state
+    prefetch_ptr[size_] >>= needed;
     bits_ -= needed;
     return (T)res;
   }
 
  private:
-  void prefetch(int size) {
-    prefetched_randint_ =
-        torch::randint(std::numeric_limits<int64_t>::min(),
-                       std::numeric_limits<int64_t>::max(), {size},
-                       torch::TensorOptions().dtype(torch::kInt64));
-    size_ = size;
-    bits_ = RAND_PREFETCH_BITS;
+  // Prefetch random bits. In-place random if prefetching size is the same.
+  void prefetch(int size, int bits) {
+    if (prefetched_randint_.size(0) != size) {
+      prefetched_randint_ =
+          torch::randint(std::numeric_limits<int64_t>::min(),
+                         std::numeric_limits<int64_t>::max(), {size},
+                         torch::TensorOptions().dtype(torch::kInt64));
+    } else {
+      prefetched_randint_.random_(std::numeric_limits<int64_t>::min(),
+                                  std::numeric_limits<int64_t>::max());
+    }
+    size_ = size - 1;
+    bits_ = bits;
   }
 
   torch::Tensor prefetched_randint_;
@@ -81,7 +99,7 @@ class PrefetchedRandint {
 template <typename T>
 class RandintEngine {
  public:
-  RandintEngine() : prefetched_(RAND_PREFETCH_THRESHOLD, RAND_PREFETCH_BITS) {}
+  RandintEngine() : prefetched_(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS) {}
 
   // Uniform random number within range [beg, end)
   T operator()(T beg, T end) {
