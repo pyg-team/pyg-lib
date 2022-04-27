@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 
-#include "../random/randint_engine.h"
+#include "../../random/cpu/randint_engine.h"
 
 namespace pyg {
 namespace sampler {
@@ -25,7 +25,7 @@ torch::Tensor random_walk_kernel(const torch::Tensor& rowptr,
 
     auto grain_size = at::internal::GRAIN_SIZE / walk_length;
     at::parallel_for(0, seed.size(0), grain_size, [&](int64_t _s, int64_t _e) {
-      pyg::random::RandintEngine eng;
+      pyg::random::RandintEngine<scalar_t> eng;
       for (auto i = _s; i < _e; ++i) {
         scalar_t v = seed_data[i];
         out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
