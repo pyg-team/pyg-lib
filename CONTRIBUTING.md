@@ -1,8 +1,29 @@
 ## Build & Test
 
-`pyg_lib` could be built as a standalone C++ library. We adopt [CMake](https://cmake.org/) to build and [GoogleTest](https://github.com/google/googletest) to test our C++ code.
+`pyg-lib` can be built as a standalone C++/CUDA library.
+For this, we adopt [CMake](https://cmake.org/) to build and [GoogleTest](https://github.com/google/googletest) to test.
 
+First, install all requirements:
 
-The library can be built with `cmake`. If you want to build tests, `-DBUILD_TEST=ON` (`OFF` by default) should be specified, and you can run them with `ctest`. A possible building and testing example could be found [here](https://github.com/pyg-team/pyg-lib/blob/master/.github/workflows/testing.yml).
+```
+conda install cmake ninja
+```
 
-You can also build `pyg_lib` as a Python library using `pip install .` with our C++ library as a `CMakeExtension`, which will be loaded (`libpyg.so`) when you `import pyg_lib`
+Then, build the library via:
+
+```
+mkdir build
+cd build
+export Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
+export CUDA_ARCH_LIST=75
+cmake .. -GNinja -DBUILD_TEST=ON -DWITH_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH_LIST}
+cmake --build .
+```
+
+If you want to include the test suite, specify `-DBUILD_TEST=ON` (`OFF` by default).
+Finally, run tests via:
+```
+ctest --verbose --output-on-failure
+```
+
+You can also build `pyg-lib` as a Python library via `pip install -e .` which uses a `CMakeExtension` to build the C++ library internally.
