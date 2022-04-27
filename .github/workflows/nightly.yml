@@ -44,17 +44,18 @@ jobs:
           python -c "import torch; print('PyTorch:', torch.__version__)"
           python -c "import torch; print('CUDA:', torch.version.cuda)"
 
-      - name: Build wheel
+      - name: Build wheel for CPU
         if: ${{ matrix.cuda-version == 'cpu' }}
         run: |
           pip install wheel
           python setup.py bdist_wheel --dist-dir=dist
 
-      - name: Build wheel
+      - name: Build wheel for CUDA
         if: ${{ matrix.cuda-version != 'cpu' }}
         run: |
           pip install wheel
-          FORCE_CUDA=1 python setup.py bdist_wheel --dist-dir=dist
+          source .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}-env.sh
+          python setup.py bdist_wheel --dist-dir=dist
 
       - name: Test wheel
         run: |
