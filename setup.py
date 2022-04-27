@@ -47,10 +47,6 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
-        CUDA_ARCH_LIST = os.environ.get('CUDA_ARCH_LIST', None)
-        if WITH_CUDA and CUDA_ARCH_LIST is not None:
-            cmake_args.append('-DCMAKE_CUDA_ARCHITECTURES=75')
-
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
 
