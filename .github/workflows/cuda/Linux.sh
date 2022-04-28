@@ -39,5 +39,4 @@ sudo apt clean
 
 rm -f ${FILENAME}
 sudo ln -sf /usr/local/cuda-${CUDA} /usr/local/cuda
-ls /usr/local
-ls /usr/local/cuda
+export PATH=/usr/local/cuda-${CUDA}/bin:${PATH}
