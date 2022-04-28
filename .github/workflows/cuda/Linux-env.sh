@@ -10,6 +10,9 @@ case ${1} in
   cu102)
     export CUDA_HOME=/usr/local/cuda-10.2
     ;;
+  cpu)
+    exit 0
+    ;;
   *)
     echo "Unrecognized CUDA_VERSION=${1}"
     exit 1
