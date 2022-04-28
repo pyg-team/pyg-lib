@@ -32,6 +32,10 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet
 
+      - name: Install ninja
+        run: |
+          sudo apt-get install -y ninja-build
+
       - name: Install CUDA ${{ matrix.cuda-version }}
         if: ${{ matrix.cuda-version != 'cpu' }}
         run: |
@@ -55,7 +59,6 @@ jobs:
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TODAY=`date +'%Y%m%d'`
-          sed -i "s/name='pyg_lib'/name='pyg_lib_nightly'/" setup.py
           sed -i "s/$VERSION/$VERSION.dev$TODAY/" setup.py
           sed -i "s/$VERSION/$VERSION.dev$TODAY/" pyg_lib/__init__.py
 

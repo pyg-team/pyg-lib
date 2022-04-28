@@ -47,8 +47,11 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
+        print("WITH NINJA???????????")
+        print(importlib.util.find_spec('ninja'))
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
+        print(cmake_args)
 
         build_args = []
 
