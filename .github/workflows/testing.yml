@@ -34,7 +34,7 @@ jobs:
           pip install ninja
           mkdir build
           cd build
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DCMAKE_BUILD_TYPE=DEBUG
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG
           cd ..
 
       - name: Build
