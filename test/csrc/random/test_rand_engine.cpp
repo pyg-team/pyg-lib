@@ -110,6 +110,7 @@ TEST(RandrealRandomTest, BasicAssertions) {
     bucket_count[bucket]++;
   }
 
+  // If max bucket count is 20% greater than min bucket count.
   EXPECT_LT(1.0 * *std::max_element(bucket_count.begin(), bucket_count.end()),
             1.2 * *std::min_element(bucket_count.begin(), bucket_count.end()));
 }
@@ -154,9 +155,6 @@ TEST(RandrealValidTest, BasicAssertions) {
 }
 
 TEST(RandrealSeedTest, BasicAssertions) {
-  int64_t beg = 12345678;
-  int64_t end = 87654321;
-
   at::manual_seed(147);
   pyg::random::RandrealEngine<float> eng1;
 
