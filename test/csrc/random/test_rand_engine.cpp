@@ -3,7 +3,7 @@
 #include <set>
 #include <vector>
 
-#include "pyg_lib/csrc/random/cpu/randint_engine.h"
+#include "pyg_lib/csrc/random/cpu/rand_engine.h"
 
 TEST(RandintRandomTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng;

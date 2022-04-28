@@ -114,6 +114,76 @@ class RandintEngine {
   PrefetchedRandint prefetched_;
 };
 
+/**
+ * Amortized O(1) uniform random reals within [0,1).
+ *
+ * Reduced torch random overheads by prefetching large random numbers in
+ * advance. Prefetched random reals are consumed on demand.
+ *
+ */
+class PrefetchedRandreal {
+ public:
+  PrefetchedRandreal() : PrefetchedRandreal(RAND_PREFETCH_SIZE) {}
+  PrefetchedRandreal(int size) { prefetch(size); }
+
+  /**
+   * Generate next random real number in [0,1) uniformly
+   *
+   * @tparam T user type of random numbers
+   *
+   * @returns the chosen number in [0,1)
+   */
+  template <typename T>
+  T next() {
+    // Consume some bits
+    if (size_ > 0) {
+      size_--;
+    } else {
+      // Prefetch if no enough real numbers
+      prefetch(prefetched_randreal_.size(0));
+    }
+
+    // torch::rand gives floats by default.
+    float* prefetch_ptr = prefetched_randreal_.data_ptr<float>();
+
+    float res = prefetch_ptr[size_];
+
+    // Safe conversion because the result is in range [0,1)
+    return (T)res;
+  }
+
+ private:
+  // Prefetch random real numbers. In-place random if prefetching size is the
+  // same.
+  void prefetch(int size) {
+    if (prefetched_randreal_.size(0) != size) {
+      prefetched_randreal_ = at::rand({size});
+    } else {
+      prefetched_randreal_.uniform_();
+    }
+    size_ = size - 1;
+  }
+
+  at::Tensor prefetched_randreal_;
+  int size_;
+};
+
+/**
+ * Randreal functor for uniform real distribution.
+ * Wrapped PrefetchedRandreal as its efficient core implementation.
+ */
+template <typename T>
+class RandrealEngine {
+ public:
+  RandrealEngine() : prefetched_(RAND_PREFETCH_SIZE) {}
+
+  // Uniform random number within range [beg, end)
+  T operator()() { return prefetched_.next<T>(); }
+
+ private:
+  PrefetchedRandreal prefetched_;
+};
+
 }  // namespace random
 
 }  // namespace pyg
