@@ -32,10 +32,9 @@ jobs:
       - name: Configure
         run: |
           pip install ninja
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
           mkdir build
           cd build
-          cmake .. -GNinja -DBUILD_TEST=ON -DCMAKE_BUILD_TYPE=DEBUG
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DCMAKE_BUILD_TYPE=DEBUG
           cd ..
 
       - name: Build
