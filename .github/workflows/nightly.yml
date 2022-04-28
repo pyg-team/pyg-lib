@@ -60,8 +60,8 @@ jobs:
         if: ${{ matrix.cuda-version != 'cpu' }}
         run: |
           pip install wheel
-          # source .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}-env.sh
-          FORCE_CUDA=1 python setup.py bdist_wheel --dist-dir=dist
+          source .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}-env.sh
+          python setup.py bdist_wheel --dist-dir=dist
 
       - name: Test wheel
         run: |
