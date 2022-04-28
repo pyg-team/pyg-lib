@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <set>
 #include <vector>
 
@@ -90,5 +91,83 @@ TEST(RandintSeedTest, BasicAssertions) {
   pyg::random::RandintEngine<int64_t> eng2;
   for (auto r : res) {
     EXPECT_EQ(eng2(beg, end), r);
+  }
+}
+
+TEST(RandrealRandomTest, BasicAssertions) {
+  pyg::random::RandrealEngine<float> eng;
+
+  // Test if it is roughly random:
+  int num_buckets = 10;
+
+  std::vector<float> bucket_count(num_buckets, 0);
+
+  int iter = 10000;
+
+  for (int i = 0; i < iter; i++) {
+    float res = eng();
+    int bucket = res * num_buckets;
+    bucket_count[bucket]++;
+  }
+
+  EXPECT_LT(1.0 * *std::max_element(bucket_count.begin(), bucket_count.end()),
+            1.2 * *std::min_element(bucket_count.begin(), bucket_count.end()));
+}
+
+TEST(RandrealPrefetchTest, BasicAssertions) {
+  pyg::random::RandrealEngine<float> eng;
+
+  // Test many times to enable prefetching:
+  int iter = 10000;
+
+  for (int i = 0; i < iter; i++) {
+    auto res = eng();
+    EXPECT_LT(res, 1.0F);
+    EXPECT_GE(res, 0.0F);
+  }
+}
+
+TEST(RandrealValidTest, BasicAssertions) {
+  // Test types:
+  int iter = 10000;
+
+  pyg::random::RandrealEngine<float> eng_float;
+  for (int i = 0; i < iter; i++) {
+    auto res = eng_float();
+    EXPECT_LT(res, 1.0F);
+    EXPECT_GE(res, 0.0F);
+  }
+
+  pyg::random::RandrealEngine<double> eng_double;
+  for (int i = 0; i < iter; i++) {
+    auto res = eng_double();
+    EXPECT_LT(res, 1.0);
+    EXPECT_GE(res, 0.0);
+  }
+
+  pyg::random::RandrealEngine<long double> eng_long_double;
+  for (int i = 0; i < iter; i++) {
+    auto res = eng_long_double();
+    EXPECT_LT(res, 1.0L);
+    EXPECT_GE(res, 0.0L);
+  }
+}
+
+TEST(RandrealSeedTest, BasicAssertions) {
+  int64_t beg = 12345678;
+  int64_t end = 87654321;
+
+  at::manual_seed(147);
+  pyg::random::RandrealEngine<float> eng1;
+
+  std::vector<float> res;
+  for (int i = 0; i < 100; i++) {
+    res.push_back(eng1());
+  }
+
+  at::manual_seed(147);
+  pyg::random::RandrealEngine<float> eng2;
+  for (auto r : res) {
+    EXPECT_EQ(eng2(), r);
   }
 }

@@ -154,7 +154,7 @@ class PrefetchedRandreal {
 
  private:
   // Prefetch random real numbers. In-place random if prefetching size is the
-  // same.
+  // same. FP32 precision is sufficient for all types of random real numbers.
   void prefetch(int size) {
     if (prefetched_randreal_.size(0) != size) {
       prefetched_randreal_ = at::rand({size});
