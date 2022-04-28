@@ -13,7 +13,7 @@ TEST(SubgraphTest, BasicAssertions) {
   auto out = pyg::sampler::subgraph(/*rowptr=*/std::get<0>(graph),
                                     /*col=*/std::get<1>(graph), nodes);
 
-  std::cout << get<0>(out) << std::endl;
-  std::cout << get<1>(out) << std::endl;
-  std::cout << get<2>(out) << std::endl;
+  std::cout << std::get<0>(out) << std::endl;
+  std::cout << std::get<1>(out) << std::endl;
+  std::cout << std::get<2>(out) << std::endl;
 }
