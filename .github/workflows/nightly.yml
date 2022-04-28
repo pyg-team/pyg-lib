@@ -43,11 +43,14 @@ jobs:
           pip install --no-index --no-cache-dir torch==${{ matrix.torch-version}} -f https://download.pytorch.org/whl/${{ matrix.cuda-version }}/torch_stable.html
           python -c "import torch; print('PyTorch:', torch.__version__)"
           python -c "import torch; print('CUDA:', torch.version.cuda)"
-          # Remove CUDNN dependency:
+
+      - name: Disable CUDNN
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
           Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
-          sed -i.bak -e '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
+          sed -i -e '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
+          sed -i -e 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
           cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
-          sed -i.bak -e 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
           cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
 
       - name: Build wheel
