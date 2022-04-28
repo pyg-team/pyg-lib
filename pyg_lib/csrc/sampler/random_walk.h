@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include "../macros.h"
+#include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
 namespace sampler {

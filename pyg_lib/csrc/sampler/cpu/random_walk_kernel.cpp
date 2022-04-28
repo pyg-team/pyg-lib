@@ -2,7 +2,7 @@
 #include <ATen/Parallel.h>
 #include <torch/library.h>
 
-#include "../../random/cpu/randint_engine.h"
+#include "pyg_lib/csrc/random/cpu/randint_engine.h"
 
 namespace pyg {
 namespace sampler {
