@@ -9,7 +9,7 @@ sudo dpkg -i cuda-repo-${OS}-11-5-local_11.5.2-495.29.05-1_amd64.deb
 sudo apt-key add /var/cuda-repo-${OS}-11-5-local/7fa2af80.pub
 
 sudo apt-get -qq update
-sudo apt install cuda-nvcc-11-5 cuda-libraries-dev-11-5
+sudo apt install cuda-nvcc-11-5 cuda-libraries-dev-11-5 cuda-command-line-tools-11-5
 sudo apt clean
 
 rm -f https://developer.download.nvidia.com/compute/cuda/11.5.2/local_installers/cuda-repo-${OS}-11-5-local_11.5.2-495.29.05-1_amd64.deb
