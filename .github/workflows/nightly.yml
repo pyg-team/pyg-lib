@@ -50,20 +50,10 @@ jobs:
           sed -i.bak -e 's/;caffe2::cudnn-public//g' /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
           cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
 
-      - name: Build wheel for CPU
-        if: ${{ matrix.cuda-version == 'cpu' }}
+      - name: Build wheel
         run: |
           pip install wheel
-          python setup.py bdist_wheel --dist-dir=dist
-
-      - name: Build wheel for CUDA
-        if: ${{ matrix.cuda-version != 'cpu' }}
-        run: |
-          pip install wheel
-          echo "---------------------------"
-          echo $PATH
-          echo "---------------------------"
-          source .github/workflows/cuda/${{ matrix.cuda-version }}-${{ runner.os }}-env.sh
+          source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           python setup.py bdist_wheel --dist-dir=dist
 
       - name: Test wheel
