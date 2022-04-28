@@ -45,6 +45,8 @@ jobs:
           python -c "import torch; print('CUDA:', torch.version.cuda)"
           sed -i.bak -e '86d;95,100d' /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
           cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
+          sed -i.bak -e 's/caffe2::cudnn-public//g' /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
+          cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
 
       - name: Build wheel for CPU
         if: ${{ matrix.cuda-version == 'cpu' }}
