@@ -43,6 +43,8 @@ jobs:
           pip install --no-index --no-cache-dir torch==${{ matrix.torch-version}} -f https://download.pytorch.org/whl/${{ matrix.cuda-version }}/torch_stable.html
           python -c "import torch; print('PyTorch:', torch.__version__)"
           python -c "import torch; print('CUDA:', torch.version.cuda)"
+          sed -i.bak -e '86d;95,100d' /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
+          cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
 
       - name: Build wheel for CPU
         if: ${{ matrix.cuda-version == 'cpu' }}
