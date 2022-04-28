@@ -1,10 +1,9 @@
 name: Nightly Wheels
 
 on:  # yamllint disable-line rule:truthy
-  push:
-    branches:
-      - master
-  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
 
 jobs:
 
