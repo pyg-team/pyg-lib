@@ -2,6 +2,11 @@
 
 OS=ubuntu1804
 
+CUDA=11.3
+CUDA_LONG=...
+FILENAME=cuda-repo-${OS}-${CUDA/./-}-local-${CUDA_LONG}_1.0-1_amd64.deb
+URL=https://developer.download.nvidia.com/compute/cuda/${CUDA}/Prod/local_installers/${FILENAME}
+
 wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
 sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
 wget -nv https://developer.download.nvidia.com/compute/cuda/11.3.0/local_installers/cuda-repo-${OS}-11-3-local_11.3.0-465.19.01-1_amd64.deb
