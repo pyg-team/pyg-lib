@@ -6,9 +6,10 @@
 namespace pyg {
 namespace sampler {
 
-PYG_API std::tuple<at::Tensor, at::Tensor> subgraph(const at::Tensor& rowptr,
-                                                    const at::Tensor& col,
-                                                    const at::Tensor& nodes);
+PYG_API std::tuple<at::Tensor, at::Tensor, at::Tensor> subgraph(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const at::Tensor& nodes);
 
 }  // namespace sampler
 }  // namespace pyg
