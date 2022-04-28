@@ -48,10 +48,16 @@ jobs:
         if: ${{ matrix.cuda-version != 'cpu' }}
         run: |
           Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
-          sed -i -e '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
-          sed -i -e 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
-          cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Config.cmake
-          cat /opt/hostedtoolcache/Python/3.9.12/x64/lib/python3.9/site-packages/torch/share/cmake/Caffe2/Caffe2Targets.cmake
+          sed -i '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
+          sed -i 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
+
+      - name: Set version
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TODAY=`date +'%Y%m%d'`
+          sed -i "s/name='pyg_lib'/name='pyg_lib_nightly'/" setup.py
+          sed -i "s/$VERSION/$VERSION.dev$TODAY/" setup.py
+          sed -i "s/$VERSION/$VERSION.dev$TODAY/" pyg_lib/__init__.py
 
       - name: Build wheel
         run: |

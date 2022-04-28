@@ -13,4 +13,6 @@ case ${1} in
     export FORCE_CUDA=1
     export PATH=/usr/local/cuda-10.2/bin:${PATH}
     ;;
+  *)
+    ;;
 esac
