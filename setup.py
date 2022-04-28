@@ -6,7 +6,7 @@ import subprocess
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.0.0'
+__version__ = '0.1.0'
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
@@ -35,10 +35,13 @@ class CMakeBuild(build_ext):
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
+        WITH_CUDA = torch.cuda.is_available()
+        WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DUSE_PYTHON=ON',
-            f'-DWITH_CUDA={"ON" if torch.cuda.is_available() else "OFF"}',
+            f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
@@ -57,12 +60,7 @@ class CMakeBuild(build_ext):
 
 install_requires = []
 
-test_requires = [
-    'pytest',
-    'pytest-cov',
-]
-
-dev_requires = test_requires + [
+dev_requires = [
     'pre-commit',
 ]
 
@@ -82,7 +80,7 @@ setup(
     url=URL,
     download_url=f'{URL}/archive/{__version__}.tar.gz',
     keywords=[
-        'deep-learning'
+        'deep-learning',
         'pytorch',
         'geometric-deep-learning',
         'graph-neural-networks',
@@ -91,7 +89,6 @@ setup(
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
-        'test': test_requires,
         'dev': dev_requires,
     },
     packages=find_packages(),

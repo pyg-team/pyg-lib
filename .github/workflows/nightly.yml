@@ -1,0 +1,83 @@
+name: Nightly Wheels
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+
+jobs:
+
+  wheel:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        torch-version: [1.11.0]
+        cuda-version: ['cpu', 'cu102', 'cu113', 'cu115']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Free up disk space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet
+
+      - name: Install CUDA ${{ matrix.cuda-version }}
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }}
+
+      - name: Install PyTorch ${{ matrix.torch-version }}+${{ matrix.cuda-version }}
+        run: |
+          pip install numpy typing-extensions dataclasses
+          pip install --no-index --no-cache-dir torch==${{ matrix.torch-version}} -f https://download.pytorch.org/whl/${{ matrix.cuda-version }}/torch_stable.html
+          python -c "import torch; print('PyTorch:', torch.__version__)"
+          python -c "import torch; print('CUDA:', torch.version.cuda)"
+
+      - name: Disable CUDNN
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
+          sed -i '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
+          sed -i 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
+
+      - name: Set version
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TODAY=`date +'%Y%m%d'`
+          sed -i "s/$VERSION/$VERSION.dev$TODAY/" setup.py
+          sed -i "s/$VERSION/$VERSION.dev$TODAY/" pyg_lib/__init__.py
+
+      - name: Build wheel
+        run: |
+          pip install ninja wheel
+          source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
+          python setup.py bdist_wheel --dist-dir=dist
+
+      - name: Test wheel
+        run: |
+          cd dist
+          ls -lah
+          pip install *.whl
+          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
+          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
+          cd ..
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+
+      - name: Upload wheel
+        run: |
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
