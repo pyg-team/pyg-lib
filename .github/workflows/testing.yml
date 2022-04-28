@@ -31,16 +31,23 @@ jobs:
 
       - name: Configure
         run: |
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake -S . -B build -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG
+          pip install ninja
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
+          mkdir build
+          cd build
+          cmake .. -GNinja -DBUILD_TEST=ON -DCMAKE_BUILD_TYPE=DEBUG
+          cd ..
 
       - name: Build
         run: |
-          cmake --build build --config DEBUG
+          cd build
+          cmake --build .
+          cd ..
 
       - name: Run tests
         run: |
           cd build
-          ctest -C DEBUG --output-on-failure --verbose
+          ctest --verbose --output-on-failure
           cd ..
 
       - name: Collect coverage

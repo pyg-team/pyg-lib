@@ -32,10 +32,6 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet
 
-      - name: Install ninja
-        run: |
-          sudo apt-get install -y ninja-build
-
       - name: Install CUDA ${{ matrix.cuda-version }}
         if: ${{ matrix.cuda-version != 'cpu' }}
         run: |
@@ -64,7 +60,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          pip install wheel
+          pip install ninja wheel
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           python setup.py bdist_wheel --dist-dir=dist
 
