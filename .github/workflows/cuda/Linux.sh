@@ -38,3 +38,6 @@ sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-comma
 sudo apt clean
 
 rm -f ${FILENAME}
+sudo ln -sf /usr/local/cuda-${CUDA} /usr/local/cuda
+ls /usr/local
+ls /usr/local/cuda
