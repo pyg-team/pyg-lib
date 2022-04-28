@@ -15,7 +15,7 @@ sudo dpkg -i ${FILENAME}
 sudo apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
 
 sudo apt-get -qq update
-sudo apt install cuda-nvcc-${CUDA/./-}- cuda-libraries-dev-${CUDA/./-} cuda-cupti-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
+sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
 sudo apt clean
 
 ls
