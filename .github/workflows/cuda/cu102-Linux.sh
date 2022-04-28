@@ -9,7 +9,7 @@ sudo dpkg -i cuda-repo-${OS}-10-2-local-10.2.89-440.33.01_1.0-1_amd64.deb
 sudo apt-key add /var/cuda-repo-10-2-local-10.2.89-440.33.01/7fa2af80.pub
 
 sudo apt-get -qq update
-sudo apt install cuda-nvcc-10-2 cuda-libraries-dev-10-2
+sudo apt install cuda-nvcc-10-2 cuda-libraries-dev-10-2 cuda-command-line-tools-10-2
 sudo apt clean
 
 rm -f https://developer.download.nvidia.com/compute/cuda/10.2/Prod/local_installers/cuda-repo-${OS}-10-2-local-10.2.89-440.33.01_1.0-1_amd64.deb
