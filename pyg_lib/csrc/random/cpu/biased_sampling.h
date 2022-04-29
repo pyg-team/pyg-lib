@@ -14,11 +14,11 @@ namespace random {
 // corresponding bias.
 
 /**
- * Biased random choice from a preprocessed CDF (exclusive sum) bias array
+ * scalar_ted random choice from a preprocessed CDF (exclusive sum) bias array
  *
- * @tparam Idx type of the set of indices to choose from
+ * @tparam index_t type of the set of indices to choose from
  *
- * @tparam Bias type of the weight array
+ * @tparam scalar_t type of the weight array
  *
  * @param idx the pointer to the start of the index array
  *
@@ -39,28 +39,28 @@ namespace random {
  * -> choose idx = 1
  */
 
-template <typename Idx, typename Bias>
-Idx biased_random_cdf(const Idx* idx,
-                      const Bias* cdf,
-                      int len,
-                      RandrealEngine<Bias>& eng) {
-  Bias rand = eng();
+template <typename index_t, typename scalar_t>
+index_t biased_random_cdf(const index_t* idx,
+                          const scalar_t* cdf,
+                          int len,
+                          RandrealEngine<scalar_t>& eng) {
+  scalar_t rand = eng();
   auto iter = std::lower_bound(cdf, cdf + len, rand);
   auto diff = std::distance(cdf, iter);
   return idx[diff - 1];
 }
 
 /**
- * Biased random choice from a preprocessed alias table with bias
+ * scalar_ted random choice from a preprocessed alias table with bias
  *
  * Reference:
  *
  * [An Efficient Method for Generating Discrete Random Variables with General
  * Distributions](https://dl.acm.org/doi/pdf/10.1145/355744.355749)
  *
- * @tparam Idx type of the set of indices to choose from
+ * @tparam index_t type of the set of indices to choose from
  *
- * @tparam Bias type of the weight array
+ * @tparam scalar_t type of the weight array
  *
  * @param idx the pointer to the start of the index array
  *
@@ -118,13 +118,13 @@ Idx biased_random_cdf(const Idx* idx,
  *
  */
 
-template <typename Idx, typename Bias>
-Idx biased_random_alias(const Idx* idx,
-                        const Idx* alias,
-                        const Bias* bias,
-                        int len,
-                        RandrealEngine<Bias>& eng) {
-  Bias rand = eng();
+template <typename index_t, typename scalar_t>
+index_t biased_random_alias(const index_t* idx,
+                            const index_t* alias,
+                            const scalar_t* bias,
+                            int len,
+                            RandrealEngine<scalar_t>& eng) {
+  scalar_t rand = eng();
   int choice = rand * len;
   bool is_alias = eng() > bias[choice];
   return is_alias ? alias[choice] : idx[choice];
