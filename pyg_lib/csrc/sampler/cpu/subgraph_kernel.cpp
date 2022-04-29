@@ -57,6 +57,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> subgraph_kernel(
     auto out_col_data = out_col.data_ptr<scalar_t>();
     auto out_edge_id_data = out_edge_id.data_ptr<scalar_t>();
 
+    // Customize `grain_size` based on the work each thread does (it will need
+    // to find `col.size(0) / nodes.size(0)` neighbors on average.
+    // TODO Benchmark this customization
     grain_size = std::max<int64_t>(out_col.size(0) / nodes.size(0), 1);
     grain_size = at::internal::GRAIN_SIZE / grain_size;
     at::parallel_for(0, nodes.size(0), grain_size, [&](int64_t _s, int64_t _e) {
