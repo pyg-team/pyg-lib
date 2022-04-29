@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include <torch/library.h>
 
 #include <limits.h>
 
@@ -115,5 +114,4 @@ class RandintEngine {
 };
 
 }  // namespace random
-
 }  // namespace pyg
