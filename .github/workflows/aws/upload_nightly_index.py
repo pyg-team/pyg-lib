@@ -14,12 +14,15 @@ args = {
 bucket = boto3.resource('s3').Bucket(name='data.pyg.org')
 
 wheels_dict = defaultdict(list)
-for obj in bucket.objects.filter(Prefix='whl/nightly/torch'):
+for obj in bucket.objects.filter(Prefix='whl/nightly'):
+    if obj.key[-3:] != 'whl':
+        continue
     torch_version, wheel_name = obj.key.split('/')[-2:]
     wheels_dict[torch_version].append(wheel_name)
 
 index_html = html.format('\n'.join([
-    href.format(f'{torch_version}.html', version) for version in wheels_dict
+    href.format(f'{torch_version}.html'.replace('+', '%2B'), version)
+    for version in wheels_dict
 ]))
 
 with open('index.html', 'w') as f:

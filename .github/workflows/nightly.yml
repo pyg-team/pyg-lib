@@ -1,13 +1,9 @@
 name: Nightly Wheels
 
 on:  # yamllint disable-line rule:truthy
-  # workflow_dispatch:
-  # schedule:
-  #   - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
-  push:
-    branches:
-      - master
-  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
 
 jobs:
 
@@ -18,8 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04]
-        # python-version: ['3.7', '3.8', '3.9', '3.10']
-        python-version: ['3.7']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         torch-version: [1.11.0]
         cuda-version: ['cpu', 'cu102', 'cu113', 'cu115']
 
