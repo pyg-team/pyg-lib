@@ -4,6 +4,7 @@
 
 #include "pyg_lib/csrc/random/cpu/biased_sampling.h"
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
+#include "test/csrc/graph.h"
 
 TEST(BiasedSamplingCDFRandomTest, BasicAssertions) {
   pyg::random::RandrealEngine<float> eng;
@@ -73,4 +74,10 @@ TEST(BiasedSamplingAliasRandomTest, BasicAssertions) {
   EXPECT_GT(cnt[1], 0.5 * iter);
   EXPECT_LT(cnt[2], 0.3 * iter);
   EXPECT_GT(cnt[2], 0.1 * iter);
+}
+
+TEST(BiasedSamplingCDFConversionTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/4, options);
 }

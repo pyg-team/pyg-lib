@@ -51,7 +51,7 @@ index_t biased_random_cdf(const index_t* idx,
 }
 
 /**
- * scalar_ted random choice from a preprocessed alias table with bias
+ * index random choice from a preprocessed alias table with bias
  *
  * Reference:
  *
@@ -129,6 +129,46 @@ index_t biased_random_alias(const index_t* idx,
   bool is_alias = eng() > bias[choice];
   return is_alias ? alias[choice] : idx[choice];
 }
+
+/**
+ * Give the CDF representation of a biased CSR.
+ *
+ * @param rowptr the row pointer of an CSR, needed because we want to group the
+ * neighbors of each node.
+ *
+ * @param bias the edge bias array which indicates the sampling weight for each
+ * edge.
+ *
+ * @returns the cdf array which is grouped by the neighbors of each node. For
+ * each group of neighbors, the weight is exclusively summed to form a cdf
+ * array. The sum of each group will be guranteed be equal to 1.
+ *
+ * Example:
+ *
+ * Neighbors of a node has the following bias: {0.5, 2.5, 1.0}
+ * The cdf of this group will be: {0.0, 0.125, 0.75}
+ *
+ */
+at::Tensor biased_to_cdf(at::Tensor rowptr, at::Tensor bias);
+
+void biased_to_cdf_inplace(at::Tensor rowptr, at::Tensor bias);
+
+template <typename scalar_t>
+void biased_to_cdf_helper(int64_t* rowptr_data,
+                          int64_t rowptr_size,
+                          const scalar_t* bias,
+                          scalar_t* cdf) {
+  for (int64_t i = 0; i < rowptr_size - 1; i++) {
+    const scalar_t* beg = bias + rowptr_data[i];
+    int64_t len = rowptr_data[i + 1] - rowptr_data[i];
+    scalar_t* out_beg = cdf + rowptr_data[i];
+    for (int64_t j = 1; j < len; j++) {
+      out_beg[j] += beg[j - 1];
+    }
+    out_beg[0] = 0;
+  }
+}
+
 }  // namespace random
 
 }  // namespace pyg
