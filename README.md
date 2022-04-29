@@ -15,6 +15,20 @@
 
 ## Installation
 
+### Form nightly
+
+Nightly wheels are provided for Linux from Python 3.7 till 3.10:
+
+```
+pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-1.11.0+${CUDA}.html
+```
+
+where `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu113`, or `cu115` depending on your PyTorch installation (`torch.version.cuda`).
+
+|             | `cpu` | `cu102` | `cu113` | `cu115` |
+|-------------|-------|---------|---------|---------|
+| **Linux**   | ✅    | ✅      | ✅      | ✅      |
+
 ### From master
 
 ```

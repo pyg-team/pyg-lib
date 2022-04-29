@@ -4,6 +4,10 @@ on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   schedule:
     - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
 
@@ -14,7 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04]
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        # python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7']
         torch-version: [1.11.0]
         cuda-version: ['cpu', 'cu102', 'cu113', 'cu115']
 
@@ -81,3 +86,25 @@ jobs:
       - name: Upload wheel
         run: |
           aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+  boto3:
+    if: ${{ always() }}
+    needs: [wheel]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install boto3
+
+      - name: Upload index
+        run: |
+          python ./.github/workflows/aws/upload_nightly_index.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
