@@ -81,3 +81,26 @@ jobs:
       - name: Upload wheel
         run: |
           aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+  boto3:
+    if: ${{ always() }}
+    needs: [wheel]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install boto3
+
+      - name: Upload index
+        run: |
+          python ./.github/workflows/aws/upload_nightly_index.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
