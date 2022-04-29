@@ -80,4 +80,21 @@ TEST(BiasedSamplingCDFConversionTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/4, options);
+  auto rowptr = std::get<0>(graph);
+
+  std::vector<float> bias_vec{1.5, 0.5, 0.8, 0.2, 0.1, 0.3, 1.0, 1.0};
+  std::vector<float> cdf_vec{0.0, 0.75, 0.0, 0.8, 0.0, 0.25, 0.0, 0.5};
+
+  at::Tensor bias = at::from_blob(bias_vec.data(), {bias_vec.size()},
+                                  at::TensorOptions().dtype(at::kFloat));
+  at::Tensor cdf = at::from_blob(cdf_vec.data(), {cdf_vec.size()},
+                                 at::TensorOptions().dtype(at::kFloat));
+
+  auto res = pyg::random::biased_to_cdf(rowptr, bias);
+
+  EXPECT_TRUE(at::equal(res, cdf));
+
+  pyg::random::biased_to_cdf_inplace(rowptr, bias);
+
+  EXPECT_TRUE(at::equal(bias, cdf));
 }

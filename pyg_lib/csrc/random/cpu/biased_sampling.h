@@ -162,10 +162,26 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
     const scalar_t* beg = bias + rowptr_data[i];
     int64_t len = rowptr_data[i + 1] - rowptr_data[i];
     scalar_t* out_beg = cdf + rowptr_data[i];
-    for (int64_t j = 1; j < len; j++) {
-      out_beg[j] += beg[j - 1];
+
+    // Remember sum, last element and current element to enable the in-place
+    // option (bias == cdf).
+    scalar_t sum = 0;
+    scalar_t last = beg[0], cur = 0;
+
+    for (int64_t j = 0; j < len; j++) {
+      sum += beg[j];
     }
+
     out_beg[0] = 0;
+    for (int64_t j = 1; j < len; j++) {
+      cur = beg[j];
+      out_beg[j] = last + out_beg[j - 1];
+      last = cur;
+    }
+
+    for (int64_t j = 1; j < len; j++) {
+      out_beg[j] /= sum;
+    }
   }
 }
 
