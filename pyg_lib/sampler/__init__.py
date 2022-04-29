@@ -1,5 +1,26 @@
+from typing import Tuple
+
 import torch
 from torch import Tensor
+
+
+def subgraph(rowptr: Tensor, col: Tensor,
+             nodes: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+    r"""Returns the induced subgraph of the graph given by
+    :obj:`(rowptr, col)`, containing only the nodes in :obj:`nodes`.
+
+    Args:
+        rowptr (torch.Tensor): Compressed source node indices.
+        col (torch.Tensor): Target node indices.
+        nodes (torch.Tensor): Node indices of the induced subgraph.
+
+    Returns:
+        (torch.Tensor, torch.Tensor, torch.Tensor): Compressed source node
+        indices and target node indices of the induced subgraph. In addition,
+        returns the indices of edges of the original graph contained in the
+        induced subgraph.
+    """
+    return torch.ops.pyg.subgraph(rowptr, col, nodes)
 
 
 def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
@@ -21,12 +42,13 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
             (default: :obj:`1.0`)
 
     Returns:
-        torch.Tensor: A tensor of shape :obj:`[seed.size(0), walk_length + 1]`
+        torch.Tensor: A tensor of shape :obj:`[seed.size(0), walk_length + 1]`,
         holding the nodes indices of each walk for each seed node.
     """
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 
 
 __all__ = [
+    'subgraph',
     'random_walk',
 ]
