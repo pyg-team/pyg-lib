@@ -151,8 +151,11 @@ index_t biased_random_alias(const index_t* idx,
  */
 at::Tensor biased_to_cdf(at::Tensor rowptr, at::Tensor bias);
 
+// An in-place version of the previous function. Replace the bias tensor with
+// its corresponding CDF representation.
 void biased_to_cdf_inplace(at::Tensor rowptr, at::Tensor bias);
 
+// The implementation of coverting to CDF representation for biased sampling.
 template <typename scalar_t>
 void biased_to_cdf_helper(int64_t* rowptr_data,
                           int64_t rowptr_size,
@@ -185,9 +188,37 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
   }
 }
 
+/**
+ * Give the alias table of a biased CSR.
+ *
+ * @param rowptr the row pointer of an CSR, needed because we want to group the
+ * neighbors of each node.
+ *
+ * @param bias the edge bias array which indicates the sampling weight for each
+ * edge.
+ *
+ * @returns A pair of tensors: {bias, alias}
+ *
+ * The output alias tensor is the alias index of the corresponding entry. For
+ * each entry, we can either sample the entry index itself or the alias index.
+ *
+ * The output bias is grouped by the neighbors of each node. For
+ * each group of neighbors, the number (p) means the probability of sampling the
+ * index of this alias table entry instead of its alias index (1 - p).
+ *
+ * Example:
+ *
+ * Neighbors of a node has the following bias: {0.5, 3, 0.5}
+ * The output bias of this group will be: {0.5, 1.0, 0.5}
+ * The alias of this group will be: {1, 1, 1}
+ * Because index 1 has a high bias number, 0 and 2 will make 1 the alias index
+ * in their alias table entries.
+ *
+ */
 std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
                                                   at::Tensor bias);
 
+// The implementation of coverting to alias table for biased sampling.
 template <typename scalar_t>
 void biased_to_alias_helper(int64_t* rowptr_data,
                             int64_t rowptr_size,
@@ -196,6 +227,7 @@ void biased_to_alias_helper(int64_t* rowptr_data,
                             int64_t* alias) {
   scalar_t eps = 1e-6;
 
+  // Calculate the average bias
   for (int64_t i = 0; i < rowptr_size - 1; i++) {
     const scalar_t* beg = bias + rowptr_data[i];
     int64_t len = rowptr_data[i + 1] - rowptr_data[i];
@@ -208,34 +240,44 @@ void biased_to_alias_helper(int64_t* rowptr_data,
     }
     avg /= len;
 
+    // The sets for index with a bias lower or higher than average
     std::vector<std::pair<int64_t, scalar_t>> high, low;
 
     for (int64_t j = 0; j < len; j++) {
       scalar_t b = beg[j];
+      // Allow some floating point error
       if (b > avg + eps) {
         high.push_back({j, b});
       } else if (b < avg - eps) {
         low.push_back({j, b});
-      } else {
+      } else {  // if close to avg, make it a stable entry
         out_beg[j] = 1;
         alias_beg[j] = j;
       }
     }
 
+    // Keep merging two elements, one from the lower bias set and the other from
+    // the higher bias set.
     while (!low.empty()) {
       auto [low_idx, low_bias] = low.back();
+
+      // An index with bias lower than average means another higher one.
       TORCH_CHECK(!high.empty(),
                   "every bias lower than avg should have a higher counterpart");
       auto [high_idx, high_bias] = high.back();
       low.pop_back();
       high.pop_back();
 
+      // Handle the lower one:
       out_beg[low_idx] = low_bias / avg;
       alias_beg[low_idx] = high_idx;
 
+      // Handle the higher one:
       scalar_t high_bias_left = high_bias - (avg - low_bias);
       out_beg[high_idx] = 1;
       alias_beg[high_idx] = high_idx;
+
+      // Dispatch the remaining bias to the corresponding set.
       if (high_bias_left > avg + eps) {
         high.push_back({high_idx, high_bias_left});
       } else if (high_bias_left < avg - eps) {
