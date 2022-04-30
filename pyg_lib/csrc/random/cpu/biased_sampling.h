@@ -127,7 +127,7 @@ index_t biased_random_alias(const index_t* idx,
   scalar_t rand = eng();
   int choice = rand * len;
   bool is_alias = eng() > bias[choice];
-  return is_alias ? alias[choice] : idx[choice];
+  return is_alias ? idx[alias[choice]] : idx[choice];
 }
 
 /**
@@ -181,6 +181,66 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
 
     for (int64_t j = 1; j < len; j++) {
       out_beg[j] /= sum;
+    }
+  }
+}
+
+std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
+                                                  at::Tensor bias);
+
+template <typename scalar_t>
+void biased_to_alias_helper(int64_t* rowptr_data,
+                            int64_t rowptr_size,
+                            const scalar_t* bias,
+                            scalar_t* out_bias,
+                            int64_t* alias) {
+  scalar_t eps = 1e-6;
+
+  for (int64_t i = 0; i < rowptr_size - 1; i++) {
+    const scalar_t* beg = bias + rowptr_data[i];
+    int64_t len = rowptr_data[i + 1] - rowptr_data[i];
+    scalar_t* out_beg = out_bias + rowptr_data[i];
+    int64_t* alias_beg = alias + rowptr_data[i];
+    scalar_t avg = 0;
+
+    for (int64_t j = 0; j < len; j++) {
+      avg += beg[j];
+    }
+    avg /= len;
+
+    std::vector<std::pair<int64_t, scalar_t>> high, low;
+
+    for (int64_t j = 0; j < len; j++) {
+      scalar_t b = beg[j];
+      if (b > avg + eps) {
+        high.push_back({j, b});
+      } else if (b < avg - eps) {
+        low.push_back({j, b});
+      } else {
+        out_beg[j] = 1;
+        alias_beg[j] = j;
+      }
+    }
+
+    while (!low.empty()) {
+      auto [low_idx, low_bias] = low.back();
+      TORCH_CHECK(!high.empty(),
+                  "every bias lower than avg should have a higher counterpart");
+      auto [high_idx, high_bias] = high.back();
+      low.pop_back();
+      high.pop_back();
+
+      out_beg[low_idx] = low_bias / avg;
+      alias_beg[low_idx] = high_idx;
+
+      scalar_t high_bias_left = high_bias - (avg - low_bias);
+      out_beg[high_idx] = 1;
+      alias_beg[high_idx] = high_idx;
+      if (high_bias_left > avg + eps) {
+        high.push_back({high_idx, high_bias_left});
+      } else if (high_bias_left < avg - eps) {
+        low.push_back({high_idx, high_bias_left});
+      }
     }
   }
 }
