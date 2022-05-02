@@ -44,24 +44,18 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
                        int64_t len = rowptr_data[i + 1] - rowptr_data[i];
                        scalar_t* out_beg = cdf + rowptr_data[i];
 
-                       // Remember sum, last element and current element to
+                       // Remember sum and current element to
                        // enable the in-place option (bias == cdf).
                        scalar_t sum = 0;
-                       scalar_t last = beg[0], cur = 0;
 
                        for (int64_t j = 0; j < len; j++) {
                          sum += beg[j];
                        }
 
-                       out_beg[0] = 0;
-                       for (int64_t j = 1; j < len; j++) {
-                         cur = beg[j];
-                         out_beg[j] = last + out_beg[j - 1];
-                         last = cur;
-                       }
-
-                       for (int64_t j = 1; j < len; j++) {
-                         out_beg[j] /= sum;
+                       scalar_t cur = sum;
+                       for (int64_t j = len - 1; j >= 0; j--) {
+                         cur -= beg[j];
+                         out_beg[j] = cur / sum;
                        }
                      }
                    });
@@ -115,6 +109,9 @@ void biased_to_alias_helper(int64_t* rowptr_data,
           // The sets for index with a bias lower or higher than average
           std::vector<std::pair<int64_t, scalar_t>> high, low;
 
+          low.reserve(len / 2 + 1);
+          high.reserve(len / 2 + 1);
+
           for (int64_t j = 0; j < len; j++) {
             scalar_t b = beg[j];
             // Allow some floating point error
@@ -149,14 +146,15 @@ void biased_to_alias_helper(int64_t* rowptr_data,
 
             // Handle the higher one:
             scalar_t high_bias_left = high_bias - (avg - low_bias);
-            out_beg[high_idx] = 1;
-            alias_beg[high_idx] = high_idx;
 
             // Dispatch the remaining bias to the corresponding set.
             if (high_bias_left > avg + eps) {
               high.push_back({high_idx, high_bias_left});
             } else if (high_bias_left < avg - eps) {
               low.push_back({high_idx, high_bias_left});
+            } else {
+              out_beg[high_idx] = 1;
+              alias_beg[high_idx] = high_idx;
             }
           }
         }
