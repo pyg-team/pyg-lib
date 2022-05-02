@@ -18,5 +18,5 @@ TEST(SubgraphTest, BasicAssertions) {
   auto expected_col = at::tensor({1, 0, 2, 1, 3, 2}, options);
   EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
   auto expected_edge_id = at::tensor({3, 4, 5, 6, 7, 8}, options);
-  EXPECT_TRUE(at::equal(std::get<2>(out), expected_edge_id));
+  EXPECT_TRUE(at::equal(std::get<2>(out).value(), expected_edge_id));
 }
