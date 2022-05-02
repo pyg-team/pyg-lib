@@ -139,9 +139,9 @@ index_t biased_random_alias(const index_t* idx,
  * @param bias the edge bias array which indicates the sampling weight for each
  * edge.
  *
- * @returns the cdf array which is grouped by the neighbors of each node. For
- * each group of neighbors, the weight is exclusively summed to form a cdf
- * array. The sum of each group will be guranteed be equal to 1.
+ * @returns (optional) the cdf array which is grouped by the neighbors of each
+ * node. For each group of neighbors, the weight is exclusively summed to form a
+ * cdf array. The sum of each group will be guranteed be equal to 1.
  *
  * Example:
  *
@@ -149,11 +149,9 @@ index_t biased_random_alias(const index_t* idx,
  * The cdf of this group will be: {0.0, 0.125, 0.75}
  *
  */
-at::Tensor biased_to_cdf(at::Tensor rowptr, at::Tensor bias);
-
-// An in-place version of the previous function. Replace the bias tensor with
-// its corresponding CDF representation.
-void biased_to_cdf_inplace(at::Tensor rowptr, at::Tensor bias);
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
+                                        at::Tensor& bias,
+                                        bool inplace);
 
 // The implementation of coverting to CDF representation for biased sampling.
 template <typename scalar_t>
@@ -182,7 +180,7 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
  *
  * Example:
  *
- * Neighbors of a node has the following bias: {0.5, 3, 0.5}
+ * Neighbors of a node has the following bias: {0.5, 2, 0.5}
  * The output bias of this group will be: {0.5, 1.0, 0.5}
  * The alias of this group will be: {1, 1, 1}
  * Because index 1 has a high bias number, 0 and 2 will make 1 the alias index

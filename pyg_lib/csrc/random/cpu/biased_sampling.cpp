@@ -3,34 +3,29 @@
 namespace pyg {
 namespace random {
 
-at::Tensor biased_to_cdf(at::Tensor rowptr, at::Tensor bias) {
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
+                                        at::Tensor& bias,
+                                        bool inplace) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(bias.is_cpu(), "'bias' must be a CPU tensor");
 
   auto cdf = at::empty_like(bias);
+  // TODO: Also dispatch index type
   int64_t rowptr_size = rowptr.size(0);
   int64_t* rowptr_data = rowptr.data_ptr<int64_t>();
 
   AT_DISPATCH_FLOATING_TYPES(bias.scalar_type(), "biased_to_cdf", [&] {
-    auto bias_data = bias.data_ptr<scalar_t>();
-    auto cdf_data = cdf.data_ptr<scalar_t>();
+    const auto bias_data = bias.data_ptr<scalar_t>();
+    scalar_t* cdf_data = nullptr;
+    if (inplace) {
+      cdf_data = bias.data_ptr<scalar_t>();
+    } else {
+      cdf_data = cdf.data_ptr<scalar_t>();
+    }
     biased_to_cdf_helper(rowptr_data, rowptr_size, bias_data, cdf_data);
   });
 
   return cdf;
-}
-
-void biased_to_cdf_inplace(at::Tensor rowptr, at::Tensor bias) {
-  TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
-  TORCH_CHECK(bias.is_cpu(), "'bias' must be a CPU tensor");
-
-  int64_t rowptr_size = rowptr.size(0);
-  int64_t* rowptr_data = rowptr.data_ptr<int64_t>();
-
-  AT_DISPATCH_FLOATING_TYPES(bias.scalar_type(), "biased_to_cdf_inplace", [&] {
-    scalar_t* bias_data = bias.data_ptr<scalar_t>();
-    biased_to_cdf_helper(rowptr_data, rowptr_size, bias_data, bias_data);
-  });
 }
 
 // The implementation of coverting to CDF representation for biased sampling.

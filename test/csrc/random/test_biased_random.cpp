@@ -90,11 +90,11 @@ TEST(BiasedSamplingCDFConversionTest, BasicAssertions) {
   at::Tensor cdf = at::from_blob(cdf_vec.data(), {cdf_vec.size()},
                                  at::TensorOptions().dtype(at::kFloat));
 
-  auto res = pyg::random::biased_to_cdf(rowptr, bias);
+  auto res = pyg::random::biased_to_cdf(rowptr, bias, false);
 
-  EXPECT_TRUE(at::equal(res, cdf));
+  EXPECT_TRUE(at::equal(res.value(), cdf));
 
-  pyg::random::biased_to_cdf_inplace(rowptr, bias);
+  pyg::random::biased_to_cdf(rowptr, bias, true);
 
   EXPECT_TRUE(at::equal(bias, cdf));
 }
