@@ -51,7 +51,7 @@ index_t biased_random_cdf(const index_t* idx,
 }
 
 /**
- * scalar_ted random choice from a preprocessed alias table with bias
+ * index random choice from a preprocessed alias table with bias
  *
  * Reference:
  *
@@ -127,8 +127,77 @@ index_t biased_random_alias(const index_t* idx,
   scalar_t rand = eng();
   int choice = rand * len;
   bool is_alias = eng() > bias[choice];
-  return is_alias ? alias[choice] : idx[choice];
+  return is_alias ? idx[alias[choice]] : idx[choice];
 }
+
+/**
+ * Give the CDF representation of a biased CSR.
+ *
+ * @param rowptr the row pointer of an CSR, needed because we want to group the
+ * neighbors of each node.
+ *
+ * @param bias the edge bias array which indicates the sampling weight for each
+ * edge.
+ *
+ * @returns (optional) the cdf array which is grouped by the neighbors of each
+ * node. For each group of neighbors, the weight is exclusively summed to form a
+ * cdf array. The sum of each group will be guranteed be equal to 1.
+ *
+ * Example:
+ *
+ * Neighbors of a node has the following bias: {0.5, 2.5, 1.0}
+ * The cdf of this group will be: {0.0, 0.125, 0.75}
+ *
+ */
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
+                                        at::Tensor& bias,
+                                        bool inplace);
+
+// The implementation of coverting to CDF representation for biased sampling.
+template <typename scalar_t>
+void biased_to_cdf_helper(int64_t* rowptr_data,
+                          size_t rowptr_size,
+                          const scalar_t* bias,
+                          scalar_t* cdf);
+
+/**
+ * Give the alias table of a biased CSR.
+ *
+ * @param rowptr the row pointer of an CSR, needed because we want to group the
+ * neighbors of each node.
+ *
+ * @param bias the edge bias array which indicates the sampling weight for each
+ * edge.
+ *
+ * @returns A pair of tensors: {bias, alias}
+ *
+ * The output alias tensor is the alias index of the corresponding entry. For
+ * each entry, we can either sample the entry index itself or the alias index.
+ *
+ * The output bias is grouped by the neighbors of each node. For
+ * each group of neighbors, the number (p) means the probability of sampling the
+ * index of this alias table entry instead of its alias index (1 - p).
+ *
+ * Example:
+ *
+ * Neighbors of a node has the following bias: {0.5, 2, 0.5}
+ * The output bias of this group will be: {0.5, 1.0, 0.5}
+ * The alias of this group will be: {1, 1, 1}
+ * Because index 1 has a high bias number, 0 and 2 will make 1 the alias index
+ * in their alias table entries.
+ *
+ */
+std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
+                                                  at::Tensor bias);
+
+// The implementation of coverting to alias table for biased sampling.
+template <typename scalar_t>
+void biased_to_alias_helper(int64_t* rowptr_data,
+                            size_t rowptr_size,
+                            const scalar_t* bias,
+                            scalar_t* out_bias,
+                            int64_t* alias);
+
 }  // namespace random
 
 }  // namespace pyg
