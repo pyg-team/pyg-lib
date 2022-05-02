@@ -131,13 +131,15 @@ void biased_to_alias_helper(int64_t* rowptr_data,
           // Keep merging two elements, one from the lower bias set and the
           // other from the higher bias set.
           while (!low.empty()) {
-            auto [low_idx, low_bias] = low.back();
+            auto low_idx = std::get<0>(low.back());
+            auto low_bias = std::get<1>(low.back());
 
             // An index with bias lower than average means another higher one.
             TORCH_CHECK(
                 !high.empty(),
                 "every bias lower than avg should have a higher counterpart");
-            auto [high_idx, high_bias] = high.back();
+            auto high_idx = std::get<0>(high.back());
+            auto high_bias = std::get<1>(high.back());
             low.pop_back();
             high.pop_back();
 

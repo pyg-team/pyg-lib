@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(pyg)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(PYG_VERSION 0.1.0)
 
 option(BUILD_TEST "Enable testing" OFF)

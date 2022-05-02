@@ -116,7 +116,9 @@ TEST(BiasedSamplingAliasConversionTest, BasicAssertions) {
   at::Tensor alias = at::from_blob(alias_vec.data(), {alias_vec.size()},
                                    at::TensorOptions().dtype(at::kLong));
 
-  auto [res_bias, res_alias] = pyg::random::biased_to_alias(rowptr, bias);
+  auto res = pyg::random::biased_to_alias(rowptr, bias);
+  auto res_bias = std::get<0>(res);
+  auto res_alias = std::get<1>(res);
 
   EXPECT_TRUE(at::equal(res_bias, out_bias));
 
