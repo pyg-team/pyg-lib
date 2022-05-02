@@ -6,10 +6,11 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> subgraph(
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
     const at::Tensor& rowptr,
     const at::Tensor& col,
-    const at::Tensor& nodes) {
+    const at::Tensor& nodes,
+    bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg nodes_t{nodes, "nodes", 1};
@@ -21,13 +22,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> subgraph(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::subgraph", "")
                        .typed<decltype(subgraph)>();
-  return op.call(rowptr, col, nodes);
+  return op.call(rowptr, col, nodes, return_edge_id);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::subgraph(Tensor rowptr, Tensor col, Tensor "
-                             "nodes) -> (Tensor, Tensor, Tensor)"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::subgraph(Tensor rowptr, Tensor col, Tensor "
+      "nodes, bool return_edge_id) -> (Tensor, Tensor, Tensor?)"));
 }
 
 }  // namespace sampler

@@ -9,17 +9,19 @@ namespace sampler {
 
 namespace {
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> subgraph_kernel(
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
     const at::Tensor& col,
-    const at::Tensor& nodes) {
+    const at::Tensor& nodes,
+    bool return_edge_id) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
 
   const auto deg = rowptr.new_empty({nodes.size(0)});
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
-  at::Tensor out_col, out_edge_id;
+  at::Tensor out_col;
+  at::Tensor out_edge_id;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
