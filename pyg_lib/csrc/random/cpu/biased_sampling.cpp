@@ -12,8 +12,8 @@ at::Tensor biased_to_cdf(at::Tensor rowptr, at::Tensor bias) {
   int64_t* rowptr_data = rowptr.data_ptr<int64_t>();
 
   AT_DISPATCH_FLOATING_TYPES(bias.scalar_type(), "biased_to_cdf", [&] {
-    scalar_t* bias_data = bias.data_ptr<scalar_t>();
-    scalar_t* cdf_data = cdf.data_ptr<scalar_t>();
+    auto bias_data = bias.data_ptr<scalar_t>();
+    auto cdf_data = cdf.data_ptr<scalar_t>();
     biased_to_cdf_helper(rowptr_data, rowptr_size, bias_data, cdf_data);
   });
 
