@@ -13,7 +13,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& nodes,
-    bool return_edge_id) {
+    const bool return_edge_id) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
@@ -21,7 +21,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   const auto deg = rowptr.new_empty({nodes.size(0)});
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
   at::Tensor out_col;
-  at::Tensor out_edge_id;
+  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
@@ -55,9 +55,12 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     at::cumsum_out(tmp, deg, /*dim=*/0);
 
     out_col = col.new_empty({out_rowptr_data[nodes.size(0)]});
-    out_edge_id = col.new_empty({out_rowptr_data[nodes.size(0)]});
     auto out_col_data = out_col.data_ptr<scalar_t>();
-    auto out_edge_id_data = out_edge_id.data_ptr<scalar_t>();
+    scalar_t* out_edge_id_data;
+    if (return_edge_id) {
+      out_edge_id = col.new_empty({out_rowptr_data[nodes.size(0)]});
+      out_edge_id_data = out_edge_id.value().data_ptr<scalar_t>();
+    }
 
     // Customize `grain_size` based on the work each thread does (it will need
     // to find `col.size(0) / nodes.size(0)` neighbors on average).
@@ -74,7 +77,8 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
           const auto search = to_local_node.find(w);
           if (search != to_local_node.end()) {
             out_col_data[offset] = search->second;
-            out_edge_id_data[offset] = j;
+            if (return_edge_id)
+              out_edge_id_data[offset] = j;
             offset++;
           }
         }
