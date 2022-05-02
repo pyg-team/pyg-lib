@@ -156,7 +156,7 @@ c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
 // The implementation of coverting to CDF representation for biased sampling.
 template <typename scalar_t>
 void biased_to_cdf_helper(int64_t* rowptr_data,
-                          int64_t rowptr_size,
+                          size_t rowptr_size,
                           const scalar_t* bias,
                           scalar_t* cdf);
 
@@ -193,7 +193,7 @@ std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
 // The implementation of coverting to alias table for biased sampling.
 template <typename scalar_t>
 void biased_to_alias_helper(int64_t* rowptr_data,
-                            int64_t rowptr_size,
+                            size_t rowptr_size,
                             const scalar_t* bias,
                             scalar_t* out_bias,
                             int64_t* alias);
