@@ -58,7 +58,8 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
     const auto rand_data = rand.data_ptr<float>();
     auto out_data = out.data_ptr<scalar_t>();
 
-    random_walk_kernel_impl<<<blocks(seed.size(0)), threads(), 0, stream>>>(
+    random_walk_kernel_impl<<<pyg::utils::blocks(seed.size(0)),
+                              pyg::utils::threads(), 0, stream>>>(
         rowptr_data, col_data, seed_data, rand_data, out_data, seed.size(0),
         walk_length);
   });
