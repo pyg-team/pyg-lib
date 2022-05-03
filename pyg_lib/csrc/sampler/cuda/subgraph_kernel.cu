@@ -8,16 +8,15 @@ namespace sampler {
 
 namespace {
 
-template <typename scalar_t, bool return_edge_id>
-__global__ void subgraph_walk_kernel_impl(
+template <typename scalar_t>
+__global__ void subgraph_deg_kernel_impl(
     const scalar_t* __restrict__ rowptr_data,
     const scalar_t* __restrict__ col_data,
     const scalar_t* __restrict__ nodes_data,
-    const float* __restrict__ rand_data,
+    const scalar_t* __restrict__ to_local_node_data,
     scalar_t* __restrict__ out_data,
-    int64_t num_seeds,
-    int64_t walk_length) {
-  CUDA_1D_KERNEL_LOOP(scalar_t, i, num_seeds) {}
+    int64_t num_nodes) {
+  CUDA_1D_KERNEL_LOOP(scalar_t, i, 32 * num_nodes) {}
 }
 
 std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
@@ -31,9 +30,34 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
   const auto stream = at::cuda::getCurrentCUDAStream();
 
-  AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {});
+  // We maintain a O(N) vector to map global node indices to local ones.
+  // TODO Can we do this without O(N) storage requirement?
+  const auto to_local_node = nodes.new_empty({rowptr.size(0) - 1});
+  const auto arange = at::arange(nodes.size(0), nodes.options());
+  to_local_node.index_copy_(/*dim=*/0, nodes, arange);
 
-  return std::make_tuple(rowptr, rowptr, rowptr);
+  const auto deg = nodes.new_empty({nodes.size(0)});
+  const auto out_rowptr = rowptr.new_zeros({nodes.size(0) + 1});
+  at::Tensor out_col;
+  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
+
+  AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
+    const auto rowptr_data = rowptr.data_ptr<scalar_t>();
+    const auto col_data = col.data_ptr<scalar_t>();
+    const auto nodes_data = nodes.data_ptr<scalar_t>();
+    const auto to_local_node_data = to_local_node.data_ptr<scalar_t>();
+    auto deg_data = deg.data_ptr<scalar_t>();
+
+    subgraph_deg_kernel_impl<<<pyg::utils::blocks(32 * nodes.size(0)),
+                               pyg::utils::threads(), 0, stream>>>(
+        rowptr_data, col_data, nodes_data, to_local_node_data, deg_data,
+        nodes.size(0));
+
+    auto tmp = out_rowptr.narrow(0, 1, nodes.size(0));
+    at::cumsum_out(tmp, deg, /*dim=*/0);
+  });
+
+  return std::make_tuple(to_local_node, deg, rowptr);
 }
 
 }  // namespace

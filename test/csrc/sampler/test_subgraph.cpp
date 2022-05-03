@@ -16,6 +16,8 @@ TEST(SubgraphTest, BasicAssertions) {
   auto out = pyg::sampler::subgraph(/*rowptr=*/std::get<0>(graph),
                                     /*col=*/std::get<1>(graph), nodes);
 
+  std::cout << std::get<0>(out) << std::endl;
+
   /* auto expected_rowptr = at::tensor({0, 1, 3, 5, 6}, options); */
   /* EXPECT_TRUE(at::equal(std::get<0>(out), expected_rowptr)); */
   /* auto expected_col = at::tensor({1, 0, 2, 1, 3, 2}, options); */
