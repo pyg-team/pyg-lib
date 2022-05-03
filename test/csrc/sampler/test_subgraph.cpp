@@ -6,6 +6,9 @@
 
 TEST(SubgraphTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
+#ifdef WITH_CUDA
+  options = options.device(at::kCUDA);
+#endif
 
   auto nodes = at::arange(1, 5, options);
   auto graph = cycle_graph(/*num_nodes=*/6, options);
