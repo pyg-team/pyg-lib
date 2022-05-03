@@ -8,6 +8,8 @@ namespace sampler {
 
 namespace {
 
+#define FULL_MASK 0xffffffff
+
 template <typename scalar_t>
 __global__ void subgraph_deg_kernel_impl(
     const scalar_t* __restrict__ rowptr_data,
@@ -16,7 +18,24 @@ __global__ void subgraph_deg_kernel_impl(
     const scalar_t* __restrict__ to_local_node_data,
     scalar_t* __restrict__ out_data,
     int64_t num_nodes) {
-  CUDA_1D_KERNEL_LOOP(scalar_t, i, 32 * num_nodes) {}
+  CUDA_1D_KERNEL_LOOP(scalar_t, thread_idx, 32 * num_nodes) {
+    scalar_t i = thread_idx >> 5;           // thread_idx / 32
+    scalar_t lane = thread_idx & (32 - 1);  // thread_idx % 32
+
+    auto v = nodes_data[i];
+
+    scalar_t deg = 0;
+    for (scalar_t j = rowptr_data[v] + lane; j < rowptr_data[v + 1]; j += 32) {
+      if (to_local_node_data[col_data[j]] >= 0)  // contiguous access
+        deg++;
+    }
+
+    for (scalar_t offset = 16; offset > 0; offset /= 2)  // warp-level reduction
+      deg += __shfl_down_sync(FULL_MASK, deg, offset);
+
+    if (lane == 0)
+      out_data[i] = deg;
+  }
 }
 
 std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
@@ -32,7 +51,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
   // We maintain a O(N) vector to map global node indices to local ones.
   // TODO Can we do this without O(N) storage requirement?
-  const auto to_local_node = nodes.new_empty({rowptr.size(0) - 1});
+  const auto to_local_node = nodes.new_full({rowptr.size(0) - 1}, -1);
   const auto arange = at::arange(nodes.size(0), nodes.options());
   to_local_node.index_copy_(/*dim=*/0, nodes, arange);
 
@@ -48,6 +67,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const auto to_local_node_data = to_local_node.data_ptr<scalar_t>();
     auto deg_data = deg.data_ptr<scalar_t>();
 
+    // Compute induced subgraph degree, parallelize with 32 threads per node:
     subgraph_deg_kernel_impl<<<pyg::utils::blocks(32 * nodes.size(0)),
                                pyg::utils::threads(), 0, stream>>>(
         rowptr_data, col_data, nodes_data, to_local_node_data, deg_data,
@@ -57,7 +77,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     at::cumsum_out(tmp, deg, /*dim=*/0);
   });
 
-  return std::make_tuple(to_local_node, deg, rowptr);
+  return std::make_tuple(out_rowptr, deg, deg);
 }
 
 }  // namespace
