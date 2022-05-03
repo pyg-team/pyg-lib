@@ -1,16 +1,17 @@
 #pragma once
 
+#include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 
 namespace pyg {
 namespace utils {
 
-int threads() {
+__host__ inline int threads() {
   const auto props = at::cuda::getCurrentDeviceProperties();
   return std::min(props->maxThreadsPerBlock, 1024);
 }
 
-int blocks(int numel) {
+__host__ inline int blocks(int numel) {
   const auto props = at::cuda::getCurrentDeviceProperties();
   const auto blocks_per_sm = props->maxThreadsPerMultiProcessor / 256;
   const auto max_blocks = props->multiProcessorCount * blocks_per_sm;
