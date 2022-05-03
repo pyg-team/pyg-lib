@@ -25,10 +25,27 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
   return op.call(rowptr, col, nodes, return_edge_id);
 }
 
+c10::Dict<utils::RELATION_TYPE,
+          std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
+hetero_subgraph(const utils::HETERO_TENSOR_TYPE& rowptr,
+                const utils::HETERO_TENSOR_TYPE& col,
+                const utils::HETERO_TENSOR_TYPE& nodes,
+                const c10::Dict<utils::RELATION_TYPE, bool> return_edge_id) {
+  c10::Dict<utils::RELATION_TYPE,
+            std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
+      out_dict;
+  return out_dict;
+}
+
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::subgraph(Tensor rowptr, Tensor col, Tensor "
       "nodes, bool return_edge_id) -> (Tensor, Tensor, Tensor?)"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::hetero_subgraph(Dict(str, Tensor) rowptr, Dict(str, "
+      "Tensor) col, Dict(str, Tensor) nodes, Dict(str, bool) "
+      "return_edge_id) -> (Dict(str, Tensor), Dict(str, Tensor), "
+      "Dict(str, Tensor?))"));
 }
 
 }  // namespace sampler
