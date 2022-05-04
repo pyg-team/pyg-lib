@@ -1,6 +1,6 @@
 import os
 import os.path as osp
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -11,8 +11,8 @@ from pyg_lib import get_home_dir
 def get_sparse_matrix(
     group: str,
     name: str,
-    dtype: torch.dtype = None,
-    device: torch.device = None,
+    dtype: torch.dtype = torch.long,
+    device: Optional[torch.device] = None,
 ) -> Tuple[Tensor, Tensor]:
     r"""Returns a sparse matrix :obj:`(rowptr, col)` from the
     `Suite Sparse Matrix Collection <https://sparse.tamu.edu>`_.
@@ -20,13 +20,16 @@ def get_sparse_matrix(
     Args:
         group (string): The group of the sparse matrix.
         name (string): The name of the sparse matrix.
+        device ()
+        dtype (torch.dtype, optional): The desired data type of returned
+            tensors. (default: :obj:`torch.long`)
+        device (torch.device, optional): the desired device of returned
+            tensors. (default: :obj:`None`)
 
     Returns:
         (torch.Tensor, torch.Tensor): Compressed source node indices and target
         node indices of the sparse matrix.
     """
-    dtype = dtype if dtype is not None else torch.long
-
     path = osp.join(get_home_dir(), f'{name}.mat')
     if not osp.exists(path):
         os.makedirs(get_home_dir(), exist_ok=True)
