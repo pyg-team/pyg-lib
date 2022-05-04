@@ -20,7 +20,6 @@ def get_sparse_matrix(
     Args:
         group (string): The group of the sparse matrix.
         name (string): The name of the sparse matrix.
-        device ()
         dtype (torch.dtype, optional): The desired data type of returned
             tensors. (default: :obj:`torch.long`)
         device (torch.device, optional): the desired device of returned
