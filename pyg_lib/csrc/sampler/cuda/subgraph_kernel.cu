@@ -36,6 +36,22 @@ __global__ void subgraph_deg_kernel_impl(
   }
 }
 
+template <typename scalar_t, bool return_edge_id>
+__global__ void subgraph_deg_kernel_impl(
+    const scalar_t* __restrict__ rowptr_data,
+    const scalar_t* __restrict__ col_data,
+    const scalar_t* __restrict__ nodes_data,
+    const scalar_t* __restrict__ to_local_node_data,
+    const scalar_t* __restrict__ out_rowptr_data,
+    scalar_t* __restrict__ out_col_data,
+    scalar_t* __restrict__ out_edge_id_data,
+    int64_t num_nodes) {
+  CUDA_1D_KERNEL_LOOP(scalar_t, thread_idx, WARP * num_nodes) {
+    scalar_t i = thread_idx / WARP;
+    scalar_t lane = thread_idx % WARP;
+  }
+}
+
 std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
     const at::Tensor& col,
@@ -74,6 +90,9 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
     auto tmp = out_rowptr.narrow(0, 1, nodes.size(0));
     at::cumsum_out(tmp, deg, /*dim=*/0);
+
+    subgraph_kernel_imp<<<pyg::utils::blocks(WARP * nodes.size(0)),
+                          pyg::utils::threads(), 0, stream>>>();
   });
 
   return std::make_tuple(out_rowptr, deg, deg);
