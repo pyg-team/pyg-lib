@@ -7,6 +7,8 @@ import torch
 
 import pyg_lib.sampler  # noqa
 
+from .home import get_home_dir, set_home_dir
+
 __version__ = '0.1.0'
 
 # * `libpyg.so`: The name of the shared library file.
@@ -36,11 +38,17 @@ load_library('libpyg')
 
 
 def cuda_version() -> int:
-    r"""Returns the CUDA version for which :obj:`pyg_lib` was compiled with."""
+    r"""Returns the CUDA version for which :obj:`pyg_lib` was compiled with.
+
+    Returns:
+        (int): The CUDA version.
+    """
     return torch.ops.pyg.cuda_version()
 
 
 __all__ = [
     '__version__',
     'cuda_version',
+    'get_home_dir',
+    'set_home_dir',
 ]
