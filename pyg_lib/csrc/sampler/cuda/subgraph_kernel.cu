@@ -8,8 +8,6 @@ namespace sampler {
 
 namespace {
 
-#define FULL_MASK 0xffffffff
-
 template <typename scalar_t>
 __global__ void subgraph_deg_kernel_impl(
     const scalar_t* __restrict__ rowptr_data,
@@ -18,20 +16,20 @@ __global__ void subgraph_deg_kernel_impl(
     const scalar_t* __restrict__ to_local_node_data,
     scalar_t* __restrict__ out_data,
     int64_t num_nodes) {
-  CUDA_1D_KERNEL_LOOP(scalar_t, thread_idx, 32 * num_nodes) {
-    scalar_t i = thread_idx >> 5;           // thread_idx / 32
-    scalar_t lane = thread_idx & (32 - 1);  // thread_idx % 32
+  CUDA_1D_KERNEL_LOOP(scalar_t, thread_idx, WARP * num_nodes) {
+    scalar_t i = thread_idx / WARP;
+    scalar_t lane = thread_idx % WARP;
 
     auto v = nodes_data[i];
 
     scalar_t deg = 0;
-    for (scalar_t j = rowptr_data[v] + lane; j < rowptr_data[v + 1]; j += 32) {
+    for (size_t j = rowptr_data[v] + lane; j < rowptr_data[v + 1]; j += WARP) {
       if (to_local_node_data[col_data[j]] >= 0)  // contiguous access
         deg++;
     }
 
-    for (scalar_t offset = 16; offset > 0; offset /= 2)  // warp-level reduction
-      deg += __shfl_down_sync(FULL_MASK, deg, offset);
+    for (size_t offset = 16; offset > 0; offset /= 2)  // warp-level reduction
+      deg += __shfl_down_sync(FULL_WARP_MASK, deg, offset);
 
     if (lane == 0)
       out_data[i] = deg;
@@ -49,8 +47,9 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
   const auto stream = at::cuda::getCurrentCUDAStream();
 
-  // We maintain a O(N) vector to map global node indices to local ones.
-  // TODO Can we do this without O(N) storage requirement?
+  // We maintain a O(num_nodes) vector to map global node indices to local ones.
+  // TODO Can we do this without O(num_nodes) storage requirement?
+  // TODO Consider caching this tensor  across consecutive runs?
   const auto to_local_node = nodes.new_full({rowptr.size(0) - 1}, -1);
   const auto arange = at::arange(nodes.size(0), nodes.options());
   to_local_node.index_copy_(/*dim=*/0, nodes, arange);
@@ -60,6 +59,9 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   at::Tensor out_col;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
+  std::cout << pyg::utils::blocks((int64_t)1000000000) << std::endl;
+  std::cout << pyg::utils::threads() << std::endl;
+
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
     const auto col_data = col.data_ptr<scalar_t>();
@@ -68,7 +70,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     auto deg_data = deg.data_ptr<scalar_t>();
 
     // Compute induced subgraph degree, parallelize with 32 threads per node:
-    subgraph_deg_kernel_impl<<<pyg::utils::blocks(32 * nodes.size(0)),
+    subgraph_deg_kernel_impl<<<pyg::utils::blocks(WARP * nodes.size(0)),
                                pyg::utils::threads(), 0, stream>>>(
         rowptr_data, col_data, nodes_data, to_local_node_data, deg_data,
         nodes.size(0));
