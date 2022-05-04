@@ -59,9 +59,6 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   at::Tensor out_col;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
-  std::cout << pyg::utils::blocks((int64_t)1000000000) << std::endl;
-  std::cout << pyg::utils::threads() << std::endl;
-
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
     const auto col_data = col.data_ptr<scalar_t>();
