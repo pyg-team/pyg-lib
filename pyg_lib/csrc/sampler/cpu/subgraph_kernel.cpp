@@ -16,25 +16,53 @@ class Mapper {
  public:
   Mapper(scalar_t num_nodes, scalar_t num_entries)
       : num_nodes(num_nodes), num_entries(num_entries) {
-    to_local_vec = std::vector<scalar_t>(num_nodes, -1);
+    // Use a some simple heuristic to determine whether we can use a vector to
+    // perform the mapping:
+    if (num_nodes < 1000000)
+      use_vec = true;
+    else if (num_entries > num_nodes / 10)
+      use_vec = true;
+    else
+      use_vec = false;
+
+    std::cout << "mapper initialized, use vec: " << use_vec << std::endl;
+
+    if (use_vec)
+      to_local_vec = std::vector<scalar_t>(num_nodes, -1);
   }
 
   void fill(const at::Tensor& nodes) {
     const auto nodes_data = nodes.data_ptr<scalar_t>();
-    auto grain_size = at::internal::GRAIN_SIZE;
-    PARALLEL_FOR(nodes.numel(), start, end) {
-      for (scalar_t i = start; i < end; ++i)
+
+    if (use_vec) {
+      for (scalar_t i = 0; i < nodes.numel(); ++i)
         to_local_vec[nodes_data[i]] = i;
-    });
+    } else {
+      for (scalar_t i = 0; i < nodes.numel(); ++i)
+        to_local_map.insert({nodes_data[i], i});
+    }
   }
 
-  bool exists(const scalar_t& node) { return to_local_vec[node] >= 0; }
+  bool exists(const scalar_t& node) {
+    if (use_vec)
+      return to_local_vec[node] >= 0;
+    else
+      return to_local_map.count(node) > 0;
+  }
 
-  scalar_t map(const scalar_t& node) { return to_local_vec[node]; }
+  scalar_t map(const scalar_t& node) {
+    if (use_vec)
+      return to_local_vec[node];
+    else {
+      const auto search = to_local_map.find(node);
+      return search != to_local_map.end() ? search->second : -1;
+    }
+  }
 
  private:
   scalar_t num_nodes;
   scalar_t num_entries;
+  bool use_vec;
   std::vector<scalar_t> to_local_vec;
   std::unordered_map<scalar_t, scalar_t> to_local_map;
 };

@@ -11,7 +11,7 @@ from pyg_lib.testing import to_edge_index, withDataset, withSeed
 def test_subgraph(dataset, **kwargs):
     (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
     perm = torch.randperm(num_nodes, dtype=rowptr.dtype, device=rowptr.device)
-    nodes = perm[:num_nodes // 2]
+    nodes = perm[:num_nodes // 100]
 
     t = time.perf_counter()
     for _ in range(10):
