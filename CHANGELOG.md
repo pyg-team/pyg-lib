@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- Added `biased sampling` utils ([#38](https://github.com/pyg-team/pyg-lib/pull/39))
+- Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44)
+- Added `biased sampling` utils ([#38](https://github.com/pyg-team/pyg-lib/pull/38))
 - Added `CHANGELOG.md` ([#39](https://github.com/pyg-team/pyg-lib/pull/39))
 - Added `pyg.subgraph()` ([#31](https://github.com/pyg-team/pyg-lib/pull/31), [#42](https://github.com/pyg-team/pyg-lib/pull/42))
 - Added nightly builds ([#28](https://github.com/pyg-team/pyg-lib/pull/28), [#36](https://github.com/pyg-team/pyg-lib/pull/36))
