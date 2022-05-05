@@ -1,11 +1,50 @@
 import os
 import os.path as osp
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import torch
 from torch import Tensor
 
 from pyg_lib import get_home_dir
+
+# Decorators ##################################################################
+
+
+def withSeed(func: Callable) -> Callable:
+    def wrapper(*args, **kwargs):
+        torch.manual_seed(12345)
+        func(*args, **kwargs)
+
+    return wrapper
+
+
+def withCUDA(func: Callable) -> Callable:
+    def wrapper(*args, **kwargs):
+        func(*args, device=torch.device('cpu'), **kwargs)
+        if torch.cuda.is_available():
+            func(*args, device=torch.device('cuda:0'), **kwargs)
+
+    return wrapper
+
+
+def withDataset(group: str, name: str) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, **kwargs):
+            dataset = get_sparse_matrix(
+                group,
+                name,
+                dtype=kwargs.get('dtype', torch.long),
+                device=kwargs.get('device', None),
+            )
+
+            func(*args, dataset=dataset, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+# Helper functions ############################################################
 
 
 def get_sparse_matrix(
@@ -48,3 +87,9 @@ def get_sparse_matrix(
     col = torch.from_numpy(mat.indices).to(device, dtype)
 
     return rowptr, col
+
+
+def to_edge_index(rowptr: Tensor, col: Tensor) -> Tensor:
+    row = torch.arange(rowptr.size(0) - 1, dtype=col.dtype, device=col.device)
+    row = row.repeat_interleave(rowptr[1:] - rowptr[:-1])
+    return torch.stack([row, col], dim=0)
