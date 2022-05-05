@@ -9,38 +9,32 @@ namespace sampler {
 
 namespace {
 
-#define PARALLEL_FOR(n, start, end) at::parallel_for(0, (n), at::internal::GRAIN_SIZE, [&](int64_t (start), int64_t (end))
-
 template <typename scalar_t>
 class Mapper {
  public:
   Mapper(scalar_t num_nodes, scalar_t num_entries)
       : num_nodes(num_nodes), num_entries(num_entries) {
-    // Use a some simple heuristic to determine whether we can use a vector to
-    // perform the mapping:
-    if (num_nodes < 1000000)
-      use_vec = true;
-    else if (num_entries > num_nodes / 10)
-      use_vec = true;
-    else
-      use_vec = false;
-
-    std::cout << "mapper initialized, use vec: " << use_vec << std::endl;
+    // Use a some simple heuristic to determine whether we can use a std::vector
+    // to perform the mapping instead of relying on the more memory-friendly,
+    // but slower std::unordered_map:
+    use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
     if (use_vec)
       to_local_vec = std::vector<scalar_t>(num_nodes, -1);
   }
 
-  void fill(const at::Tensor& nodes) {
-    const auto nodes_data = nodes.data_ptr<scalar_t>();
-
+  void fill(const scalar_t* nodes_data, const scalar_t size) {
     if (use_vec) {
-      for (scalar_t i = 0; i < nodes.numel(); ++i)
+      for (scalar_t i = 0; i < size; ++i)
         to_local_vec[nodes_data[i]] = i;
     } else {
-      for (scalar_t i = 0; i < nodes.numel(); ++i)
+      for (scalar_t i = 0; i < size; ++i)
         to_local_map.insert({nodes_data[i], i});
     }
+  }
+
+  void fill(const at::Tensor& nodes) {
+    fill(nodes.data_ptr<scalar_t>(), nodes.numel());
   }
 
   bool exists(const scalar_t& node) {
@@ -60,8 +54,8 @@ class Mapper {
   }
 
  private:
-  scalar_t num_nodes;
-  scalar_t num_entries;
+  scalar_t num_nodes, num_entries;
+
   bool use_vec;
   std::vector<scalar_t> to_local_vec;
   std::unordered_map<scalar_t, scalar_t> to_local_map;
