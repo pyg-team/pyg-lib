@@ -23,7 +23,7 @@ PYG_API c10::Dict<utils::edge_t,
 hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
                 const utils::edge_tensor_dict_t& col,
                 const utils::node_tensor_dict_t& nodes,
-                const c10::Dict<utils::edge_t, bool> return_edge_id);
+                const c10::Dict<utils::edge_t, bool>& return_edge_id);
 
 }  // namespace sampler
 }  // namespace pyg
