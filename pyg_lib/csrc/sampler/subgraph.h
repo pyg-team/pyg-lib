@@ -18,12 +18,12 @@ PYG_API std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
 
 // A heterogeneous version of the above function.
 // Returns a dict from each relation type to its result
-PYG_API c10::Dict<utils::RELATION_TYPE,
+PYG_API c10::Dict<utils::edge_t,
                   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
-hetero_subgraph(const utils::HETERO_TENSOR_TYPE& rowptr,
-                const utils::HETERO_TENSOR_TYPE& col,
-                const utils::HETERO_TENSOR_TYPE& nodes,
-                const c10::Dict<utils::RELATION_TYPE, bool> return_edge_id);
+hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
+                const utils::edge_tensor_dict_t& col,
+                const utils::node_tensor_dict_t& nodes,
+                const c10::Dict<utils::edge_t, bool> return_edge_id);
 
 }  // namespace sampler
 }  // namespace pyg

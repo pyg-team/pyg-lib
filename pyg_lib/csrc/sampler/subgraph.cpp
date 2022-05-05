@@ -25,13 +25,13 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
   return op.call(rowptr, col, nodes, return_edge_id);
 }
 
-c10::Dict<utils::RELATION_TYPE,
+c10::Dict<utils::edge_t,
           std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
-hetero_subgraph(const utils::HETERO_TENSOR_TYPE& rowptr,
-                const utils::HETERO_TENSOR_TYPE& col,
-                const utils::HETERO_TENSOR_TYPE& nodes,
-                const c10::Dict<utils::RELATION_TYPE, bool> return_edge_id) {
-  c10::Dict<utils::RELATION_TYPE,
+hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
+                const utils::edge_tensor_dict_t& col,
+                const utils::node_tensor_dict_t& nodes,
+                const c10::Dict<utils::edge_t, bool> return_edge_id) {
+  c10::Dict<utils::edge_t,
             std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
       out_dict;
   return out_dict;
