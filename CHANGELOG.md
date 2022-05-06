@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added hetero subgraph kernel ([#43](https://github.com/pyg-team/pyg-lib/pull/43)
 - Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44)
 - Added `biased sampling` utils ([#38](https://github.com/pyg-team/pyg-lib/pull/38))
 - Added `CHANGELOG.md` ([#39](https://github.com/pyg-team/pyg-lib/pull/39))

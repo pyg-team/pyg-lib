@@ -21,6 +21,7 @@ struct NodeDstMode : public HeteroDispatchMode {};
 
 struct EdgeMode : public HeteroDispatchMode {};
 
+// Check if the argument is a c10::dict so that is could be filtered by an edge type.
 template <typename... T>
 struct is_c10_dict : std::false_type {};
 
@@ -57,11 +58,13 @@ class HeteroDispatchArg<T, V, NodeSrcMode> {
     static_assert(is_c10_dict<T>::value, "Should be a c10::dict");
   }
 
+  // Dict value lookup
   template <typename K>
   V value_by_edge(const K& key) {
     return val_.at(get_src(key));
   }
 
+  // Dict if key exists
   bool filter_by_edge(const edge_t& edge) {
     return val_.contains(get_src(edge));
   }
@@ -125,11 +128,13 @@ struct is_hetero_arg<HeteroDispatchArg<T, V, Mode>> : std::true_type {
 template <typename... Args>
 bool filter_args_by_edge(const edge_t& edge, Args&&... args) {}
 
+// Stop condition of argument filtering
 template <>
 bool filter_args_by_edge(const edge_t& edge) {
   return true;
 }
 
+// We filter each argument individually by the given edge using a variadic template
 template <typename T, typename... Args>
 bool filter_args_by_edge(const edge_t& edge, T&& t, Args&&... args) {
   static_assert(
@@ -138,6 +143,7 @@ bool filter_args_by_edge(const edge_t& edge, T&& t, Args&&... args) {
   return t.filter_by_edge(edge) && filter_args_by_edge(edge, args...);
 }
 
+// Check if a callable is wrapped by std::function
 template <typename... T>
 struct is_std_function : std::false_type {};
 

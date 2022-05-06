@@ -22,11 +22,12 @@ node_t get_src(const edge_t& e) {
 
 rel_t get_rel(const edge_t& e) {
   auto beg = e.find_first_of(SPLIT_TOKEN) + SPLIT_TOKEN.size();
-  return e.substr(beg, e.find_last_of(SPLIT_TOKEN) - beg);
+  return e.substr(beg,
+                  e.find_last_of(SPLIT_TOKEN) - SPLIT_TOKEN.size() + 1 - beg);
 }
 
 node_t get_dst(const edge_t& e) {
-  return e.substr(e.find_last_of(SPLIT_TOKEN) + SPLIT_TOKEN.size());
+  return e.substr(e.find_last_of(SPLIT_TOKEN) + 1);
 }
 }  // namespace utils
 
