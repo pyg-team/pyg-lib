@@ -21,7 +21,8 @@ struct NodeDstMode : public HeteroDispatchMode {};
 
 struct EdgeMode : public HeteroDispatchMode {};
 
-// Check if the argument is a c10::dict so that is could be filtered by an edge type.
+// Check if the argument is a c10::dict so that is could be filtered by an edge
+// type.
 template <typename... T>
 struct is_c10_dict : std::false_type {};
 
@@ -134,7 +135,8 @@ bool filter_args_by_edge(const edge_t& edge) {
   return true;
 }
 
-// We filter each argument individually by the given edge using a variadic template
+// We filter each argument individually by the given edge using a variadic
+// template
 template <typename T, typename... Args>
 bool filter_args_by_edge(const edge_t& edge, T&& t, Args&&... args) {
   static_assert(
