@@ -27,4 +27,5 @@ def test_subgraph(dataset, **kwargs):
     print(time.perf_counter() - t)
 
 
-test_subgraph()
+if __name__ == '__main__':
+    test_subgraph()

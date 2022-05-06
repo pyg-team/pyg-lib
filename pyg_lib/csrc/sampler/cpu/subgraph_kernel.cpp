@@ -2,64 +2,13 @@
 #include <ATen/Parallel.h>
 #include <torch/library.h>
 
+#include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 
 namespace pyg {
 namespace sampler {
 
 namespace {
-
-template <typename scalar_t>
-class Mapper {
- public:
-  Mapper(scalar_t num_nodes, scalar_t num_entries)
-      : num_nodes(num_nodes), num_entries(num_entries) {
-    // Use a some simple heuristic to determine whether we can use a std::vector
-    // to perform the mapping instead of relying on the more memory-friendly,
-    // but slower std::unordered_map:
-    use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
-
-    if (use_vec)
-      to_local_vec = std::vector<scalar_t>(num_nodes, -1);
-  }
-
-  void fill(const scalar_t* nodes_data, const scalar_t size) {
-    if (use_vec) {
-      for (scalar_t i = 0; i < size; ++i)
-        to_local_vec[nodes_data[i]] = i;
-    } else {
-      for (scalar_t i = 0; i < size; ++i)
-        to_local_map.insert({nodes_data[i], i});
-    }
-  }
-
-  void fill(const at::Tensor& nodes) {
-    fill(nodes.data_ptr<scalar_t>(), nodes.numel());
-  }
-
-  bool exists(const scalar_t& node) {
-    if (use_vec)
-      return to_local_vec[node] >= 0;
-    else
-      return to_local_map.count(node) > 0;
-  }
-
-  scalar_t map(const scalar_t& node) {
-    if (use_vec)
-      return to_local_vec[node];
-    else {
-      const auto search = to_local_map.find(node);
-      return search != to_local_map.end() ? search->second : -1;
-    }
-  }
-
- private:
-  scalar_t num_nodes, num_entries;
-
-  bool use_vec;
-  std::vector<scalar_t> to_local_vec;
-  std::unordered_map<scalar_t, scalar_t> to_local_map;
-};
 
 std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
@@ -70,12 +19,13 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
 
+  const auto num_nodes = rowptr.size(0) - 1;
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
   at::Tensor out_col;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
-    auto mapper = Mapper<scalar_t>(rowptr.size(0) - 1, nodes.size(0));
+    auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, nodes.size(0));
     mapper.fill(nodes);
 
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
@@ -129,6 +79,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
             out_col_data[offset] = w;
             if (return_edge_id)
               out_edge_id_data[offset] = j;
+            offset++;
           }
         }
       }
