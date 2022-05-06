@@ -6,8 +6,8 @@ import pyg_lib
 from pyg_lib.testing import to_edge_index, withDataset, withSeed
 
 
-@withDataset('DIMACS10', 'citationCiteseer')
 @withSeed
+@withDataset('DIMACS10', 'citationCiteseer')
 def test_subgraph(dataset, **kwargs):
     (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
     perm = torch.randperm(num_nodes, dtype=rowptr.dtype, device=rowptr.device)
