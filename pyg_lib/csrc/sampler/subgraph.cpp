@@ -28,38 +28,76 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
   return op.call(rowptr, col, nodes, return_edge_id);
 }
 
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+subgraph_bipartite(const at::Tensor& rowptr,
+                   const at::Tensor& col,
+                   const at::Tensor& src_nodes,
+                   const at::Tensor& dst_nodes,
+                   const bool return_edge_id) {
+  TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
+  TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
+  TORCH_CHECK(src_nodes.is_cpu(), "'src_nodes' must be a CPU tensor");
+  TORCH_CHECK(dst_nodes.is_cpu(), "'dst_nodes' must be a CPU tensor");
+
+  const auto num_nodes = rowptr.size(0) - 1;
+  at::Tensor out_rowptr, out_col;
+  c10::optional<at::Tensor> out_edge_id;
+
+  AT_DISPATCH_INTEGRAL_TYPES(
+      src_nodes.scalar_type(), "subgraph_bipartite", [&] {
+        // TODO: at::max parallel but still a little expensive
+        Mapper<scalar_t> mapper(at::max(col).item<scalar_t>() + 1,
+                                dst_nodes.size(0));
+        mapper.fill(dst_nodes);
+
+        auto res = subgraph_with_mapper<scalar_t>(rowptr, col, src_nodes,
+                                                  mapper, return_edge_id);
+        out_rowptr = std::get<0>(res);
+        out_col = std::get<1>(res);
+        out_edge_id = std::get<2>(res);
+      });
+
+  return {out_rowptr, out_col, out_edge_id};
+}
+
 c10::Dict<utils::edge_t,
           std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
 hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
                 const utils::edge_tensor_dict_t& col,
-                const utils::node_tensor_dict_t& nodes,
+                const utils::node_tensor_dict_t& src_nodes,
+                const utils::node_tensor_dict_t& dst_nodes,
                 const c10::Dict<utils::edge_t, bool>& return_edge_id) {
-  // Define the homogeneous implementation as a std function to pass the type
+  // Define the bipartite implementation as a std function to pass the type
   // check
   std::function<std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>(
-      const at::Tensor&, const at::Tensor&, const at::Tensor&, bool)>
-      func = subgraph;
+      const at::Tensor&, const at::Tensor&, const at::Tensor&,
+      const at::Tensor&, bool)>
+      func = subgraph_bipartite;
 
   // Construct an operator
   utils::HeteroDispatchOp<decltype(func)> op(rowptr, col, func);
 
   // Construct dispatchable arguments
-  // TODO: We filter source node by assuming hetero graph is a dict of homo
-  // graph here; both source and destination nodes should be considered when
-  // filtering a bipartite graph
   utils::HeteroDispatchArg<utils::node_tensor_dict_t, at::Tensor,
                            utils::NodeSrcMode>
-      nodes_arg(nodes);
+      src_nodes_arg(src_nodes);
+  utils::HeteroDispatchArg<utils::node_tensor_dict_t, at::Tensor,
+                           utils::NodeDstMode>
+      dst_nodes_arg(dst_nodes);
   utils::HeteroDispatchArg<c10::Dict<utils::edge_t, bool>, bool,
                            utils::EdgeMode>
       edge_id_arg(return_edge_id);
-  return op(nodes_arg, edge_id_arg);
+  return op(src_nodes_arg, dst_nodes_arg, edge_id_arg);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::subgraph(Tensor rowptr, Tensor col, Tensor "
       "nodes, bool return_edge_id) -> (Tensor, Tensor, Tensor?)"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::subgraph_bipartite(Tensor rowptr, Tensor col, Tensor "
+      "src_nodes, Tensor dst_nodes, bool return_edge_id) -> (Tensor, Tensor, "
+      "Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_subgraph(Dict(str, Tensor) rowptr, Dict(str, "
       "Tensor) col, Dict(str, Tensor) nodes, Dict(str, bool) "

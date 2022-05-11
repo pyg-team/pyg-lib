@@ -40,7 +40,7 @@ TEST(HeteroSubgraphPassFilterTest, BasicAssertions) {
   edge_id_dict.insert(edge_name, true);
 
   auto res = pyg::sampler::hetero_subgraph(rowptr_dict, col_dict, nodes_dict,
-                                           edge_id_dict);
+                                           nodes_dict, edge_id_dict);
 
   EXPECT_EQ(res.size(), 1);
   auto out = res.at(edge_name);
@@ -72,7 +72,7 @@ TEST(HeteroSubgraphFailFilterTest, BasicAssertions) {
   edge_id_dict.insert(edge_name, true);
 
   auto res = pyg::sampler::hetero_subgraph(rowptr_dict, col_dict, nodes_dict,
-                                           edge_id_dict);
+                                           nodes_dict, edge_id_dict);
 
   EXPECT_EQ(res.size(), 0);
 }
