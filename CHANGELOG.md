@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added `pyg::sampler::Mapper` utility for mapping global to local node indices ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
+- Added benchmark script ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
 - Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44)
 - Added `biased sampling` utils ([#38](https://github.com/pyg-team/pyg-lib/pull/38))
 - Added `CHANGELOG.md` ([#39](https://github.com/pyg-team/pyg-lib/pull/39))
