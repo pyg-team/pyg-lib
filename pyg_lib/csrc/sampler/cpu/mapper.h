@@ -5,6 +5,8 @@
 namespace pyg {
 namespace sampler {
 
+// TODO Implement `Mapper` as an interface/abstract class to allow for other
+// implementations as well.
 template <typename scalar_t>
 class Mapper {
  public:
