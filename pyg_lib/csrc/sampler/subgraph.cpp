@@ -139,13 +139,13 @@ subgraph_bipartite(const at::Tensor& rowptr,
   return {out_rowptr, out_col, out_edge_id};
 }
 
-c10::Dict<utils::edge_t,
+c10::Dict<utils::EdgeType,
           std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
-hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
-                const utils::edge_tensor_dict_t& col,
-                const utils::node_tensor_dict_t& src_nodes,
-                const utils::node_tensor_dict_t& dst_nodes,
-                const c10::Dict<utils::edge_t, bool>& return_edge_id) {
+hetero_subgraph(const utils::EdgeTensorDict& rowptr,
+                const utils::EdgeTensorDict& col,
+                const utils::NodeTensorDict& src_nodes,
+                const utils::NodeTensorDict& dst_nodes,
+                const c10::Dict<utils::EdgeType, bool>& return_edge_id) {
   // Define the bipartite implementation as a std function to pass the type
   // check
   std::function<std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>(
@@ -157,13 +157,13 @@ hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
   utils::HeteroDispatchOp<decltype(func)> op(rowptr, col, func);
 
   // Construct dispatchable arguments
-  utils::HeteroDispatchArg<utils::node_tensor_dict_t, at::Tensor,
+  utils::HeteroDispatchArg<utils::NodeTensorDict, at::Tensor,
                            utils::NodeSrcMode>
       src_nodes_arg(src_nodes);
-  utils::HeteroDispatchArg<utils::node_tensor_dict_t, at::Tensor,
+  utils::HeteroDispatchArg<utils::NodeTensorDict, at::Tensor,
                            utils::NodeDstMode>
       dst_nodes_arg(dst_nodes);
-  utils::HeteroDispatchArg<c10::Dict<utils::edge_t, bool>, bool,
+  utils::HeteroDispatchArg<c10::Dict<utils::EdgeType, bool>, bool,
                            utils::EdgeMode>
       edge_id_arg(return_edge_id);
   return op(src_nodes_arg, dst_nodes_arg, edge_id_arg);

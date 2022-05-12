@@ -45,7 +45,7 @@ class HeteroDispatchArg<T, V, SkipMode> {
     return val_;
   }
 
-  bool filter_by_edge(const edge_t& edge) { return true; }
+  bool filter_by_edge(const EdgeType& edge) { return true; }
 
  private:
   T val_;
@@ -66,7 +66,7 @@ class HeteroDispatchArg<T, V, NodeSrcMode> {
   }
 
   // Dict if key exists
-  bool filter_by_edge(const edge_t& edge) {
+  bool filter_by_edge(const EdgeType& edge) {
     return val_.contains(get_src(edge));
   }
 
@@ -87,7 +87,7 @@ class HeteroDispatchArg<T, V, NodeDstMode> {
     return val_.at(get_dst(key));
   }
 
-  bool filter_by_edge(const edge_t& edge) {
+  bool filter_by_edge(const EdgeType& edge) {
     return val_.contains(get_dst(edge));
   }
 
@@ -108,7 +108,7 @@ class HeteroDispatchArg<T, V, EdgeMode> {
     return val_.at(key);
   }
 
-  bool filter_by_edge(const edge_t& edge) { return val_.contains(edge); }
+  bool filter_by_edge(const EdgeType& edge) { return val_.contains(edge); }
 
  private:
   T val_;
@@ -127,18 +127,18 @@ struct is_hetero_arg<HeteroDispatchArg<T, V, Mode>> : std::true_type {
 
 // Specialize
 template <typename... Args>
-bool filter_args_by_edge(const edge_t& edge, Args&&... args) {}
+bool filter_args_by_edge(const EdgeType& edge, Args&&... args) {}
 
 // Stop condition of argument filtering
 template <>
-bool filter_args_by_edge(const edge_t& edge) {
+bool filter_args_by_edge(const EdgeType& edge) {
   return true;
 }
 
 // We filter each argument individually by the given edge using a variadic
 // template
 template <typename T, typename... Args>
-bool filter_args_by_edge(const edge_t& edge, T&& t, Args&&... args) {
+bool filter_args_by_edge(const EdgeType& edge, T&& t, Args&&... args) {
   static_assert(
       is_hetero_arg<std::remove_const_t<std::remove_reference_t<T>>>::value,
       "args should be HeteroDispatchArg");
@@ -155,9 +155,9 @@ struct is_std_function<std::function<T(Args...)>> : std::true_type {};
 template <typename T>
 class HeteroDispatchOp {
  public:
-  using result_type = typename T::result_type;
-  HeteroDispatchOp(const edge_tensor_dict_t& rowptr,
-                   const edge_tensor_dict_t& col,
+  using ResultType = typename T::result_type;
+  HeteroDispatchOp(const EdgeTensorDict& rowptr,
+                   const EdgeTensorDict& col,
                    T op)
       : rowptr_(rowptr), col_(col), op_(op) {
     // Check early
@@ -165,15 +165,15 @@ class HeteroDispatchOp {
   }
 
   template <typename... Args>
-  c10::Dict<edge_t, result_type> operator()(Args&&... args) {
-    c10::Dict<edge_t, result_type> dict;
+  c10::Dict<EdgeType, ResultType> operator()(Args&&... args) {
+    c10::Dict<EdgeType, ResultType> dict;
     for (const auto& kv : rowptr_) {
       auto edge = kv.key();
       auto rowptr = kv.value();
       auto col = col_.at(edge);
       bool pass = filter_args_by_edge(edge, args...);
       if (pass) {
-        result_type res = op_(rowptr, col, args.value_by_edge(edge)...);
+        ResultType res = op_(rowptr, col, args.value_by_edge(edge)...);
         dict.insert(edge, res);
       }
     }
@@ -181,8 +181,8 @@ class HeteroDispatchOp {
   }
 
  private:
-  edge_tensor_dict_t rowptr_;
-  edge_tensor_dict_t col_;
+  EdgeTensorDict rowptr_;
+  EdgeTensorDict col_;
   T op_;
 };
 

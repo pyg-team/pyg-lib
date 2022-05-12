@@ -29,13 +29,13 @@ subgraph_bipartite(const at::Tensor& rowptr,
 
 // A heterogeneous version of the above function.
 // Returns a dict from each relation type to its result
-PYG_API c10::Dict<utils::edge_t,
+PYG_API c10::Dict<utils::EdgeType,
                   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
-hetero_subgraph(const utils::edge_tensor_dict_t& rowptr,
-                const utils::edge_tensor_dict_t& col,
-                const utils::node_tensor_dict_t& src_nodes,
-                const utils::node_tensor_dict_t& dst_nodes,
-                const c10::Dict<utils::edge_t, bool>& return_edge_id);
+hetero_subgraph(const utils::EdgeTensorDict& rowptr,
+                const utils::EdgeTensorDict& col,
+                const utils::NodeTensorDict& src_nodes,
+                const utils::NodeTensorDict& dst_nodes,
+                const c10::Dict<utils::EdgeType, bool>& return_edge_id);
 
 template <typename T>
 std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>

@@ -9,24 +9,24 @@ namespace utils {
 
 const std::string SPLIT_TOKEN = "__";
 
-using edge_t = std::string;
-using node_t = std::string;
+using EdgeType = std::string;
+using NodeType = std::string;
 using rel_t = std::string;
 
-using edge_tensor_dict_t = c10::Dict<edge_t, at::Tensor>;
-using node_tensor_dict_t = c10::Dict<node_t, at::Tensor>;
+using EdgeTensorDict = c10::Dict<EdgeType, at::Tensor>;
+using NodeTensorDict = c10::Dict<NodeType, at::Tensor>;
 
-inline node_t get_src(const edge_t& e) {
+inline NodeType get_src(const EdgeType& e) {
   return e.substr(0, e.find_first_of(SPLIT_TOKEN));
 }
 
-inline rel_t get_rel(const edge_t& e) {
+inline rel_t get_rel(const EdgeType& e) {
   auto beg = e.find_first_of(SPLIT_TOKEN) + SPLIT_TOKEN.size();
   return e.substr(beg,
                   e.find_last_of(SPLIT_TOKEN) - SPLIT_TOKEN.size() + 1 - beg);
 }
 
-inline node_t get_dst(const edge_t& e) {
+inline NodeType get_dst(const EdgeType& e) {
   return e.substr(e.find_last_of(SPLIT_TOKEN) + 1);
 }
 }  // namespace utils

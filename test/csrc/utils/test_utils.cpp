@@ -3,7 +3,7 @@
 #include "pyg_lib/csrc/sampler/subgraph.h"
 
 TEST(UtilsTypeTest, BasicAssertions) {
-  pyg::utils::edge_t edge = "node1__to__node2";
+  pyg::utils::EdgeType edge = "node1__to__node2";
 
   auto src = pyg::utils::get_src(edge);
   auto dst = pyg::utils::get_dst(edge);

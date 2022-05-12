@@ -27,16 +27,16 @@ TEST(HeteroSubgraphPassFilterTest, BasicAssertions) {
   auto nodes = at::arange(1, 5, options);
   auto graph = cycle_graph(/*num_nodes=*/6, options);
 
-  pyg::utils::node_t node_name = "node";
-  pyg::utils::edge_t edge_name = "node__to__node";
+  pyg::utils::NodeType node_name = "node";
+  pyg::utils::EdgeType edge_name = "node__to__node";
 
-  pyg::utils::edge_tensor_dict_t rowptr_dict;
+  pyg::utils::EdgeTensorDict rowptr_dict;
   rowptr_dict.insert(edge_name, std::get<0>(graph));
-  pyg::utils::edge_tensor_dict_t col_dict;
+  pyg::utils::EdgeTensorDict col_dict;
   col_dict.insert(edge_name, std::get<1>(graph));
-  pyg::utils::edge_tensor_dict_t nodes_dict;
+  pyg::utils::EdgeTensorDict nodes_dict;
   nodes_dict.insert(node_name, nodes);
-  c10::Dict<pyg::utils::edge_t, bool> edge_id_dict;
+  c10::Dict<pyg::utils::EdgeType, bool> edge_id_dict;
   edge_id_dict.insert(edge_name, true);
 
   auto res = pyg::sampler::hetero_subgraph(rowptr_dict, col_dict, nodes_dict,
@@ -59,16 +59,16 @@ TEST(HeteroSubgraphFailFilterTest, BasicAssertions) {
   auto nodes = at::arange(1, 5, options);
   auto graph = cycle_graph(/*num_nodes=*/6, options);
 
-  pyg::utils::node_t node_name = "node";
-  pyg::utils::edge_t edge_name = "node123__to456__node321";
+  pyg::utils::NodeType node_name = "node";
+  pyg::utils::EdgeType edge_name = "node123__to456__node321";
 
-  pyg::utils::edge_tensor_dict_t rowptr_dict;
+  pyg::utils::EdgeTensorDict rowptr_dict;
   rowptr_dict.insert(edge_name, std::get<0>(graph));
-  pyg::utils::edge_tensor_dict_t col_dict;
+  pyg::utils::EdgeTensorDict col_dict;
   col_dict.insert(edge_name, std::get<1>(graph));
-  pyg::utils::edge_tensor_dict_t nodes_dict;
+  pyg::utils::EdgeTensorDict nodes_dict;
   nodes_dict.insert(node_name, nodes);
-  c10::Dict<pyg::utils::edge_t, bool> edge_id_dict;
+  c10::Dict<pyg::utils::EdgeType, bool> edge_id_dict;
   edge_id_dict.insert(edge_name, true);
 
   auto res = pyg::sampler::hetero_subgraph(rowptr_dict, col_dict, nodes_dict,

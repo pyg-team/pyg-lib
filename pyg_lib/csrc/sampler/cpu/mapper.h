@@ -10,8 +10,6 @@ namespace sampler {
 template <typename scalar_t>
 class Mapper {
  public:
-  using type = scalar_t;
-
   Mapper(scalar_t num_nodes, scalar_t num_entries)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // Use a some simple heuristic to determine whether we can use a std::vector
