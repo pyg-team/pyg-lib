@@ -37,13 +37,5 @@ hetero_subgraph(const utils::EdgeTensorDict& rowptr,
                 const utils::NodeTensorDict& dst_nodes,
                 const c10::Dict<utils::EdgeType, bool>& return_edge_id);
 
-template <typename T>
-std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
-subgraph_with_mapper(const at::Tensor& rowptr,
-                     const at::Tensor& col,
-                     const at::Tensor& nodes,
-                     const Mapper<T>& mapper,
-                     const bool return_edge_id);
-
 }  // namespace sampler
 }  // namespace pyg
