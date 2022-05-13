@@ -11,7 +11,7 @@ const std::string SPLIT_TOKEN = "__";
 
 using EdgeType = std::string;
 using NodeType = std::string;
-using rel_t = std::string;
+using RelationType = std::string;
 
 using EdgeTensorDict = c10::Dict<EdgeType, at::Tensor>;
 using NodeTensorDict = c10::Dict<NodeType, at::Tensor>;
@@ -20,7 +20,7 @@ inline NodeType get_src(const EdgeType& e) {
   return e.substr(0, e.find_first_of(SPLIT_TOKEN));
 }
 
-inline rel_t get_rel(const EdgeType& e) {
+inline RelationType get_rel(const EdgeType& e) {
   auto beg = e.find_first_of(SPLIT_TOKEN) + SPLIT_TOKEN.size();
   return e.substr(beg,
                   e.find_last_of(SPLIT_TOKEN) - SPLIT_TOKEN.size() + 1 - beg);

@@ -56,15 +56,9 @@ hetero_subgraph(const utils::EdgeTensorDict& rowptr,
                 const utils::NodeTensorDict& src_nodes,
                 const utils::NodeTensorDict& dst_nodes,
                 const c10::Dict<utils::EdgeType, bool>& return_edge_id) {
-  // Define the bipartite implementation as a std function to pass the type
-  // check
-  std::function<std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>(
-      const at::Tensor&, const at::Tensor&, const at::Tensor&,
-      const at::Tensor&, bool)>
-      func = subgraph_bipartite;
-
-  // Construct an operator
-  utils::HeteroDispatchOp<decltype(func)> op(rowptr, col, func);
+  c10::Dict<utils::EdgeType,
+            std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>>
+      res;
 
   // Construct dispatchable arguments
   utils::HeteroDispatchArg<utils::NodeTensorDict, at::Tensor,
@@ -76,7 +70,23 @@ hetero_subgraph(const utils::EdgeTensorDict& rowptr,
   utils::HeteroDispatchArg<c10::Dict<utils::EdgeType, bool>, bool,
                            utils::EdgeMode>
       edge_id_arg(return_edge_id);
-  return op(src_nodes_arg, dst_nodes_arg, edge_id_arg);
+
+  for (const auto& kv : rowptr) {
+    const auto& edge_type = kv.key();
+    bool pass = filter_args_by_edge(edge_type, src_nodes_arg, dst_nodes_arg,
+                                    edge_id_arg);
+    if (pass) {
+      auto vals = value_args_by_edge(edge_type, src_nodes_arg, dst_nodes_arg,
+                                     edge_id_arg);
+      const auto& r = rowptr.at(edge_type);
+      const auto& c = col.at(edge_type);
+      res.insert(edge_type,
+                 subgraph_bipartite(r, c, std::get<0>(vals), std::get<1>(vals),
+                                    std::get<2>(vals)));
+    }
+  }
+
+  return res;
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
@@ -87,10 +97,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::subgraph_bipartite(Tensor rowptr, Tensor col, Tensor "
       "src_nodes, Tensor dst_nodes, bool return_edge_id) -> (Tensor, Tensor, "
       "Tensor?)"));
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::hetero_subgraph(Dict(str, Tensor) rowptr, Dict(str, "
-      "Tensor) col, Dict(str, Tensor) nodes, Dict(str, bool) "
-      "return_edge_id) -> Dict(str, (Tensor, Tensor, Tensor?))"));
+  m.def("hetero_subgraph", hetero_subgraph);
 }
 
 }  // namespace sampler

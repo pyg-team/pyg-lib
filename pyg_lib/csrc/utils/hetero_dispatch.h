@@ -37,13 +37,11 @@ class HeteroDispatchArg {};
 template <typename T, typename V>
 class HeteroDispatchArg<T, V, SkipMode> {
  public:
+  using ValueType = V;
   HeteroDispatchArg(const T& val) : val_(val) {}
 
   // If we pass the filter, we will obtain the value of the argument.
-  template <typename K>
-  V value_by_edge(const K& key) {
-    return val_;
-  }
+  V value_by_edge(const EdgeType& edge) { return val_; }
 
   bool filter_by_edge(const EdgeType& edge) { return true; }
 
@@ -55,15 +53,13 @@ class HeteroDispatchArg<T, V, SkipMode> {
 template <typename T, typename V>
 class HeteroDispatchArg<T, V, NodeSrcMode> {
  public:
+  using ValueType = V;
   HeteroDispatchArg(const T& val) : val_(val) {
     static_assert(is_c10_dict<T>::value, "Should be a c10::dict");
   }
 
   // Dict value lookup
-  template <typename K>
-  V value_by_edge(const K& key) {
-    return val_.at(get_src(key));
-  }
+  V value_by_edge(const EdgeType& edge) { return val_.at(get_src(edge)); }
 
   // Dict if key exists
   bool filter_by_edge(const EdgeType& edge) {
@@ -78,14 +74,12 @@ class HeteroDispatchArg<T, V, NodeSrcMode> {
 template <typename T, typename V>
 class HeteroDispatchArg<T, V, NodeDstMode> {
  public:
+  using ValueType = V;
   HeteroDispatchArg(const T& val) : val_(val) {
     static_assert(is_c10_dict<T>::value, "Should be a c10::dict");
   }
 
-  template <typename K>
-  V value_by_edge(const K& key) {
-    return val_.at(get_dst(key));
-  }
+  V value_by_edge(const EdgeType& edge) { return val_.at(get_dst(edge)); }
 
   bool filter_by_edge(const EdgeType& edge) {
     return val_.contains(get_dst(edge));
@@ -99,14 +93,12 @@ class HeteroDispatchArg<T, V, NodeDstMode> {
 template <typename T, typename V>
 class HeteroDispatchArg<T, V, EdgeMode> {
  public:
+  using ValueType = V;
   HeteroDispatchArg(const T& val) : val_(val) {
     static_assert(is_c10_dict<T>::value, "Should be a c10::dict");
   }
 
-  template <typename K>
-  V value_by_edge(const K& key) {
-    return val_.at(key);
-  }
+  V value_by_edge(const EdgeType& edge) { return val_.at(edge); }
 
   bool filter_by_edge(const EdgeType& edge) { return val_.contains(edge); }
 
@@ -145,46 +137,27 @@ bool filter_args_by_edge(const EdgeType& edge, T&& t, Args&&... args) {
   return t.filter_by_edge(edge) && filter_args_by_edge(edge, args...);
 }
 
-// Check if a callable is wrapped by std::function
-template <typename... T>
-struct is_std_function : std::false_type {};
+// Specialize
+template <typename... Args>
+auto value_args_by_edge(const EdgeType& edge, Args&&... args) {}
 
+// Stop condition of argument filtering
+template <>
+auto value_args_by_edge(const EdgeType& edge) {
+  return std::tuple<>();
+}
+
+// We filter each argument individually by the given edge using a variadic
+// template
 template <typename T, typename... Args>
-struct is_std_function<std::function<T(Args...)>> : std::true_type {};
-
-template <typename T>
-class HeteroDispatchOp {
- public:
-  using ResultType = typename T::result_type;
-  HeteroDispatchOp(const EdgeTensorDict& rowptr,
-                   const EdgeTensorDict& col,
-                   T op)
-      : rowptr_(rowptr), col_(col), op_(op) {
-    // Check early
-    static_assert(is_std_function<T>::value, "Must pass a function");
-  }
-
-  template <typename... Args>
-  c10::Dict<EdgeType, ResultType> operator()(Args&&... args) {
-    c10::Dict<EdgeType, ResultType> dict;
-    for (const auto& kv : rowptr_) {
-      auto edge = kv.key();
-      auto rowptr = kv.value();
-      auto col = col_.at(edge);
-      bool pass = filter_args_by_edge(edge, args...);
-      if (pass) {
-        ResultType res = op_(rowptr, col, args.value_by_edge(edge)...);
-        dict.insert(edge, res);
-      }
-    }
-    return dict;
-  }
-
- private:
-  EdgeTensorDict rowptr_;
-  EdgeTensorDict col_;
-  T op_;
-};
+auto value_args_by_edge(const EdgeType& edge, T&& t, Args&&... args) {
+  using ArgType = std::remove_const_t<std::remove_reference_t<T>>;
+  static_assert(is_hetero_arg<ArgType>::value,
+                "args should be HeteroDispatchArg");
+  return std::tuple_cat(
+      std::tuple<typename ArgType::ValueType>(t.value_by_edge(edge)),
+      value_args_by_edge(edge, args...));
+}
 
 }  // namespace utils
 
