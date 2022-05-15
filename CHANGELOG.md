@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- Added hetero subgraph kernel ([#43](https://github.com/pyg-team/pyg-lib/pull/43)
+- Added `hetero_subgraph` kernel ([#43](https://github.com/pyg-team/pyg-lib/pull/43)
 - Added `pyg::sampler::Mapper` utility for mapping global to local node indices ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
 - Added benchmark script ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
 - Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44)
