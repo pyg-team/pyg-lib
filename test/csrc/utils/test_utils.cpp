@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "pyg_lib/csrc/sampler/subgraph.h"
+#include "pyg_lib/csrc/utils/types.h"
 
 TEST(UtilsTypeTest, BasicAssertions) {
   pyg::utils::EdgeType edge = "node1__to__node2";
