@@ -73,16 +73,16 @@ hetero_subgraph(const utils::EdgeTensorDict& rowptr,
 
   for (const auto& kv : rowptr) {
     const auto& edge_type = kv.key();
-    bool pass = filter_args_by_edge(edge_type, src_nodes_arg, dst_nodes_arg,
-                                    edge_id_arg);
+    bool pass = src_nodes_arg.filter_by_edge(edge_type) &&
+                dst_nodes_arg.filter_by_edge(edge_type) &&
+                edge_id_arg.filter_by_edge(edge_type);
     if (pass) {
-      auto vals = value_args_by_edge(edge_type, src_nodes_arg, dst_nodes_arg,
-                                     edge_id_arg);
       const auto& r = rowptr.at(edge_type);
       const auto& c = col.at(edge_type);
-      res.insert(edge_type,
-                 subgraph_bipartite(r, c, std::get<0>(vals), std::get<1>(vals),
-                                    std::get<2>(vals)));
+      res.insert(edge_type, subgraph_bipartite(
+                                r, c, src_nodes_arg.value_by_edge(edge_type),
+                                dst_nodes_arg.value_by_edge(edge_type),
+                                edge_id_arg.value_by_edge(edge_type)));
     }
   }
 
