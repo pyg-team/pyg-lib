@@ -16,12 +16,11 @@ extensions = [
 ]
 
 html_theme = 'pyg_sphinx_theme'
-autodoc_member_order = 'bysource'
 html_logo = ('https://raw.githubusercontent.com/pyg-team/pyg_sphinx_theme/'
              'master/pyg_sphinx_theme/static/img/pyg_logo.png')
-html_theme_options = {
-    'logo_only': True,
-}
+
+add_module_names = False
+autodoc_member_order = 'bysource'
 
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),

@@ -3,7 +3,7 @@
 To build the documentation:
 
 1. [Build and install](https://github.com/pyg-team/pyg-lib/blob/master/CONTRIBUTING.md) `pyg-lib` from source.
-2. Install [Sphinx](https://www.sphinx-doc.org/en/master/) via
+2. Install [Sphinx](https://www.sphinx-doc.org/en/master/) theme via
    ```
    pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
    ```
