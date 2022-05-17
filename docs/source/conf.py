@@ -18,7 +18,7 @@ extensions = [
 html_theme = 'pyg_sphinx_theme'
 autodoc_member_order = 'bysource'
 html_logo = ('https://raw.githubusercontent.com/pyg-team/pyg_sphinx_theme/'
-             'initial_commit/pyg_sphinx_theme/static/img/pyg_logo.png')
+             'master/pyg_sphinx_theme/static/img/pyg_logo.png')
 html_theme_options = {
     'logo_only': True,
 }
