@@ -2,6 +2,7 @@
 #include <ATen/Parallel.h>
 #include <torch/library.h>
 
+#include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 
 namespace pyg {
@@ -18,31 +19,31 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
 
-  const auto deg = rowptr.new_empty({nodes.size(0)});
+  const auto num_nodes = rowptr.size(0) - 1;
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
   at::Tensor out_col;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
+    auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, nodes.size(0));
+    mapper.fill(nodes);
+
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
     const auto col_data = col.data_ptr<scalar_t>();
     const auto nodes_data = nodes.data_ptr<scalar_t>();
 
-    std::unordered_map<scalar_t, scalar_t> to_local_node;
-    for (scalar_t i = 0; i < nodes.size(0); ++i)  // TODO parallelize
-      to_local_node.insert({nodes_data[i], i});
-
     // We first iterate over all nodes and collect information about the number
     // of edges in the induced subgraph.
+    const auto deg = rowptr.new_empty({nodes.size(0)});
     auto deg_data = deg.data_ptr<scalar_t>();
     auto grain_size = at::internal::GRAIN_SIZE;
     at::parallel_for(0, nodes.size(0), grain_size, [&](int64_t _s, int64_t _e) {
-      for (scalar_t i = _s; i < _e; ++i) {
+      for (size_t i = _s; i < _e; ++i) {
         const auto v = nodes_data[i];
         // Iterate over all neighbors and check if they are part of `nodes`:
         scalar_t d = 0;
-        for (scalar_t j = rowptr_data[v]; j < rowptr_data[v + 1]; ++j) {
-          if (to_local_node.count(col_data[j]) > 0)
+        for (size_t j = rowptr_data[v]; j < rowptr_data[v + 1]; ++j) {
+          if (mapper.exists(col_data[j]))
             d++;
         }
         deg_data[i] = d;
@@ -73,10 +74,9 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
         // Iterate over all neighbors and check if they are part of `nodes`:
         scalar_t offset = out_rowptr_data[i];
         for (scalar_t j = rowptr_data[v]; j < rowptr_data[v + 1]; ++j) {
-          const auto w = col_data[j];
-          const auto search = to_local_node.find(w);
-          if (search != to_local_node.end()) {
-            out_col_data[offset] = search->second;
+          const auto w = mapper.map(col_data[j]);
+          if (w >= 0) {
+            out_col_data[offset] = w;
             if (return_edge_id)
               out_edge_id_data[offset] = j;
             offset++;
