@@ -17,9 +17,9 @@ def subgraph(
         rowptr (torch.Tensor): Compressed source node indices.
         col (torch.Tensor): Target node indices.
         nodes (torch.Tensor): Node indices of the induced subgraph.
-        return_edge_id (bool, optional): If set :obj:`False`, will not return
-                        the indices of edges of the original graph contained in
-                        the induced subgraph. (default: :obj:`True`)
+        return_edge_id (bool, optional): If set to :obj:`False`, will not
+            return the indices of edges of the original graph contained in the
+            induced subgraph. (default: :obj:`True`)
 
     Returns:
         (torch.Tensor, torch.Tensor, Optional[torch.Tensor]): Compressed source

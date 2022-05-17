@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install sphinx sphinx_rtd_theme
+          pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
 
       - name: Install package
         run: |
