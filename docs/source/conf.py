@@ -15,7 +15,13 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'pyg_sphinx_theme'
+html_logo = ('https://raw.githubusercontent.com/pyg-team/pyg_sphinx_theme/'
+             'master/pyg_sphinx_theme/static/img/pyg_logo.png')
+html_favicon = ('https://raw.githubusercontent.com/pyg-team/pyg_sphinx_theme/'
+                'master/pyg_sphinx_theme/static/img/favicon.png')
+
+add_module_names = False
 autodoc_member_order = 'bysource'
 
 intersphinx_mapping = {
