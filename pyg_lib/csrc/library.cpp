@@ -6,7 +6,6 @@
 
 #ifdef WITH_CUDA
 #include <cuda.h>
-#include <cutlass/gemm/gemm.h>
 #endif
 
 #include <torch/library.h>
