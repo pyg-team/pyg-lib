@@ -19,6 +19,9 @@ if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+
+  set(CUTLASS_DIR third_party/cutlass/include)
+  include_directories(${CUTLASS_DIR})
 endif()
 
 set(CSRC pyg_lib/csrc)
