@@ -10,7 +10,7 @@ namespace segment {
 PYG_API at::Tensor matmul(const at::Tensor& input,
                           const at::Tensor& ptr,
                           const at::Tensor& other,
-                          at::optional<at::Tensor&> out);
+                          const at::Tensor& out);
 
 }  // namespace segment
 }  // namespace pyg
