@@ -18,7 +18,7 @@ at::Tensor matmul(const at::Tensor& input,
 
   at::CheckedFrom c = "segment_matmul";
   at::checkAllDefined(c, {input_t, ptr_t, other_t, out_t});
-  at::checkAllSameType(c, {input_t, ptr_t, other_t, out_t});
+  at::checkAllSameType(c, {input_t, other_t, out_t});
 
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul", "")
