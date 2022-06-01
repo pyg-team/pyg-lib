@@ -29,7 +29,7 @@ at::Tensor matmul_kernel(const at::Tensor& input,
                          const at::Tensor& ptr,
                          const at::Tensor& other,
                          const at::Tensor& out) {
-  // TODO: Require contiguous memory!
+  // TODO: Requires contiguous memory!
   auto num_matrices = ptr.numel() - 1;
 
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
@@ -63,9 +63,11 @@ at::Tensor matmul_kernel(const at::Tensor& input,
   std::vector<float*> ptr_D_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = input.data_ptr<float>() + (ptr_data[i] * input.size(1));
+    ptr_A_host[i] = input[i].data_ptr<float>();
     ptr_B_host[i] = other[i].data_ptr<float>();
-    ptr_D_host[i] = out.data_ptr<float>() + (ptr_data[i] * out.size(1));
+    ptr_D_host[i] = out[i].data_ptr<float>();
+    // ptr_A_host[i] = input.data_ptr<float>() + (ptr_data[i] * input.size(1));
+    // ptr_D_host[i] = out.data_ptr<float>() + (ptr_data[i] * out.size(1));
   }
 
   cutlass::DeviceAllocation<float*> ptr_A;
@@ -85,9 +87,9 @@ at::Tensor matmul_kernel(const at::Tensor& input,
   std::vector<int64_t> ldb_host(num_matrices);
   std::vector<int64_t> ldd_host(num_matrices);
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = ptr_data[i + 1] - ptr_data[i];
-    auto k = input.size(1);
-    auto n = out.size(1);
+    auto m = input.size(1);
+    auto k = input.size(2);
+    auto n = out.size(2);
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     lda_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ldb_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
@@ -115,7 +117,7 @@ at::Tensor matmul_kernel(const at::Tensor& input,
   typename EpilogueOutputOp::Params epilogue_op(1.0, 0.0);
 
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
-  int threadblock_count = 0;
+  int threadblock_count = 1024;
   typename GemmGrouped::Arguments args(
       all_problems_device.get(), num_matrices, threadblock_count, epilogue_op,
       ptr_A.get(), ptr_B.get(), ptr_D.get(), ptr_D.get(), lda.get(), ldb.get(),
