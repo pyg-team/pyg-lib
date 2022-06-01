@@ -22,6 +22,8 @@ if(WITH_CUDA)
 
   set(CUTLASS_DIR third_party/cutlass/include)
   include_directories(${CUTLASS_DIR})
+  set(CUTLASS_UTIL_DIR third_party/cutlass/tools/util/include)
+  include_directories(${CUTLASS_UTIL_DIR})
 endif()
 
 set(CSRC pyg_lib/csrc)
