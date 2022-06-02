@@ -5,7 +5,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- Added `pyg::segment::matmul` CUDA implementation via `cutlass` ([#51](https://github.com/pyg-team/pyg-lib/pull/51)
 - Added `pyg::sampler::Mapper` utility for mapping global to local node indices ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
 - Added benchmark script ([#45](https://github.com/pyg-team/pyg-lib/pull/45)
 - Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44)
