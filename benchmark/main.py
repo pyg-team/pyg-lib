@@ -27,5 +27,48 @@ def test_subgraph(dataset, **kwargs):
     print(time.perf_counter() - t)
 
 
+def test_segment_matmul():
+    num_types = 100
+    num_nodes = 10000
+    feat = 128
+
+    inputs = torch.randn(num_types, num_nodes, feat, device='cuda')
+    weight = torch.randn(num_types, feat, feat, device='cuda')
+    out = torch.empty(num_types, num_nodes, feat, device='cuda')
+    ptr = torch.arange(num_types + 1)
+
+    for i in range(1, 1001):
+        if i == 100:
+            t = time.perf_counter()
+        torch.cuda.synchronize()
+        torch.ops.pyg.segment_matmul(inputs, ptr, weight, out)
+        torch.cuda.synchronize()
+    print(time.perf_counter() - t)
+
+    seglen = torch.zeros(inputs.size(0), dtype=torch.long,
+                         device='cpu') + inputs.size(1)
+    import dgl
+    for i in range(1, 1001):
+        if i == 100:
+            t = time.perf_counter()
+        torch.cuda.synchronize()
+        dgl.ops.segment_mm(inputs.view(-1, feat), weight, seglen)
+        torch.cuda.synchronize()
+    print(time.perf_counter() - t)
+
+    for i in range(1, 1001):
+        if i == 100:
+            t = time.perf_counter()
+        torch.cuda.synchronize()
+        out = torch.empty_like(inputs)
+        for j in range(inputs.size(0)):
+            out[j] = inputs[j] @ weight[j]
+        torch.cuda.synchronize()
+    print(time.perf_counter() - t)
+
+    pass
+
+
 if __name__ == '__main__':
-    test_subgraph()
+    # test_subgraph()
+    test_segment_matmul()

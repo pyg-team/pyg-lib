@@ -56,7 +56,7 @@ at::Tensor matmul_kernel(const at::Tensor& input,
       cutlass::arch::OpMultiplyAdd                                    //
       >::GemmKernel;
 
-  auto ptr_data = ptr.cpu().data_ptr<int64_t>();
+  // auto ptr_data = ptr.cpu().data_ptr<int64_t>();
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
