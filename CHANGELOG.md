@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
 ### Changed
+- Fixed versions of `checkout` and `setup-python` in CI ([#52](https://github.com/pyg-team/pytorch_geometric/pull/52))
 - Make use of the `pyg_sphinx_theme` documentation template ([#47](https://github.com/pyg-team/pyg-lib/pull/47))
 - Auto-compute number of threads and blocks in CUDA kernels ([#41](https://github.com/pyg-team/pyg-lib/pull/41))
 - Optional return types in `pyg.subgraph()` ([#40](https://github.com/pyg-team/pyg-lib/pull/40))
