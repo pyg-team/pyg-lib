@@ -27,14 +27,109 @@ namespace {
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
-                               const std::vector<at::Tensor>& out) {}
+                               const std::vector<at::Tensor>& out) {
+  // TODO (matthias) Check tensor devices.
+  // TODO (matthias) Check for contiguous memory.
+
+  // TODO (matthias) Allow for other types than `float`.
+  // TODO (matthias) Are these attributes correctly set?
+  using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+      float,                                         // Element A
+      cutlass::layout::RowMajor,                     // Layout A
+      cutlass::ComplexTransform::kNone,              //
+      8,                                             // Granularity A
+      float,                                         // Element B
+      cutlass::layout::RowMajor,                     // Layout B
+      cutlass::ComplexTransform::kNone,              //
+      8,                                             // Granularity B
+      float,                                         // Element C&D
+      cutlass::layout::RowMajor,                     // Layout C&D
+      float,                                         // Element Accumulator
+      cutlass::arch::OpClassTensorOp,                // Operator Class Tag
+      cutlass::arch::Sm80,                           // Architecture
+      cutlass::gemm::GemmShape<256, 128, 32>,        // Threadblock-level Tile
+      cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
+      cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
+      cutlass::epilogue::thread::LinearCombination<  // Epilogue
+          float, 8, float, float>,                   //
+      cutlass::gemm::threadblock::                   // Swizzling Operator
+      GemmIdentityThreadblockSwizzle<8>,             //
+      2,                                             // Stages
+      cutlass::arch::OpMultiplyAdd                   // Operation
+      >::GemmKernel;
+
+  auto num_matrices = input.size();
+
+  std::vector<float*> ptr_A_host(num_matrices);
+  std::vector<float*> ptr_B_host(num_matrices);
+  std::vector<float*> ptr_C_host(num_matrices);
+
+  for (size_t i = 0; i < num_matrices; ++i) {
+    ptr_A_host[i] = input[i].data_ptr<float>();
+    ptr_B_host[i] = other[i].data_ptr<float>();
+    ptr_C_host[i] = out[i].data_ptr<float>();
+  }
+
+  cutlass::DeviceAllocation<float*> ptr_A;
+  ptr_A.reset(num_matrices);
+  ptr_A.copy_from_host(ptr_A_host.data());
+
+  cutlass::DeviceAllocation<float*> ptr_B;
+  ptr_B.reset(num_matrices);
+  ptr_B.copy_from_host(ptr_B_host.data());
+
+  cutlass::DeviceAllocation<float*> ptr_C;
+  ptr_C.reset(num_matrices);
+  ptr_C.copy_from_host(ptr_C_host.data());
+
+  std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
+  std::vector<int64_t> ld_A_host(num_matrices);
+  std::vector<int64_t> ld_B_host(num_matrices);
+  std::vector<int64_t> ld_C_host(num_matrices);
+
+  for (size_t i = 0; i < num_matrices; ++i) {
+    auto m = input[i].size(0), k = input[i].size(1), n = out[i].size(1);
+    all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
+    ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
+    ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
+    ld_C_host[i] = GemmKernel::LayoutC::packed({m, n}).stride(0);
+  }
+
+  cutlass::DeviceAllocation<cutlass::gemm::GemmCoord> all_problems_device;
+  all_problems_device.reset(num_matrices);
+  all_problems_device.copy_from_host(all_problems.data());
+
+  cutlass::DeviceAllocation<int64_t> ld_A;
+  ld_A.reset(num_matrices);
+  ld_A.copy_from_host(ld_A_host.data());
+
+  cutlass::DeviceAllocation<int64_t> ld_B;
+  ld_B.reset(num_matrices);
+  ld_B.copy_from_host(ld_B_host.data());
+
+  cutlass::DeviceAllocation<int64_t> ld_C;
+  ld_C.reset(num_matrices);
+  ld_C.copy_from_host(ld_C_host.data());
+
+  using EpilogueOutputOp = typename GemmKernel::Epilogue::OutputOp;
+  typename EpilogueOutputOp::Params epilogue_op(1.0, 0.0);
+
+  using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
+  typename GemmGrouped::Arguments args(
+      all_problems_device.get(), num_matrices, /*threadblock_count=*/1024,
+      epilogue_op, ptr_A.get(), ptr_B.get(), ptr_C.get(), ptr_C.get(),
+      ld_A.get(), ld_B.get(), ld_C.get(), ld_C.get());
+
+  GemmGrouped gemm;
+  auto status = gemm.initialize(args);
+  TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM init failed");
+  status = gemm.run();
+  TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
+}
 
 std::vector<at::Tensor> grouped_matmul_kernel(
     const std::vector<at::Tensor>& input,
     const std::vector<at::Tensor>& other) {
-  // TODO (matthias) Check tensor devices.
-  // TODO (matthias) Check for contiguous memory.
-
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
@@ -47,13 +142,10 @@ std::vector<at::Tensor> grouped_matmul_kernel(
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
                                  const at::Tensor& other) {
-  // TODO (matthias) Check tensor devices.
-  // TODO (matthias) Check for contiguous memory.
-
   auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
               ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
-  size = size.cpu();  // `at::split` requires CPU-allocated array.
-  // TODO (matthias) Allow other types than `int64_t`.
+  size = size.cpu();  // `at::split` requires CPU-allocated data.
+  // TODO (matthias) Allow for other types than `int64_t`.
   auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
 
   const auto out = input.new_empty({input.size(0), other.size(-1)});
@@ -65,124 +157,6 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
   return out;
 }
-
-// // TODO: Requires contiguous memory!
-// auto num_matrices = ptr.numel() - 1;
-
-// using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-//     float,                                         //
-//     cutlass::layout::RowMajor,                     //
-//     cutlass::ComplexTransform::kNone,              //
-//     8,                                             //
-//     float,                                         //
-//     cutlass::layout::RowMajor,                     //
-//     cutlass::ComplexTransform::kNone,              //
-//     8,                                             //
-//     float,                                         //
-//     cutlass::layout::RowMajor,                     //
-//     float,                                         //
-//     cutlass::arch::OpClassTensorOp,                //
-//     cutlass::arch::Sm80,                           //
-//     cutlass::gemm::GemmShape<256, 128, 32>,        //
-//     cutlass::gemm::GemmShape<64, 64, 32>,          //
-//     cutlass::gemm::GemmShape<16, 8, 8>,            //
-//     cutlass::epilogue::thread::LinearCombination<  //
-//         float,
-//         8,
-//         float,
-//         float>,                                                     //
-//     cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<8>,  //
-//     2,                                                              //
-//     cutlass::arch::OpMultiplyAdd                                    //
-//     >::GemmKernel;
-
-// // auto ptr_data = ptr.cpu().data_ptr<int64_t>();
-
-// std::vector<float*> ptr_A_host(num_matrices);
-// std::vector<float*> ptr_B_host(num_matrices);
-// std::vector<float*> ptr_D_host(num_matrices);
-
-// for (size_t i = 0; i < num_matrices; ++i) {
-//   ptr_A_host[i] = input[i].data_ptr<float>();
-//   ptr_B_host[i] = other[i].data_ptr<float>();
-//   ptr_D_host[i] = out[i].data_ptr<float>();
-//   // ptr_A_host[i] = input.data_ptr<float>() + (ptr_data[i] *
-//   // input.size(1)); ptr_D_host[i] = out.data_ptr<float>() + (ptr_data[i] *
-//   // out.size(1));
-// }
-
-// cutlass::DeviceAllocation<float*> ptr_A;
-// ptr_A.reset(num_matrices);
-// ptr_A.copy_from_host(ptr_A_host.data());
-
-// cutlass::DeviceAllocation<float*> ptr_B;
-// ptr_B.reset(num_matrices);
-// ptr_B.copy_from_host(ptr_B_host.data());
-
-// cutlass::DeviceAllocation<float*> ptr_D;
-// ptr_D.reset(num_matrices);
-// ptr_D.copy_from_host(ptr_D_host.data());
-
-// std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
-// std::vector<int64_t> lda_host(num_matrices);
-// std::vector<int64_t> ldb_host(num_matrices);
-// std::vector<int64_t> ldd_host(num_matrices);
-// for (size_t i = 0; i < num_matrices; ++i) {
-//   auto m = input.size(1);
-//   auto k = input.size(2);
-//   auto n = out.size(2);
-//   all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
-//   lda_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
-//   ldb_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
-//   ldd_host[i] = GemmKernel::LayoutC::packed({m, n}).stride(0);
-// }
-
-// cutlass::DeviceAllocation<cutlass::gemm::GemmCoord> all_problems_device;
-// all_problems_device.reset(num_matrices);
-// all_problems_device.copy_from_host(all_problems.data());
-
-// cutlass::DeviceAllocation<int64_t> lda;
-// lda.reset(num_matrices);
-// lda.copy_from_host(lda_host.data());
-
-// cutlass::DeviceAllocation<int64_t> ldb;
-// ldb.reset(num_matrices);
-// ldb.copy_from_host(ldb_host.data());
-
-// cutlass::DeviceAllocation<int64_t> ldd;
-// ldd.reset(num_matrices);
-// ldd.copy_from_host(ldd_host.data());
-
-// /* configurate the GEMM args */
-// using EpilogueOutputOp = typename GemmKernel::Epilogue::OutputOp;
-// typename EpilogueOutputOp::Params epilogue_op(1.0, 0.0);
-
-// using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
-// int threadblock_count = 1024;
-// typename GemmGrouped::Arguments args(all_problems_device.get(),
-//                                      num_matrices,
-//                                      threadblock_count,
-//                                      epilogue_op,
-//                                      ptr_A.get(),
-//                                      ptr_B.get(),
-//                                      ptr_D.get(),
-//                                      ptr_D.get(),
-//                                      lda.get(),
-//                                      ldb.get(),
-//                                      ldd.get(),
-//                                      ldd.get());
-
-// GemmGrouped gemm;
-// cutlass::Status status;
-// status = gemm.initialize(args);
-// TORCH_CHECK(status == cutlass::Status::kSuccess,
-//             "GroupedGEMM kernel initialization: failed \n");
-// status = gemm.run();
-// TORCH_CHECK(status == cutlass::Status::kSuccess,
-//             "GroupedGEMM kernel run: failed \n");
-
-// return out;
-// }
 
 }  // namespace
 
