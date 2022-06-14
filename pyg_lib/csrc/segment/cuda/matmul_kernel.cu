@@ -25,16 +25,45 @@ namespace segment {
 
 namespace {
 
+void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
+                               const std::vector<at::Tensor>& other,
+                               const std::vector<at::Tensor>& out) {}
+
 std::vector<at::Tensor> grouped_matmul_kernel(
     const std::vector<at::Tensor>& input,
     const std::vector<at::Tensor>& other) {
-  return input;
+  // TODO (matthias) Check tensor devices.
+  // TODO (matthias) Check for contiguous memory.
+
+  std::vector<at::Tensor> out(input.size());
+  for (size_t i = 0; i < input.size(); ++i)
+    out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
+
+  grouped_matmul_out_kernel(input, other, out);
+
+  return out;
 }
 
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
                                  const at::Tensor& other) {
-  return input;
+  // TODO (matthias) Check tensor devices.
+  // TODO (matthias) Check for contiguous memory.
+
+  auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
+              ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
+  size = size.cpu();  // `at::split` requires CPU-allocated array.
+  // TODO (matthias) Allow other types than `int64_t`.
+  auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+
+  const auto out = input.new_empty({input.size(0), other.size(-1)});
+
+  grouped_matmul_out_kernel(
+      input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+      other.split(/*split_size=*/1, /*dim=*/0),
+      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+
+  return out;
 }
 
 // // TODO: Requires contiguous memory!
