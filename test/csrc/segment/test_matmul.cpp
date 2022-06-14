@@ -16,7 +16,7 @@ TEST(SegmentMatmulTest, BasicAssertions) {
   /* std::cout << ptr << std::endl; */
   /* std::cout << other << std::endl; */
   std::cout << out << std::endl;
-  pyg::segment::matmul(input, ptr, other, out);
+  pyg::segment::segment_matmul(input, ptr, other);
   std::cout << out << std::endl;
 
   std::cout << at::matmul(input[0], other[0]) << std::endl;

@@ -49,10 +49,6 @@ class CMakeBuild(build_ext):
 
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
-        else:
-            print("---------------------------")
-            print("NO NINJA")
-            print("---------------------------")
 
         build_args = []
 
