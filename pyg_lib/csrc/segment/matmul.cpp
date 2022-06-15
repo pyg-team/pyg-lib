@@ -10,6 +10,8 @@ namespace segment {
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
+  // TODO (matthias) Add automatic dispatcher.
+  // TODO (matthias) Add autograd support.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
                        .typed<decltype(grouped_matmul)>();
@@ -21,6 +23,7 @@ at::Tensor segment_matmul(const at::Tensor& input,
                           const at::Tensor& ptr,
                           const at::Tensor& other) {
   // TODO (matthias) Add TensorArg definitions.
+  // TODO (matthias) Add autograd support.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul", "")
                        .typed<decltype(segment_matmul)>();
