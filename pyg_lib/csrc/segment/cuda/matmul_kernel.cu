@@ -2,23 +2,9 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
 
-#include <cutlass/cutlass.h>
 #include <cutlass/gemm/device/gemm_grouped.h>
-#include <cutlass/gemm/device/gemm_universal.h>
-#include <cutlass/gemm/gemm.h>
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
-#include <cutlass/gemm/kernel/gemm_grouped.h>
-#include <cutlass/util/command_line.h>
-#include <cutlass/util/device_memory.h>
-#include <cutlass/util/distribution.h>
 #include <cutlass/util/host_tensor.h>
-#include <cutlass/util/reference/device/gemm_complex.h>
-#include <cutlass/util/reference/device/tensor_fill.h>
-#include <cutlass/util/reference/host/gemm_complex.h>
-#include <cutlass/util/reference/host/tensor_compare.h>
-#include <cutlass/util/reference/host/tensor_copy.h>
-#include <cutlass/util/reference/host/tensor_norm.h>
-#include <cutlass/util/tensor_view_io.h>
 
 namespace pyg {
 namespace segment {
