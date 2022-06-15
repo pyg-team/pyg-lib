@@ -15,7 +15,9 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         outs = pyg_lib.segment.grouped_matmul(inputs, others)
         assert len(outs) == 2
         assert outs[0].size() == (5, 32)
+        assert outs[0] == inputs[0] @ others[0]
         assert outs[1].size() == (3, 64)
+        assert outs[1] == inputs[1] @ others[1]
 
     Args:
         inputs (List[torch.Tensor]): List of left operand 2D matrices of shapes
