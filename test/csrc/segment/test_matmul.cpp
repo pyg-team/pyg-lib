@@ -4,17 +4,36 @@
 #include "pyg_lib/csrc/segment/matmul.h"
 
 #ifdef WITH_CUDA
+TEST(GroupedMatmulTest, BasicAssertions) {
+  auto options = at::TensorOptions().device(at::kCUDA);
+
+  auto input = {at::randn({5, 8}, options), at::randn({3, 12}, options)};
+  auto other = {at::randn({8, 16}, options), at::randn({12, 32}, options)};
+
+  auto out = pyg::segment::grouped_matmul(input, other);
+  EXPECT_EQ(out[0].size(0), 5);
+  EXPECT_EQ(out[0].size(1), 16);
+  EXPECT_EQ(out[1].size(0), 3);
+  EXPECT_EQ(out[1].size(1), 32);
+  EXPECT_TRUE(at::allclose(out[0], at::matmul(input[0], other[0]), 1e-01));
+  EXPECT_TRUE(at::allclose(out[1], at::matmul(input[1], other[1]), 1e-01));
+}
+#endif
+
+#ifdef WITH_CUDA
 TEST(SegmentMatmulTest, BasicAssertions) {
   auto options = at::TensorOptions().device(at::kCUDA);
 
-  auto input = at::randn({6, 8}, options);
-  auto ptr = at::tensor({0, 2, 4, 6}, options.dtype(at::kLong));
-  auto other = at::randn({3, 8, 8}, options);
+  auto input = at::randn({8, 12}, options);
+  auto ptr = at::tensor({0, 5, 8}, options.dtype(at::kLong));
+  auto other = at::randn({2, 12, 16}, options);
 
-  /* std::cout << input << std::endl; */
-  /* std::cout << ptr << std::endl; */
-  /* std::cout << other << std::endl; */
   auto out = pyg::segment::segment_matmul(input, ptr, other);
-  std::cout << out << std::endl;
+  EXPECT_EQ(out.size(0), 8);
+  EXPECT_EQ(out.size(1), 16);
+  EXPECT_TRUE(at::allclose(out.narrow(0, 0, 5),
+                           at::matmul(input.narrow(0, 0, 5), other[0]), 1e-01));
+  EXPECT_TRUE(at::allclose(out.narrow(0, 5, 3),
+                           at::matmul(input.narrow(0, 5, 3), other[1]), 1e-01));
 }
 #endif
