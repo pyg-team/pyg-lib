@@ -23,11 +23,13 @@ class Mapper {
 
   void fill(const scalar_t* nodes_data, const scalar_t size) {
     if (use_vec) {
-      for (scalar_t i = 0; i < size; ++i)
+      for (scalar_t i = 0; i < size; ++i) {
         to_local_vec[nodes_data[i]] = i;
+      }
     } else {
-      for (scalar_t i = 0; i < size; ++i)
+      for (scalar_t i = 0; i < size; ++i) {
         to_local_map.insert({nodes_data[i], i});
+      }
     }
   }
 
@@ -35,14 +37,14 @@ class Mapper {
     fill(nodes.data_ptr<scalar_t>(), nodes.numel());
   }
 
-  bool exists(const scalar_t& node) {
+  bool exists(const scalar_t& node) const {
     if (use_vec)
       return to_local_vec[node] >= 0;
     else
       return to_local_map.count(node) > 0;
   }
 
-  scalar_t map(const scalar_t& node) {
+  scalar_t map(const scalar_t& node) const {
     if (use_vec)
       return to_local_vec[node];
     else {
