@@ -14,7 +14,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& nodes,
-    const bool return_edge_id) {
+    bool return_edge_id) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");

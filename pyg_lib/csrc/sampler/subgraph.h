@@ -13,7 +13,7 @@ PYG_API std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& nodes,
-    const bool return_edge_id = true);
+    bool return_edge_id = true);
 
 }  // namespace sampler
 }  // namespace pyg
