@@ -4,13 +4,14 @@
 #include <torch/library.h>
 
 namespace pyg {
-namespace segment {
+namespace ops {
 
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
   // TODO (matthias) Add autograd support.
+  // TODO (matthias) Add dispatcher support.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
                        .typed<decltype(grouped_matmul)>();
@@ -37,5 +38,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                              "Tensor other) -> Tensor"));
 }
 
-}  // namespace segment
+}  // namespace ops
 }  // namespace pyg

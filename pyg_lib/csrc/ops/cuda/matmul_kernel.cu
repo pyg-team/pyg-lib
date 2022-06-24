@@ -7,7 +7,7 @@
 #include <cutlass/util/host_tensor.h>
 
 namespace pyg {
-namespace segment {
+namespace ops {
 
 namespace {
 
@@ -153,5 +153,5 @@ TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
          TORCH_FN(segment_matmul_kernel));
 }
 
-}  // namespace segment
+}  // namespace ops
 }  // namespace pyg
