@@ -75,9 +75,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 
   for (size_t i = 0; i < num_matrices; ++i) {
     auto m = input[i].size(0), k = input[i].size(1), n = out[i].size(1);
-    TORCH_CHECK(input[i].dim() == 2, "'input' needs to be two-dimensional");
-    TORCH_CHECK(other[i].dim() == 2, "'other' needs to be two-dimensional");
-    TORCH_CHECK(input[i].size(1) == other[i].size(0), "Shape mismatch");
+    TORCH_CHECK(input[i].size(-1) == other[i].size(-2), "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
