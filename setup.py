@@ -51,8 +51,8 @@ class CMakeBuild(build_ext):
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
         else:
-            warnings.warn("Building times can be heavly improved by install "
-                          "'ninja': `pip install ninja`")
+            warnings.warn("Building times of 'pyg-lib' can be heavily improved"
+                          " by installing 'ninja': `pip install ninja`")
 
         build_args = []
 
