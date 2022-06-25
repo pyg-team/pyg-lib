@@ -2,6 +2,7 @@ import importlib
 import os
 import os.path as osp
 import subprocess
+import warnings
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -49,6 +50,9 @@ class CMakeBuild(build_ext):
 
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
+        else:
+            warnings.warn("Building times can be heavly improved by install "
+                          "'ninja': `pip install ninja`")
 
         build_args = []
 
