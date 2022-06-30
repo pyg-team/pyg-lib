@@ -4,6 +4,12 @@ OS=ubuntu1804
 
 case ${1} in
   cu115)
+    CUDA=11.6
+    APT_KEY=${OS}-${CUDA/./-}-local
+    FILENAME=cuda-repo-${APT_KEY}_${CUDA}.2-510.47.03-1_amd64.deb
+    URL=https://developer.download.nvidia.com/compute/cuda/${CUDA}.2/local_installers
+    ;;
+  cu115)
     CUDA=11.5
     APT_KEY=${OS}-${CUDA/./-}-local
     FILENAME=cuda-repo-${APT_KEY}_${CUDA}.2-495.29.05-1_amd64.deb
