@@ -68,8 +68,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 };
 
 at::Tensor segment_matmul(const at::Tensor& input,
-                                       const at::Tensor& ptr,
-                                       const at::Tensor& other) {
+                          const at::Tensor& ptr,
+                          const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other);
 }
 
