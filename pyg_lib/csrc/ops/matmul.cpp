@@ -19,8 +19,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list forward(AutogradContext* ctx,
                                std::vector<Variable> input,
                                std::vector<Variable> other) {
-    auto out =
-        op.call(input, other) ctx->save_for_backward({out, input, other});
+    auto out = op.call(input, other);
+    ctx->save_for_backward({out, input, other});
     return out;
   }
 
