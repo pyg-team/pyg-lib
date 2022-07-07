@@ -1,7 +1,7 @@
 #include "matmul.h"
-#include <torch/script.h>
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
+#include <torch/script.h>
 
 namespace pyg {
 namespace ops {
