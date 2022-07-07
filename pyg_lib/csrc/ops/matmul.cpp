@@ -23,15 +23,14 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto saved = ctx->get_saved_variables();
     auto out = saved[0];
-    auto input = saved[1]; 
+    auto input = saved[1];
     for (size_t i = 0; i < input.size(); ++i)
       input[i] = input[i].transpose(-2, -1);
     auto other = saved[2];
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1);
     auto input_grad = op.call(input, grad_outs);
-    auto other_grad = op.call(grad_outs, other)
-    return {input_grad, other_grad};
+    auto other_grad = op.call(grad_outs, other) return {input_grad, other_grad};
   }
 };
 
@@ -47,9 +46,9 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
                        .findSchemaOrThrow("pyg::segment_matmul", "")
                        .typed<decltype(segment_matmul)>();
   static Variable forward(AutogradContext* ctx,
-                           Variable input,
-                           const at::Tensor& ptr,
-                           Variable other) {
+                          Variable input,
+                          const at::Tensor& ptr,
+                          Variable other) {
     auto out = op.call(input, ptr, other);
     ctx->save_for_backward({out, input, ptr, other});
     return out;
