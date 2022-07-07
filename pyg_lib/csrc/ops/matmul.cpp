@@ -30,7 +30,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1);
     auto input_grad = op.call(input, grad_outs);
-    auto other_grad = op.call(grad_outs, other) return {input_grad, other_grad};
+    auto other_grad = op.call(grad_outs, other);
+    return {input_grad, other_grad};
   }
 };
 
