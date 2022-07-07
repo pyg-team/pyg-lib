@@ -1,10 +1,14 @@
 #include "matmul.h"
-
+#include <torch/script.h>
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
 
 namespace pyg {
 namespace ops {
+
+using torch::autograd::AutogradContext;
+using torch::autograd::Variable;
+using torch::autograd::variable_list;
 
 // Performs matrix multiplication across list of elements.
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
@@ -35,11 +39,6 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   }
 };
 
-std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
-                                       const std::vector<at::Tensor>& other) {
-  return GroupedMatmul::apply(input, other);
-}
-
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
@@ -67,9 +66,14 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 };
 
+std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
+                                       const std::vector<at::Tensor>& other) {
+  return GroupedMatmul::apply(input, other);
+}
+
 at::Tensor segment_matmul(const at::Tensor& input,
-                                       const at::Tensor& ptr,
-                                       const at::Tensor& other) {
+                          const at::Tensor& ptr,
+                          const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other);
 }
 
