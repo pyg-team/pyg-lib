@@ -1,5 +1,6 @@
 import torch
 
+
 def test_grouped_matmul():
     from pyg_lib.ops import grouped_matmul
 
@@ -39,9 +40,6 @@ def test_segment_matmul():
     # check correctness of backward
     assert other.grad[0:5] == out[0:5].grad @ other[0:5].T
     assert other.grad[5:8] == out[5:8].grad @ other[5:8].T
-
-
-
 
 
 if __name__ == 'main':
