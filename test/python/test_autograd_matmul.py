@@ -6,7 +6,10 @@ def test_grouped_matmul():
 
     # compute forward
     inputs = [torch.randn(5, 16), torch.randn(3, 32)]
-    others = [torch.randn((16, 32), requires_grad=True), torch.randn((32, 64), requires_grad=True)]
+    others = [
+        torch.randn((16, 32), requires_grad=True),
+        torch.randn((32, 64), requires_grad=True)
+    ]
     outs = grouped_matmul(inputs, others)
     # check forward correctness
     assert len(outs) == 2
@@ -24,6 +27,7 @@ def test_grouped_matmul():
 
 def test_segment_matmul():
     from pyg_lib.ops import segment_matmul
+
     # compute forward
     inputs = torch.randn(8, 16)
     ptr = torch.tensor([0, 5, 8])
