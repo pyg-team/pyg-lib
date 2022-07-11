@@ -61,7 +61,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
   static Variable backward(AutogradContext* ctx, Variable grad_out) {
     auto saved = ctx->get_saved_variables();
-    auto input = saved[1] auto ptr = saved[2];
+    auto input = saved[1];
+    auto ptr = saved[2];
     auto other = saved[3].transpose(-2, -1).contiguous();
     auto other_grad = op.call(grad_outs, ptr, other);
     if (torch::autograd::any_variable_requires_grad(input)) {
