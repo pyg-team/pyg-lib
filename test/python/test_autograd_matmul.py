@@ -4,6 +4,7 @@ import torch
 
 def test_grouped_matmul():
     from pyg_lib.ops import grouped_matmul
+
     # compute
     inputs = [torch.randn(5, 16), torch.randn(3, 32), torch.randn(4, 10)]
     others = [torch.randn(16, 32), torch.randn(32, 64), torch.randn(10, 20)]
@@ -17,8 +18,10 @@ def test_grouped_matmul():
     assert outs[2].size() == (4, 20)
     assert outs[2] == inputs[2] @ others[2]
 
+
 def test_segment_matmul():
     from pyg_lib.ops import segment_matmul
+
     # compute
     inputs = torch.randn(8, 16)
     ptr = torch.tensor([0, 5, 8])
@@ -28,5 +31,3 @@ def test_segment_matmul():
     assert out.size() == (8, 32)
     assert out[0:5] == inputs[0:5] @ other[0]
     assert out[5:8] == inputs[5:8] @ other[1]
-
-
