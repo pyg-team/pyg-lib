@@ -12,6 +12,7 @@ using torch::autograd::variable_list;
 
 // Performs matrix multiplication across list of elements.
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
+ // TODO (matthias) Add TensorArg definitions.
  public:
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
@@ -26,21 +27,28 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto saved = ctx->get_saved_variables();
-    auto out = saved[0];
     auto input = saved[1];
-    for (size_t i = 0; i < input.size(); ++i)
-      input[i] = input[i].transpose(-2, -1);
     auto other = saved[2];
     for (size_t i = 0; i < input.size(); ++i)
-      other[i] = other[i].transpose(-2, -1);
-    auto input_grad = op.call(input, grad_outs);
+      other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = op.call(grad_outs, other);
-    return {input_grad, other_grad};
+    if (torch::autograd::any_variable_requires_grad(input)) {
+      for (size_t i = 0; i < input.size(); ++i)
+        input[i] = input[i].transpose(-2, -1).contiguous();
+      auto input_grad = op.call(input, grad_outs);
+      return {input_grad, other_grad};
+    }
+    else {
+      return other_grad;
+    }
+    
+    
   }
 };
 
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
+ // TODO (matthias) Add TensorArg definitions.
  public:
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul", "")
@@ -56,13 +64,20 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
   static Variable backward(AutogradContext* ctx, Variable grad_out) {
     auto saved = ctx->get_saved_variables();
-    auto out = saved[0];
-    auto input = saved[1].transpose(-2, -1);
+    auto input = saved[1]
     auto ptr = saved[2];
-    auto other = saved[3].transpose(-2, -1);
-    auto input_grad = op.call(input, ptr, grad_outs);
-    auto other_grad = op.call(grad_outs, ptr, other);
-    return {input_grad, other_grad};
+    auto other = saved[3].transpose(-2, -1).contiguous();
+    auto other_grad = op.call(grad_outs, ptr, other); 
+    if (torch::autograd::any_variable_requires_grad(input)) {
+      input = input.transpose(-2, -1).contiguous();
+      auto input_grad = op.call(input, ptr, grad_outs);
+      return {input_grad, other_grad};
+    }
+    else {
+      return other_grad;
+    }
+    
+    
   }
 };
 
