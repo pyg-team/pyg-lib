@@ -64,10 +64,10 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input = saved[0];
     auto ptr = saved[1];
     auto other = saved[2].transpose(-2, -1).contiguous();
-    auto other_grad = op.call(grad_outs, ptr, other);
+    auto other_grad = op.call(grad_out, ptr, other);
     if (torch::autograd::any_variable_requires_grad(input)) {
       input = input.transpose(-2, -1).contiguous();
-      auto input_grad = op.call(input, ptr, grad_outs);
+      auto input_grad = op.call(input, ptr, grad_out);
       return {input_grad, other_grad};
     } else {
       return other_grad;
