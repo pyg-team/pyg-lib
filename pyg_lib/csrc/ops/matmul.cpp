@@ -21,14 +21,14 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
                                std::vector<Variable> input,
                                std::vector<Variable> other) {
     auto out = op.call(input, other);
-    ctx->save_for_backward({out, input, other});
+    ctx->save_for_backward({input, other});
     return out;
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto saved = ctx->get_saved_variables();
-    auto input = saved[1];
-    auto other = saved[2];
+    variable_list input = saved[0];
+    variable_list other = saved[1];
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = op.call(grad_outs, other);
@@ -55,15 +55,15 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
                           const at::Tensor& ptr,
                           Variable other) {
     auto out = op.call(input, ptr, other);
-    ctx->save_for_backward({out, input, ptr, other});
+    ctx->save_for_backward({input, ptr, other});
     return out;
   }
 
   static Variable backward(AutogradContext* ctx, Variable grad_out) {
     auto saved = ctx->get_saved_variables();
-    auto input = saved[1];
-    auto ptr = saved[2];
-    auto other = saved[3].transpose(-2, -1).contiguous();
+    auto input = saved[0];
+    auto ptr = saved[1];
+    auto other = saved[2].transpose(-2, -1).contiguous();
     auto other_grad = op.call(grad_outs, ptr, other);
     if (torch::autograd::any_variable_requires_grad(input)) {
       input = input.transpose(-2, -1).contiguous();
