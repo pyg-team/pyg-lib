@@ -10,17 +10,22 @@ using torch::autograd::AutogradContext;
 using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
+static auto group_op = c10::Dispatcher::singleton()
+                     .findSchemaOrThrow("pyg::grouped_matmul", "")
+                     .typed<decltype(grouped_matmul)>();
+
+static auto segment_op = c10::Dispatcher::singleton()
+                     .findSchemaOrThrow("pyg::segment_matmul", "")
+                     .typed<decltype(segment_matmul)>();
+
 // Performs matrix multiplication across list of elements.
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   // TODO (matthias) Add TensorArg definitions.
  public:
-  static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::grouped_matmul", "")
-                       .typed<decltype(grouped_matmul)>();
   static variable_list forward(AutogradContext* ctx,
                                std::vector<Variable> input,
                                std::vector<Variable> other) {
-    auto out = op.call(input, other);
+    auto out = group_op.call(input, other);
     ctx->save_for_backward({input, other});
     return out;
   }
@@ -31,11 +36,11 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     variable_list other = saved[1];
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1).contiguous();
-    auto other_grad = op.call(grad_outs, other);
-    if (torch::autograd::any_variable_requires_grad(input)) {
+    auto other_grad = group_op.call(grad_outs, other);
+    if (torch::autograd::any_variable_requires_grad({input})) {
       for (size_t i = 0; i < input.size(); ++i)
         input[i] = input[i].transpose(-2, -1).contiguous();
-      auto input_grad = op.call(input, grad_outs);
+      auto input_grad = group_op.call(input, grad_outs);
       return {input_grad, other_grad};
     } else {
       return other_grad;
@@ -47,14 +52,11 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   // TODO (matthias) Add TensorArg definitions.
  public:
-  static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::segment_matmul", "")
-                       .typed<decltype(segment_matmul)>();
   static Variable forward(AutogradContext* ctx,
                           Variable input,
                           const at::Tensor& ptr,
                           Variable other) {
-    auto out = op.call(input, ptr, other);
+    auto out = segment_op.call(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return out;
   }
@@ -64,10 +66,10 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input = saved[0];
     auto ptr = saved[1];
     auto other = saved[2].transpose(-2, -1).contiguous();
-    auto other_grad = op.call(grad_out, ptr, other);
+    auto other_grad = segment_op.call(grad_out, ptr, other);
     if (torch::autograd::any_variable_requires_grad(input)) {
       input = input.transpose(-2, -1).contiguous();
-      auto input_grad = op.call(input, ptr, grad_out);
+      auto input_grad = segment_op.call(input, ptr, grad_out);
       return {input_grad, other_grad};
     } else {
       return other_grad;
