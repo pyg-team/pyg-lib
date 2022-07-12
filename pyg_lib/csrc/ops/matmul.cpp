@@ -57,6 +57,11 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //   }
 // };
 
+// std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
+//                                        const std::vector<at::Tensor>& other) {
+//   return GroupedMatmul::apply(input, other);
+// }
+
 static auto segment_op = c10::Dispatcher::singleton()
                              .findSchemaOrThrow("pyg::segment_matmul", "")
                              .typed<decltype(segment_matmul)>();
@@ -89,11 +94,6 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     }
   }
 };
-
-std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
-                                       const std::vector<at::Tensor>& other) {
-  return GroupedMatmul::apply(input, other);
-}
 
 std::vector<at::Tensor> segment_matmul(const at::Tensor& input,
                                        const at::Tensor& ptr,
