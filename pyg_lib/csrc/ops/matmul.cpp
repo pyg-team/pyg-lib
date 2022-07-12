@@ -67,9 +67,9 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   // TODO (matthias) Add TensorArg definitions.
  public:
   static variable_list forward(AutogradContext* ctx,
-                          Variable input,
-                          const at::Tensor& ptr,
-                          Variable other) {
+                               Variable input,
+                               const at::Tensor& ptr,
+                               Variable other) {
     auto out = segment_op.call(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return {out};
