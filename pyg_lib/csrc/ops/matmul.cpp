@@ -26,7 +26,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
                                std::vector<Variable> input,
                                std::vector<Variable> other) {
     auto out = group_op.call(input, other);
-    ctx->save_for_backward({input, other});
+    // ctx->save_for_backward({input, other});
     return out;
   }
 
