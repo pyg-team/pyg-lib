@@ -127,8 +127,8 @@ std::vector<at::Tensor> grouped_matmul_kernel(
 }
 
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
-                                              const at::Tensor& ptr,
-                                              const at::Tensor& other) {
+                                 const at::Tensor& ptr,
+                                 const at::Tensor& other) {
   auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
               ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
   size = size.cpu();  // `at::split` requires CPU-allocated data.
