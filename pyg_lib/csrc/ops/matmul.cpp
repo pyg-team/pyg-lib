@@ -58,7 +58,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 // };
 
 // std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
-//                                        const std::vector<at::Tensor>& other) {
+//                                        const std::vector<at::Tensor>& other)
+//                                        {
 //   return GroupedMatmul::apply(input, other);
 // }
 
