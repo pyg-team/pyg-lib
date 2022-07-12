@@ -64,12 +64,11 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 // }
 at::Tensor segment_op(const at::Tensor& input,
                       const at::Tensor& ptr,
-                      const at::Tensor& other){
-  static auto op =
-    c10::Dispatcher::singleton()
-        .findSchemaOrThrow("pyg::segment_matmul", "")
-        .typed<decltype(segment_op)>();
-return op.call(input, ptr, other);
+                      const at::Tensor& other) {
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::segment_matmul", "")
+                       .typed<decltype(segment_op)>();
+  return op.call(input, ptr, other);
 }
 
 // Performs matrix multiplication according to segments.
