@@ -79,7 +79,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     return {out};
   }
 
-  static variable_list backward(AutogradContext* ctx, Variable grad_out) {
+  static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto saved = ctx->get_saved_variables();
     auto input = saved[0];
     auto ptr = saved[1];
