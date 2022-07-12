@@ -106,8 +106,9 @@ at::Tensor segment_matmul(const at::Tensor& input,
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
+                             "Tensor other) -> Tensor"));
 }
-static auto registry =
-    torch::RegisterOperators().op("segment_matmul", &segment_matmul);
 }  // namespace ops
 }  // namespace pyg
