@@ -64,7 +64,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 // }
 at::Tensor segment_op(const at::Tensor& input,
                       const at::Tensor& ptr,
-                      const at::Tensor& other) static auto op =
+                      const at::Tensor& other){
+  static auto op =
     c10::Dispatcher::singleton()
         .findSchemaOrThrow("pyg::segment_matmul", "")
         .typed<decltype(segment_op)>();
