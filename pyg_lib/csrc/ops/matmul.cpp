@@ -10,17 +10,12 @@ using torch::autograd::AutogradContext;
 using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
-static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::grouped_matmul", "")
-                       .typed<decltype(grouped_matmul)>();
-
-static auto segment_op = c10::Dispatcher::singleton()
-                             .findSchemaOrThrow("pyg::segment_matmul", "")
-                             .typed<decltype(segment_matmul)>();
-
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::grouped_matmul", "")
+                       .typed<decltype(grouped_matmul)>();
   // TODO (matthias) Add TensorArg definitions.
   // TODO (matthias) Add autograd support.
   // TODO (matthias) Add dispatcher support.
@@ -103,6 +98,10 @@ at::Tensor segment_matmul(const at::Tensor& input,
                           const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
+
+static auto segment_op = c10::Dispatcher::singleton()
+                             .findSchemaOrThrow("pyg::segment_matmul", "")
+                             .typed<decltype(segment_matmul)>();
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
