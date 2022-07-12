@@ -108,6 +108,6 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
 }
 static auto registry = torch::RegisterOperators()
-                           .op("segment_matmul", &segment_matmul)
+                           .op("segment_matmul", &segment_matmul);
 }  // namespace ops
 }  // namespace pyg
