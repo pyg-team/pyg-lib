@@ -29,16 +29,16 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 // class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 //   // TODO (matthias) Add TensorArg definitions.
 //  public:
-//   static variable_list forward(AutogradContext* ctx,
+//   static std::vector<variable_list> forward(AutogradContext* ctx,
 //                                std::vector<Variable> input,
 //                                std::vector<Variable> other) {
 //     auto out = group_op.call(input, other);
-//     // ctx->save_for_backward({input, other});
-//     return out;
+//     ctx->save_for_backward({input, other});
+//     return {out};
 //   }
 
 //
-//   static variable_list backward(AutogradContext* ctx, variable_list
+//   static std::vector<variable_list> backward(AutogradContext* ctx, variable_list
 //   grad_outs) {
 //     auto saved = ctx->get_saved_variables();
 //     variable_list input = saved[0];
@@ -52,7 +52,7 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //       auto input_grad = group_op.call(input, grad_outs);
 //       return {input_grad, other_grad};
 //     } else {
-//       return other_grad;
+//       return {variable_list(), other_grad};
 //     }
 //   }
 // };
@@ -106,10 +106,8 @@ std::vector<at::Tensor> segment_matmul(const at::Tensor& input,
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
-  m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
-                             "Tensor other) -> Tensor[]"));
 }
-
+static auto registry = torch::RegisterOperators()
+                           .op("segment_matmul", &segment_matmul)
 }  // namespace ops
 }  // namespace pyg
