@@ -10,7 +10,6 @@ using torch::autograd::AutogradContext;
 using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
-
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
@@ -97,8 +96,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 }
 
 std::vector<at::Tensor> segment_matmul(const at::Tensor& input,
-                          const at::Tensor& ptr,
-                          const at::Tensor& other) {
+                                       const at::Tensor& ptr,
+                                       const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other);
 }
 
