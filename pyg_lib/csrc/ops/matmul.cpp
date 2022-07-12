@@ -38,8 +38,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //   }
 
 //
-//   static std::vector<variable_list> backward(AutogradContext* ctx, variable_list
-//   grad_outs) {
+//   static std::vector<variable_list> backward(AutogradContext* ctx,
+//   variable_list grad_outs) {
 //     auto saved = ctx->get_saved_variables();
 //     variable_list input = saved[0];
 //     variable_list other = saved[1];
@@ -107,7 +107,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
 }
-static auto registry = torch::RegisterOperators()
-                           .op("segment_matmul", &segment_matmul)
+static auto registry =
+    torch::RegisterOperators().op("segment_matmul", &segment_matmul)
 }  // namespace ops
 }  // namespace pyg
