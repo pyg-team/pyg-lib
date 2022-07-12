@@ -75,7 +75,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
                                Variable input,
                                const at::Tensor& ptr,
                                Variable other) {
-    auto out = segment_op.call(input, ptr, other);
+    Variable out = segment_op.call(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return {out};
   }
