@@ -81,14 +81,14 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
-    auto saved = ctx->get_saved_variables();
-    auto input = saved[0];
-    auto ptr = saved[1];
-    auto other = saved[2].transpose(-2, -1).contiguous();
-    auto other_grad = segment_op.call(grad_outs[0], ptr, other);
+    variable_list saved = ctx->get_saved_variables();
+    Variable input = saved[0];
+    Variable ptr = saved[1];
+    Variable other = saved[2].transpose(-2, -1).contiguous();
+    Variable other_grad = segment_op.call(grad_outs[0], ptr, other);
     if (torch::autograd::any_variable_requires_grad({input})) {
       input = input.transpose(-2, -1).contiguous();
-      auto input_grad = segment_op.call(input, ptr, grad_outs[0]);
+      Variable input_grad = segment_op.call(input, ptr, grad_outs[0]);
       return {input_grad, other_grad};
     } else {
       return {Variable(), other_grad};
