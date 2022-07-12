@@ -85,10 +85,11 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     Variable input = saved[0];
     Variable ptr = saved[1];
     Variable other = saved[2].transpose(-2, -1).contiguous();
-    Variable other_grad = segment_op.call(grad_outs[0], ptr, other);
+    Variable grad_out = grad_outs[0]
+    Variable other_grad = segment_op.call(grad_out, ptr, other);
     if (torch::autograd::any_variable_requires_grad({input})) {
       input = input.transpose(-2, -1).contiguous();
-      Variable input_grad = segment_op.call(input, ptr, grad_outs[0]);
+      Variable input_grad = segment_op.call(input, ptr, grad_out);
       return {input_grad, other_grad};
     } else {
       return {Variable(), other_grad};
