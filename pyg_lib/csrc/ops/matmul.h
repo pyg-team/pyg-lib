@@ -13,7 +13,7 @@ PYG_API std::vector<at::Tensor> grouped_matmul(
     const std::vector<at::Tensor>& other);
 
 // TODO (matthias) Import `out` argument.
-PYG_API std::vector<at::Tensor> segment_matmul(const at::Tensor& input,
+PYG_API at::Tensor segment_matmul(const at::Tensor& input,
                                                const at::Tensor& ptr,
                                                const at::Tensor& other);
 

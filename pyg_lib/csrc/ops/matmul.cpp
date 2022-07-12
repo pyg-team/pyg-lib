@@ -97,10 +97,10 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 };
 
-std::vector<at::Tensor> segment_matmul(const at::Tensor& input,
+at::Tensor segment_matmul(const at::Tensor& input,
                                        const at::Tensor& ptr,
                                        const at::Tensor& other) {
-  return SegmentMatmul::apply(input, ptr, other);
+  return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
