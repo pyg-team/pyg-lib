@@ -54,13 +54,13 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   // TODO (matthias) Add TensorArg definitions.
  public:
-  static Variable forward(AutogradContext* ctx,
+  static variable_list forward(AutogradContext* ctx,
                           Variable input,
                           const at::Tensor& ptr,
                           Variable other) {
     auto out = segment_op.call(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
-    return out;
+    return {out, Variable()};
   }
 
   static variable_list backward(AutogradContext* ctx, Variable grad_out) {
