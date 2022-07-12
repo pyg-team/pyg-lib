@@ -11,8 +11,8 @@ using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::grouped_matmul", "")
-                       .typed<decltype(grouped_matmul)>();
+                     .findSchemaOrThrow("pyg::grouped_matmul", "")
+                     .typed<decltype(grouped_matmul)>();
 
 static auto segment_op = c10::Dispatcher::singleton()
                              .findSchemaOrThrow("pyg::segment_matmul", "")
