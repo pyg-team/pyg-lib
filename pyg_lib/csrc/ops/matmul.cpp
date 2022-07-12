@@ -62,6 +62,14 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //                                        {
 //   return GroupedMatmul::apply(input, other)[0];
 // }
+at::Tensor segment_matmul(const at::Tensor& input,
+                          const at::Tensor& ptr,
+                          const at::Tensor& other)
+  static auto op = c10::Dispatcher::singleton()
+                             .findSchemaOrThrow("pyg::segment_matmul", "")
+                             .typed<decltype(segment_matmul)>();
+  return op.call(input, ptr, other);
+}
 
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
@@ -98,10 +106,6 @@ at::Tensor segment_matmul(const at::Tensor& input,
                           const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
-
-static auto segment_op = c10::Dispatcher::singleton()
-                             .findSchemaOrThrow("pyg::segment_matmul", "")
-                             .typed<decltype(segment_matmul)>();
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
