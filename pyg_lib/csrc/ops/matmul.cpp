@@ -11,12 +11,12 @@ using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 static auto group_op = c10::Dispatcher::singleton()
-                     .findSchemaOrThrow("pyg::grouped_matmul", "")
-                     .typed<decltype(grouped_matmul)>();
+                           .findSchemaOrThrow("pyg::grouped_matmul", "")
+                           .typed<decltype(grouped_matmul)>();
 
 static auto segment_op = c10::Dispatcher::singleton()
-                     .findSchemaOrThrow("pyg::segment_matmul", "")
-                     .typed<decltype(segment_matmul)>();
+                             .findSchemaOrThrow("pyg::segment_matmul", "")
+                             .typed<decltype(segment_matmul)>();
 
 // Performs matrix multiplication across list of elements.
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
