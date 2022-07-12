@@ -39,7 +39,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   //   for (size_t i = 0; i < input.size(); ++i)
   //     other[i] = other[i].transpose(-2, -1).contiguous();
   //   auto other_grad = group_op.call(grad_outs, other);
-  //   if (torch::autograd::any_variable_requires_grad({input})) {
+  //   if (torch::autograd::any_variable_requires_grad(input)) {
   //     for (size_t i = 0; i < input.size(); ++i)
   //       input[i] = input[i].transpose(-2, -1).contiguous();
   //     auto input_grad = group_op.call(input, grad_outs);
@@ -69,7 +69,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto ptr = saved[1];
     auto other = saved[2].transpose(-2, -1).contiguous();
     auto other_grad = segment_op.call(grad_out, ptr, other);
-    if (torch::autograd::any_variable_requires_grad(input)) {
+    if (torch::autograd::any_variable_requires_grad({input})) {
       input = input.transpose(-2, -1).contiguous();
       auto input_grad = segment_op.call(input, ptr, grad_out);
       return {input_grad, other_grad};
