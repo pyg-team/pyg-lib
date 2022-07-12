@@ -10,6 +10,14 @@ using torch::autograd::AutogradContext;
 using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
+static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::grouped_matmul", "")
+                       .typed<decltype(grouped_matmul)>();
+
+static auto segment_op = c10::Dispatcher::singleton()
+                             .findSchemaOrThrow("pyg::segment_matmul", "")
+                             .typed<decltype(segment_matmul)>();
+
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
@@ -17,9 +25,6 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
   // TODO (matthias) Add autograd support.
   // TODO (matthias) Add dispatcher support.
   // TODO (rishi) Add get GroupedMatmul backward working
-  static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::grouped_matmul", "")
-                       .typed<decltype(grouped_matmul)>();
   return op.call(input, other);
 }
 
@@ -60,12 +65,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 // std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //                                        const std::vector<at::Tensor>& other)
 //                                        {
-//   return GroupedMatmul::apply(input, other);
+//   return GroupedMatmul::apply(input, other)[0];
 // }
-
-static auto segment_op = c10::Dispatcher::singleton()
-                             .findSchemaOrThrow("pyg::segment_matmul", "")
-                             .typed<decltype(segment_matmul)>();
 
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
