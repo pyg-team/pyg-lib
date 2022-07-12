@@ -31,7 +31,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   }
 
   // TODO (rishi) Add GroupedMatmul backward
-  // static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
+  // static variable_list backward(AutogradContext* ctx, variable_list
+  // grad_outs) {
   //   auto saved = ctx->get_saved_variables();
   //   variable_list input = saved[0];
   //   variable_list other = saved[1];
