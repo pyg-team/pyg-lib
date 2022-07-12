@@ -38,8 +38,8 @@ std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
 //   }
 
 //
-//   static std::vector<variable_list> backward(AutogradContext* ctx, variable_list
-//   grad_outs) {
+//   static std::vector<variable_list> backward(AutogradContext* ctx,
+//   variable_list grad_outs) {
 //     auto saved = ctx->get_saved_variables();
 //     variable_list input = saved[0];
 //     variable_list other = saved[1];
