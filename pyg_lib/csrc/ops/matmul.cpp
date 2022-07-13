@@ -1,14 +1,11 @@
 #include "matmul.h"
+
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
 #include <torch/script.h>
 
 namespace pyg {
 namespace ops {
-
-using torch::autograd::AutogradContext;
-using torch::autograd::Variable;
-using torch::autograd::variable_list;
 
 namespace {
 
@@ -34,6 +31,10 @@ at::Tensor _segment_matmul(const at::Tensor& input,
                        .typed<decltype(segment_matmul)>();
   return op.call(input, ptr, other);
 }
+
+using torch::autograd::AutogradContext;
+using torch::autograd::Variable;
+using torch::autograd::variable_list;
 
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
