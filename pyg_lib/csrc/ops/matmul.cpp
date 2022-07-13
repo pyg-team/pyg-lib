@@ -37,7 +37,7 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
   std::vector<at::Tensor> return_list;
   for (size_t i = 0; i < tens.size(); ++i)
-    return_list.push_back(tens[ptr[i - 1]:ptr[i]]);
+    return_list.push_back(tens [ptr[i - 1]:ptr[i]]);
 }
 
 // Performs matrix multiplication according to segments.
