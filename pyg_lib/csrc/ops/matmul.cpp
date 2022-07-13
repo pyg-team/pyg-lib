@@ -23,14 +23,13 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 }
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
-                                        const std::vector<at::Tensor>& t2) {
+                               const std::vector<at::Tensor>& t2) {
   return t1.insert(t1.end(), t2.begin(), t2.end());
 }
 
-auto split(const std::vector<at::Tensor>& t,
-                                       int split_index) {
+auto split(const std::vector<at::Tensor>& t, int split_index) {
   std::vector<T> t1(t.begin(), t.begin() + split_index),
-               t2(t.begin() + split_index, t.end());
+      t2(t.begin() + split_index, t.end());
   return {t1, t2};
 }
 
@@ -47,13 +46,12 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     return out;
   }
 
-  static variable_list backward(AutogradContext* ctx,
-  variable_list grad_outs) {
+  static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    auto [input, other] = split(input_and_other, input_len)
-    for (size_t i = 0; i < input.size(); ++i)
-      other[i] = other[i].transpose(-2, -1).contiguous();
+    auto [input, other] = split(
+        input_and_other, input_len) for (size_t i = 0; i < input.size(); ++i)
+        other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = _grouped_matmul(grad_outs, other);
     variable_list input_grad;
     // For Simplicity:
@@ -85,8 +83,8 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
   std::vector<at::Tensor> return_list;
   for (int64_t i = 0; i < ptr.numel(); ++i)
-    return_list.push_back(
-        tens.slice(0, ptr.index({i - 1}).item<int>(), ptr.index({i}).item<int>()));
+    return_list.push_back(tens.slice(0, ptr.index({i - 1}).item<int>(),
+                                     ptr.index({i}).item<int>()));
   return return_list;
 }
 
