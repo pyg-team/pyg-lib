@@ -22,8 +22,8 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   return op.call(input, other);
 }
 
-std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
-                               const std::vector<at::Tensor>& t2) {
+std::vector<at::Tensor> concat(std::vector<at::Tensor>& t1,
+                               std::vector<at::Tensor>& t2) {
   return t1.insert(t1.end(), t2.begin(), t2.end());
 }
 
