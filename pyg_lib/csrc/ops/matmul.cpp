@@ -37,7 +37,7 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
   std::vector<at::Tensor> return_list;
   for (size_t i = 0; i < ptr.numel(); ++i)
-    return_list.push_back(tens.slice(0, (int)ptr[i - 1], (int)ptr[i]));
+    return_list.push_back(tens.slice(0, (int)ptr.index({i - 1}), (int)ptr.index({i})));
   return return_list;
 }
 
@@ -46,7 +46,7 @@ at::Tensor reflatten(std::vector<at::Tensor> list) {
   int ptr = 0;
   for (size_t i = 0; i < list.size(); ++i) {
     auto tens_to_store = list[i];
-    return_tens.slice(0, ptr, ptr + tens_to_store.size(0)) = tens_to_store;
+    return_tens.index_put_({Slice(ptr, ptr + tens_to_store.size(0))}, tens_to_store);
     ptr = ptr + tens_to_store.size(0);
   }
   return return_tens;
