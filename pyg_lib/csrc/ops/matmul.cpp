@@ -42,11 +42,9 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
 
 at::Tensor reflatten(std::vector<at::Tensor>& list) {
   at::Tensor return_tens;
-  int ptr =
-  for (size_t i = 0; i < list.size(); ++i)
-    auto tens_to_store = list[i]
-    return_tens[ptr:ptr+tens_to_store.size(0)] = tens_to_store
-  return return_tens
+  int ptr = for (size_t i = 0; i < list.size(); ++i) auto tens_to_store =
+      list[i] return_tens [ptr:ptr + tens_to_store.size(0)] =
+          tens_to_store return return_tens
 }
 
 // Performs matrix multiplication according to segments.
