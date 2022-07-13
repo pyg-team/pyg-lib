@@ -54,6 +54,6 @@ TEST(SegmentMatmulBackwardTest, BasicAssertions) {
   out.mean().backward();
   EXPECT_TRUE(input.grad().numel() == input.numel());
   EXPECT_TRUE(other.grad().numel() ==
-              other.numel());  // No backward pass for `other` yet.
+              other.numel());
 }
 #endif
