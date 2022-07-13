@@ -24,7 +24,7 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
                                const std::vector<at::Tensor>& t2) {
-  for (size_t i = 0; i < t2.size(); ++i){
+  for (size_t i = 0; i < t2.size(); ++i) {
     Variable to_push = t2[i];
     t1.push_back(to_push);
   }
