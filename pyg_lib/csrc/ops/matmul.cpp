@@ -46,8 +46,8 @@ at::Tensor reflatten(std::vector<at::Tensor> list) {
   int ptr = 0;
   for (size_t i = 0; i < list.size(); ++i) {
     auto tens_to_store = list[i];
-    return_tens.slice(0, ptr, ptr+tens_to_store.size(0)) = tens_to_store;
-    ptr = ptr+tens_to_store.size(0)
+    return_tens.slice(0, ptr, ptr + tens_to_store.size(0)) = tens_to_store;
+    ptr = ptr + tens_to_store.size(0)
   }
   return return_tens;
 }
