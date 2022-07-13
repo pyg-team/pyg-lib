@@ -11,11 +11,11 @@ namespace {
 
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
+  // TODO (matthias) Add TensorArg definitions.
+  // TODO (matthias) Add dispatcher support.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
                        .typed<decltype(grouped_matmul)>();
-  // TODO (matthias) Add TensorArg definitions.
-  // TODO (matthias) Add dispatcher support.
   return op.call(input, other);
 }
 
