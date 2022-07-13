@@ -37,7 +37,7 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
   std::vector<at::Tensor> return_list;
   for (size_t i = 0; i < ptr.numel(); ++i)
-    return_list.push_back(tens.slice(0, (int) ptr[i - 1], (int) ptr[i]));
+    return_list.push_back(tens.slice(0, (int)ptr[i - 1], (int)ptr[i]));
   return return_list;
 }
 
