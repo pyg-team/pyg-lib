@@ -24,9 +24,21 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
                                const std::vector<at::Tensor>& t2) {
-  for (size_t i = 0; i < t2.size(); ++i)
-    t1.push_back(t2[i]);
+  for (size_t i = 0; i < t2.size(); ++i){
+    Variable to_push = t2[i];
+    t1.push_back(to_push);
+  }
   return t1;
+}
+
+auto get_input(const std::vector<at::Tensor>& t, int split_index) {
+  std::vector<at::Tensor> t1(t.begin(), t.begin() + split_index);
+  return t1;
+}
+
+auto get_other(const std::vector<at::Tensor>& t, int split_index) {
+  std::vector<at::Tensor> t2(t.begin() + split_index, t.end());
+  return t2;
 }
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
@@ -45,21 +57,18 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    auto input = input_and_other[std::slice(0, input_len, 1)];
-    auto other = input_and_other[std::slice(
-        input_len, input_and_other.size() - input_len, 1)];
-    variable_list other_t;
+    auto input = get_input(input_and_other, input_len);
+    auto other = get_other(input_and_other, input_len);
     for (size_t i = 0; i < input.size(); ++i)
-      other_t.push_back(other[i].transpose(-2, -1));
-    auto other_grad = _grouped_matmul(grad_outs, other_t);
+      other[i] = other[i].transpose(-2, -1).contiguous();
+    auto other_grad = _grouped_matmul(grad_outs, other);
     variable_list input_grad;
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
     if (torch::autograd::any_variable_requires_grad(input)) {
-      variable_list input_t;
       for (size_t i = 0; i < input.size(); ++i)
-        input_t.push_back(input[i].transpose(-2, -1));
-      input_grad = _grouped_matmul(input_t, grad_outs);
+        input[i] = input[i].transpose(-2, -1).contiguous();
+      input_grad = _grouped_matmul(input, grad_outs);
     } else {
       for (size_t i = 0; i < input.size(); ++i)
         input_grad.push_back(Variable());
