@@ -24,16 +24,9 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
                                const std::vector<at::Tensor>& t2) {
-  std::vector<at::Tensor> t3(t1);
   for (size_t i = 0; i < t2.size(); ++i)
-    t3.push_back(t2[i]);
-  return t3;
-}
-
-auto split(const std::vector<at::Tensor>& t, int split_index) {
-  std::vector<at::Tensor> t1(t.begin(), t.begin() + split_index);
-  std::vector<at::Tensor> t2(t.begin() + split_index, t.end());
-  return std::make_tuple(t1, t2);
+    t1.push_back(t2[i]);
+  return t1;
 }
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
@@ -52,9 +45,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    auto input_other_tuple = split(input_and_other, input_len);
-    auto input = input_other_tuple[0];
-    auto other = input_other_tuple[1];
+    auto input = input_and_other[std::slice(0, input_len, 1)];
+    auto other = input_and_other[std::slice(input_len, input_and_other.size()-input_len, 1)];
     variable_list other_t;
     for (size_t i = 0; i < input.size(); ++i)
       other_t.push_back(other[i].transpose(-2, -1));
