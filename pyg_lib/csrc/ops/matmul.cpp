@@ -24,8 +24,10 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
                                const std::vector<at::Tensor>& t2) {
-  std::vector<at::Tensor> t3(t1) for (size_t i = 0; i < t2.size(); ++i)
-      t3.push_back(t2[i]) return t3
+  std::vector<at::Tensor> t3(t1);
+  for (size_t i = 0; i < t2.size(); ++i)
+    t3.push_back(t2[i]);
+  return t3;
 }
 
 std::tuple<std::vector<at::Tensor>, std::vector<at::Tensor>> split(
@@ -53,10 +55,12 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
     auto input_other_tuple = split(input_and_other, input_len);
-    auto input = input_other_tuple[0] auto other =
-        input_other_tuple[1] for (size_t i = 0; i < input.size(); ++i)
-            other[i] = other[i].transpose(-2, -1).contiguous();
-    auto other_grad = _grouped_matmul(grad_outs, other);
+    auto input = input_other_tuple[0];
+    auto other = input_other_tuple[1];
+    variable_list other_t;
+    for (size_t i = 0; i < input.size(); ++i)
+      other_t.push_back(other[i].transpose(-2, -1));
+    auto other_grad = _grouped_matmul(grad_outs, other_t);
     variable_list input_grad;
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
