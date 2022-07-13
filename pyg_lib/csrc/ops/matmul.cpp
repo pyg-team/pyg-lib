@@ -9,6 +9,9 @@ namespace ops {
 
 namespace {
 
+using torch::autograd::AutogradContext;
+using torch::autograd::Variable;
+using torch::autograd::variable_list;
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
@@ -19,6 +22,55 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   return op.call(input, other);
 }
 
+std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
+                                        const std::vector<at::Tensor>& t2) {
+  return t1.insert(t1.end(), t2.begin(), t2.end());
+}
+
+auto split(const std::vector<at::Tensor>& t,
+                                       int split_index) {
+  std::vector<T> t1(t.begin(), t.begin() + split_index),
+               t2(t.begin() + split_index, t.end());
+  return {t1, t2};
+}
+
+class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
+  // TODO (matthias) Add TensorArg definitions.
+ public:
+  static variable_list forward(AutogradContext* ctx,
+                               std::vector<Variable> input,
+                               std::vector<Variable> other) {
+    auto out = _grouped_matmul(input, other);
+    variable_list input_and_other = concat(input, other);
+    ctx->save_for_backward(input_and_other);
+    ctx->saved_data["input_len"] = input.size();
+    return out;
+  }
+
+  static variable_list backward(AutogradContext* ctx,
+  variable_list grad_outs) {
+    auto input_and_other = ctx->get_saved_variables();
+    int input_len = ctx->saved_data["input_len"].toInt();
+    auto [input, other] = split(input_and_other, input_len)
+    for (size_t i = 0; i < input.size(); ++i)
+      other[i] = other[i].transpose(-2, -1).contiguous();
+    auto other_grad = _grouped_matmul(grad_outs, other);
+    variable_list input_grad;
+    // For Simplicity:
+    // We assume entire input variable list either requires grad or does not
+    if (torch::autograd::any_variable_requires_grad(input)) {
+      variable_list input_t;
+      for (size_t i = 0; i < input.size(); ++i)
+        input_t.push_back(input[i].transpose(-2, -1));
+      input_grad = _grouped_matmul(input_t, grad_outs);
+    } else {
+      for (size_t i = 0; i < input.size(); ++i)
+        input_grad.push_back(Variable())
+    }
+    return concat(input_grad, other_grad);
+  }
+};
+
 at::Tensor _segment_matmul(const at::Tensor& input,
                            const at::Tensor& ptr,
                            const at::Tensor& other) {
@@ -28,10 +80,6 @@ at::Tensor _segment_matmul(const at::Tensor& input,
                        .typed<decltype(segment_matmul)>();
   return op.call(input, ptr, other);
 }
-
-using torch::autograd::AutogradContext;
-using torch::autograd::Variable;
-using torch::autograd::variable_list;
 
 std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
@@ -74,8 +122,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto input_grad = Variable(), other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({input})) {
-      // TODO (matthias) get rid of unnecessary `contiguous` here.
-      auto other_t = other.transpose(-2, -1).contiguous();
+      auto other_t = other.transpose(-2, -1);
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
@@ -93,7 +140,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add autograd support.
-  return _grouped_matmul(input, other);
+  return GroupedMatmul::apply(input, other);
 }
 
 // Performs matrix multiplication according to segments.
