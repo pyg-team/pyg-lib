@@ -38,13 +38,17 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
   std::vector<at::Tensor> return_list;
   for (size_t i = 0; i < ptr.numel(); ++i)
     return_list.push_back(tens [ptr[i - 1]:ptr[i]]);
+  return return_list;
 }
 
 at::Tensor reflatten(std::vector<at::Tensor>& list) {
   at::Tensor return_tens;
-  int ptr = for (size_t i = 0; i < list.size(); ++i) auto tens_to_store =
-      list[i] return_tens [ptr:ptr + tens_to_store.size(0)] =
-          tens_to_store return return_tens
+  int ptr = 0;
+  for (size_t i = 0; i < list.size(); ++i){
+    auto tens_to_store = list[i];
+    return_tens[ptr:ptr+tens_to_store.size(0)] = tens_to_store;
+  }
+  return return_tens;
 }
 
 // Performs matrix multiplication according to segments.
