@@ -24,13 +24,16 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
 
 std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
                                const std::vector<at::Tensor>& t2) {
-  return t1.insert(t1.end(), t2.begin(), t2.end());
+  std::vector<at::Tensor> t3(t1)
+  for (size_t i = 0; i < t2.size(); ++i)
+    t3.push_back(t2[i])
+  return t3
 }
 
-auto split(const std::vector<at::Tensor>& t, int split_index) {
+std::tuple<std::vector<at::Tensor>, std::vector<at::Tensor>> split(const std::vector<at::Tensor>& t, int split_index) {
   std::vector<at::Tensor> t1(t.begin(), t.begin() + split_index);
   std::vector<at::Tensor> t2(t.begin() + split_index, t.end());
-  return {t1, t2};
+  return std::make_tuple(t1, t2);
 }
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
@@ -42,15 +45,17 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
     ctx->save_for_backward(input_and_other);
-    ctx->saved_data["input_len"] = input.size();
+    ctx->saved_data["input_len"] = (int)input.size();
     return out;
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    auto [input, other] = split(
-        input_and_other, input_len) for (size_t i = 0; i < input.size(); ++i)
+    auto input_other_tuple = split(input_and_other, input_len);
+    auto input = input_other_tuple[0]
+    auto other = input_other_tuple[1]
+    for (size_t i = 0; i < input.size(); ++i)
         other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = _grouped_matmul(grad_outs, other);
     variable_list input_grad;
@@ -63,7 +68,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
       input_grad = _grouped_matmul(input_t, grad_outs);
     } else {
       for (size_t i = 0; i < input.size(); ++i)
-        input_grad.push_back(Variable())
+        input_grad.push_back(Variable());
     }
     return concat(input_grad, other_grad);
   }
