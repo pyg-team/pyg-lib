@@ -30,7 +30,7 @@ std::vector<at::Tensor> concat(const std::vector<at::Tensor>& t1,
   return t3;
 }
 
-std::tuple<std::vector<at::Tensor>, std::vector<at::Tensor>> split(
+auto split(
     const std::vector<at::Tensor>& t,
     int split_index) {
   std::vector<at::Tensor> t1(t.begin(), t.begin() + split_index);
