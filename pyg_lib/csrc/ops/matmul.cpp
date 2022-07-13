@@ -38,7 +38,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
                                Variable input,
-                               const at::Tensor& ptr,
+                               Variable ptr,
                                Variable other) {
     Variable out = _segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
@@ -51,20 +51,16 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input = saved[0], ptr = saved[1], other = saved[2];
 
     auto input_grad = Variable(), other_grad = Variable();
-
     if (torch::autograd::any_variable_requires_grad({input})) {
       // TODO (matthias) get rid of unnecessary `contiguous` here.
-      auto input_t = input.transpose(-2, -1).contiguous();
-      input_grad = _segment_matmul(input_t, ptr, grad_out);
-    }
-
-    if (torch::autograd::any_variable_requires_grad({other})) {
-      // TODO (matthias) get rid of unnecessary `contiguous` here.
       auto other_t = other.transpose(-2, -1).contiguous();
-      other_grad = _segment_matmul(grad_out, ptr, other_t);
+      input_grad = _segment_matmul(grad_out, ptr, other_t);
+    }
+    if (torch::autograd::any_variable_requires_grad({other})) {
+      // TODO (matthias) implement backward pass for `other`.
     }
 
-    return {input_grad, other_grad};
+    return {input_grad, Variable(), other_grad};
   }
 };
 
