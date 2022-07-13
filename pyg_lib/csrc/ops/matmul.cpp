@@ -46,7 +46,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
     auto input = input_and_other[std::slice(0, input_len, 1)];
-    auto other = input_and_other[std::slice(input_len, input_and_other.size()-input_len, 1)];
+    auto other = input_and_other[std::slice(
+        input_len, input_and_other.size() - input_len, 1)];
     variable_list other_t;
     for (size_t i = 0; i < input.size(); ++i)
       other_t.push_back(other[i].transpose(-2, -1));
