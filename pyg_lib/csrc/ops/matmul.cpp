@@ -37,7 +37,7 @@ std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
                                     const at::Tensor& ptr) {
   std::vector<at::Tensor> return_list;
   for (size_t i = 0; i < tens.size(); ++i)
-    return_list.push_back(tens [ptr[i - 1]:ptr[i]])
+    return_list.push_back(tens[ptr[i - 1]:ptr[i]]);
 }
 
 // Performs matrix multiplication according to segments.
@@ -64,9 +64,9 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
-      variable_list grad_out_list = break_w_ptr(grad_out, ptr)
-          variable_list other_list = break_w_ptr(other, ptr) other_grad =
-              _grouped_matmul(grad_out_list, other_list);
+      variable_list grad_out_list = break_w_ptr(grad_out, ptr);
+      variable_list other_list = break_w_ptr(other, ptr);
+      other_grad = _grouped_matmul(grad_out_list, other_list);
     }
     return {input_grad, Variable(), other_grad};
   }
