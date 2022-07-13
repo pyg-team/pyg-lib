@@ -47,8 +47,9 @@ at::Tensor reflatten(std::vector<at::Tensor> list) {
   int ptr = 0;
   for (int64_t i = 0; i < list.size(); ++i) {
     auto tens_to_store = list[i];
-    return_tens.index_put_({torch::indexing::Slice(ptr, ptr + tens_to_store.size(0))},
-                           tens_to_store);
+    return_tens.index_put_(
+        {torch::indexing::Slice(ptr, ptr + tens_to_store.size(0))},
+        tens_to_store);
     ptr = ptr + tens_to_store.size(0);
   }
   return return_tens;
