@@ -30,16 +30,6 @@ std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
   return t1;
 }
 
-auto get_input(const std::vector<at::Tensor>& t, int split_index) {
-  std::vector<at::Tensor> t1(t.begin(), t.begin() + split_index);
-  return t1;
-}
-
-auto get_other(const std::vector<at::Tensor>& t, int split_index) {
-  std::vector<at::Tensor> t2(t.begin() + split_index, t.end());
-  return t2;
-}
-
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   // TODO (matthias) Add TensorArg definitions.
  public:
@@ -56,8 +46,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    auto input = get_input(input_and_other, input_len);
-    auto other = get_other(input_and_other, input_len);
+    std::vector<at::Tensor> input(input_and_other.begin(), input_and_other.begin() + input_grad);
+    std::vector<at::Tensor> other(input_and_other.begin() + input_grad, input_and_other.end());
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = _grouped_matmul(grad_outs, other);
@@ -86,28 +76,6 @@ at::Tensor _segment_matmul(const at::Tensor& input,
   return op.call(input, ptr, other);
 }
 
-std::vector<at::Tensor> break_w_ptr(const at::Tensor& tens,
-                                    const at::Tensor& ptr) {
-  std::vector<at::Tensor> return_list;
-  for (int64_t i = 0; i < ptr.numel(); ++i)
-    return_list.push_back(tens.slice(0, ptr.index({i - 1}).item<int>(),
-                                     ptr.index({i}).item<int>()));
-  return return_list;
-}
-
-at::Tensor reflatten(std::vector<at::Tensor> list) {
-  at::Tensor return_tens;
-  int ptr = 0;
-  for (int64_t i = 0; i < list.size(); ++i) {
-    auto tens_to_store = list[i];
-    return_tens.index_put_(
-        {torch::indexing::Slice(ptr, ptr + tens_to_store.size(0))},
-        tens_to_store);
-    ptr = ptr + tens_to_store.size(0);
-  }
-  return return_tens;
-}
-
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
@@ -131,9 +99,11 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
-      variable_list grad_out_list = break_w_ptr(grad_out, ptr);
-      variable_list other_list = break_w_ptr(other, ptr);
-      other_grad = reflatten(_grouped_matmul(grad_out_list, other_list));
+      auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
+            ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
+      size = size.cpu();
+      auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+      other_grad = at::stack(_grouped_matmul(grad_out.split_with_sizes(sizes, 0), other.split(1, 0)));
     }
     return {input_grad, Variable(), other_grad};
   }
