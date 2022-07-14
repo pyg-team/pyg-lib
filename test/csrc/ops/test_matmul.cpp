@@ -25,24 +25,6 @@ TEST(GroupedMatmulTest, BasicAssertions) {
 #endif
 
 #ifdef WITH_CUDA
-TEST(GroupedMatmulBackwardTest, BasicAssertions) {
-  // TODO (matthias) skip for now due to missing dispatcher support.
-  return;
-  auto options = at::TensorOptions().device(at::kCUDA);
-
-  std::vector<at::Tensor> input{at::randn({5, 8}, options),
-                                at::randn({3, 12}, options)};
-  std::vector<at::Tensor> other{at::randn({8, 16}, options),
-                                at::randn({12, 32}, options)};
-
-  auto out = pyg::ops::grouped_matmul(input, other);
-  out.mean().backward();
-  EXPECT_TRUE(out[0].grad().numel() == out[0].numel());
-  EXPECT_TRUE(out[1].grad().numel() == out[1].numel());
-}
-#endif
-
-#ifdef WITH_CUDA
 TEST(SegmentMatmulTest, BasicAssertions) {
   auto options = at::TensorOptions().device(at::kCUDA);
 

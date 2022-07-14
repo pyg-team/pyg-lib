@@ -95,7 +95,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto input_grad = Variable(), other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({input})) {
-      auto other_t = other.transpose(-2, -1);
+      // TODO (matthias) get rid of unnecessary `contiguous` here.
+      auto other_t = other.transpose(-2, -1).contiguous();
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
@@ -114,7 +115,6 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
-  // TODO (matthias) Add autograd support.
   return GroupedMatmul::apply(input, other);
 }
 
