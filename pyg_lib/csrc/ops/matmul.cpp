@@ -46,8 +46,8 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    std::vector<at::Tensor> input(input_and_other.begin(), input_and_other.begin() + input_grad);
-    std::vector<at::Tensor> other(input_and_other.begin() + input_grad, input_and_other.end());
+    std::vector<at::Tensor> input(input_and_other.begin(), input_and_other.begin() + input_len);
+    std::vector<at::Tensor> other(input_and_other.begin() + input_len, input_and_other.end());
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = _grouped_matmul(grad_outs, other);
