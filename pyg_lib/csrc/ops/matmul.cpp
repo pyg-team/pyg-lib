@@ -46,8 +46,10 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
-    std::vector<at::Tensor> input(input_and_other.begin(), input_and_other.begin() + input_grad);
-    std::vector<at::Tensor> other(input_and_other.begin() + input_grad, input_and_other.end());
+    std::vector<at::Tensor> input(input_and_other.begin(),
+                                  input_and_other.begin() + input_grad);
+    std::vector<at::Tensor> other(input_and_other.begin() + input_grad,
+                                  input_and_other.end());
     for (size_t i = 0; i < input.size(); ++i)
       other[i] = other[i].transpose(-2, -1).contiguous();
     auto other_grad = _grouped_matmul(grad_outs, other);
@@ -100,11 +102,13 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
-      auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
-            ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
+      auto size =
+          ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
+          ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
       size = size.cpu();
       auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-      other_grad = at::stack(_grouped_matmul(grad_out.split_with_sizes(sizes, 0), other.split(1, 0)));
+      other_grad = at::stack(_grouped_matmul(
+          grad_out.split_with_sizes(sizes, 0), other.split(1, 0)));
     }
     return {input_grad, Variable(), other_grad};
   }
