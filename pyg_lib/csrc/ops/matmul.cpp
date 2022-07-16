@@ -4,6 +4,8 @@
 #include <torch/library.h>
 #include <torch/script.h>
 
+#include "pyg_lib/csrc/utils/convert.h"
+
 namespace pyg {
 namespace ops {
 
@@ -91,24 +93,24 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
-    auto grad_out = grad_outs[0];
-    auto saved = ctx->get_saved_variables();
-    auto input = saved[0], ptr = saved[1], other = saved[2];
+    const auto grad_out = grad_outs[0];
+    const auto saved = ctx->get_saved_variables();
+    const auto input = saved[0], ptr = saved[1], other = saved[2];
 
     auto input_grad = Variable(), other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({input})) {
       // TODO (matthias) get rid of unnecessary `contiguous` here.
-      auto other_t = other.transpose(-2, -1).contiguous();
+      const auto other_t = other.transpose(-2, -1).contiguous();
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
-      auto size =
-          ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
-          ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
-      size = size.cpu();
-      auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-      other_grad = at::stack(_grouped_matmul(
-          grad_out.split_with_sizes(sizes, 0), other.split(1, 0)));
+      // TODO (matthias) get rid of unnecessary `contiguous` here.
+      const auto input_t = input.transpose(-2, -1).contiguous();
+      const auto sizes = pyg::utils::sizes_from_ptr(ptr);
+      auto others_grad = _grouped_matmul(
+          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
+          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+      other_grad = at::stack(others_grad, /*dim=*/0);
     }
     return {input_grad, Variable(), other_grad};
   }
