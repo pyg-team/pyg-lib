@@ -80,7 +80,6 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   }
 };
 
-// Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
