@@ -4,16 +4,13 @@
 #include <torch/library.h>
 #include <torch/script.h>
 
-#include "pyg_lib/csrc/utils/convert.h"
+#include "pyg_lib/csrc/utils/cpu/convert.h"
 
 namespace pyg {
 namespace ops {
 
 namespace {
 
-using torch::autograd::AutogradContext;
-using torch::autograd::Variable;
-using torch::autograd::variable_list;
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
@@ -24,6 +21,16 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   return op.call(input, other);
 }
 
+at::Tensor _segment_matmul(const at::Tensor& input,
+                           const at::Tensor& ptr,
+                           const at::Tensor& other) {
+  // TODO (matthias) Add TensorArg definitions.
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::segment_matmul", "")
+                       .typed<decltype(segment_matmul)>();
+  return op.call(input, ptr, other);
+}
+
 std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
                                std::vector<at::Tensor> t2) {
   for (size_t i = 0; i < t2.size(); ++i) {
@@ -31,6 +38,10 @@ std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
   }
   return t1;
 }
+
+using torch::autograd::AutogradContext;
+using torch::autograd::Variable;
+using torch::autograd::variable_list;
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   // TODO (matthias) Add TensorArg definitions.
@@ -69,16 +80,6 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     return concat(input_grad, other_grad);
   }
 };
-
-at::Tensor _segment_matmul(const at::Tensor& input,
-                           const at::Tensor& ptr,
-                           const at::Tensor& other) {
-  // TODO (matthias) Add TensorArg definitions.
-  static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::segment_matmul", "")
-                       .typed<decltype(segment_matmul)>();
-  return op.call(input, ptr, other);
-}
 
 // Performs matrix multiplication according to segments.
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
