@@ -5,7 +5,6 @@
 
 #ifdef WITH_CUDA
 TEST(GroupedMatmulTest, BasicAssertions) {
-  return;
   auto options = at::TensorOptions().device(at::kCUDA);
 
   std::vector<at::Tensor> input{at::randn({5, 8}, options),
@@ -27,7 +26,6 @@ TEST(GroupedMatmulTest, BasicAssertions) {
 
 #ifdef WITH_CUDA
 TEST(SegmentMatmulTest, BasicAssertions) {
-  return;
   auto options = at::TensorOptions().device(at::kCUDA);
 
   auto input = at::randn({8, 12}, options);

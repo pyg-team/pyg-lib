@@ -13,9 +13,6 @@ namespace {
 
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
-  for (int i = 0; i < input.size(); i++) {
-    std::cout << input[i].sizes() << " " << other[i].sizes() << std::endl;
-  }
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
@@ -100,27 +97,20 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto input_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({input})) {
-      // TODO (matthias) get rid of unnecessary `contiguous` here.
       auto other_t = other.transpose(-2, -1);
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
 
     auto other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({other})) {
-      // TODO (matthias) get rid of unnecessary `contiguous` here.
-      auto input_t = input.transpose(-2, -1);
       auto size = pyg::utils::size_from_ptr(ptr).cpu();
       // TODO (matthias) Allow for other types than `int64_t`.
       auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+      auto input_t = input.transpose(-2, -1);
       auto others_grad = _grouped_matmul(
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-      /* for (int i = 0; i < 2; i++) { */
-      /*   std::cout << others_grad[i] << std::endl; */
-      /*   std::cout << others_grad[i].sizes() << std::endl; */
-      /* } */
       other_grad = at::stack(others_grad);
-      // std::cout << other_grad2 << std::endl;
     }
     return {input_grad, Variable(), other_grad};
   }
