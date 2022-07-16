@@ -17,7 +17,15 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
   // TODO (matthias) Check tensor devices.
-  // TODO (matthias) Check for contiguous memory.
+
+  const auto num_matrices = input.size();
+
+  // TODO (matthias) Better handle non-contiguous memory layouts.
+  std::vector<at::Tensor> new_input, new_other;
+  for (size_t i = 0; i < num_matrices; ++i) {
+    new_input.push_back(input[i].contiguous());
+    new_other.push_back(other[i].contiguous());
+  }
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -46,15 +54,13 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
 
-  auto num_matrices = input.size();
-
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = input[i].data_ptr<float>();
-    ptr_B_host[i] = other[i].data_ptr<float>();
+    ptr_A_host[i] = new_input[i].data_ptr<float>();
+    ptr_B_host[i] = new_other[i].data_ptr<float>();
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
@@ -136,9 +142,10 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto out = input.new_empty({input.size(0), other.size(-1)});
 
+  // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
-      input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      other.split(/*split_size=*/1, /*dim=*/0),
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0),
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
 
   return out;
@@ -146,9 +153,12 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
+// TODO (matthias) Add as CUDA library once dispatcher support lands.
+TORCH_LIBRARY(pyg, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
+}
+TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
 }
