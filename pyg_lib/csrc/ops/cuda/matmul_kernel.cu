@@ -6,7 +6,7 @@
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
 
-#include "pyg_lib/csrc/utils/cpu/convert.h"
+#include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
 namespace ops {
@@ -131,7 +131,9 @@ std::vector<at::Tensor> grouped_matmul_kernel(
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
                                  const at::Tensor& other) {
-  const auto sizes = pyg::utils::sizes_from_ptr(ptr);
+  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
+  // TODO (matthias) Allow for other types than `int64_t`.
+  const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto out = input.new_empty({input.size(0), other.size(-1)});
 
   grouped_matmul_out_kernel(

@@ -4,7 +4,7 @@
 #include <torch/library.h>
 #include <torch/script.h>
 
-#include "pyg_lib/csrc/utils/cpu/convert.h"
+#include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
 namespace ops {
@@ -44,7 +44,6 @@ using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
-  // TODO (matthias) Add TensorArg definitions.
  public:
   static variable_list forward(AutogradContext* ctx,
                                std::vector<Variable> input,
@@ -94,20 +93,22 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
-    const auto grad_out = grad_outs[0];
-    const auto saved = ctx->get_saved_variables();
-    const auto input = saved[0], ptr = saved[1], other = saved[2];
+    auto grad_out = grad_outs[0];
+    auto saved = ctx->get_saved_variables();
+    auto input = saved[0], ptr = saved[1], other = saved[2];
 
     auto input_grad = Variable(), other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({input})) {
       // TODO (matthias) get rid of unnecessary `contiguous` here.
-      const auto other_t = other.transpose(-2, -1).contiguous();
+      auto other_t = other.transpose(-2, -1).contiguous();
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
     if (torch::autograd::any_variable_requires_grad({other})) {
       // TODO (matthias) get rid of unnecessary `contiguous` here.
-      const auto input_t = input.transpose(-2, -1).contiguous();
-      const auto sizes = pyg::utils::sizes_from_ptr(ptr);
+      auto input_t = input.transpose(-2, -1).contiguous();
+      auto size = pyg::utils::size_from_ptr(ptr).cpu();
+      // TODO (matthias) Allow for other types than `int64_t`.
+      auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
       auto others_grad = _grouped_matmul(
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
