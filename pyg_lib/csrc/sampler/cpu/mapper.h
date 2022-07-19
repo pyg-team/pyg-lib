@@ -2,6 +2,8 @@
 
 #include <ATen/ATen.h>
 
+#include "parallel_hashmap/phmap.h"
+
 namespace pyg {
 namespace sampler {
 
@@ -14,7 +16,7 @@ class Mapper {
       : num_nodes(num_nodes), num_entries(num_entries) {
     // Use a some simple heuristic to determine whether we can use a std::vector
     // to perform the mapping instead of relying on the more memory-friendly,
-    // but slower std::unordered_map implementation:
+    // but slower phmap::flat_hash_map implementation:
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
     if (use_vec)
@@ -56,7 +58,7 @@ class Mapper {
 
   bool use_vec;
   std::vector<scalar_t> to_local_vec;
-  std::unordered_map<scalar_t, scalar_t> to_local_map;
+  phmap::flat_hash_map<scalar_t, scalar_t> to_local_map;
 };
 
 }  // namespace sampler

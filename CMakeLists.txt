@@ -35,6 +35,9 @@ file(GLOB_RECURSE ALL_HEADERS ${CSRC}/*.h)
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
+set(PHMAP_DIR third_party/parallel-hashmap)
+target_include_directories(${PROJECT_NAME} PRIVATE ${PHMAP_DIR})
+
 find_package(Torch REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
