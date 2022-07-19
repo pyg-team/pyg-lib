@@ -50,7 +50,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
           float, 8, float, float>,                   //
       cutlass::gemm::threadblock::                   // Swizzling Operator
       GemmIdentityThreadblockSwizzle<8>,             //
-      2,                                             // Stages
+      3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
 
