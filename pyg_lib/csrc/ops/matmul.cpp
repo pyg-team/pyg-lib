@@ -62,7 +62,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     std::vector<at::Tensor> other(input_and_other.begin() + input_len,
                                   input_and_other.end());
     for (size_t i = 0; i < input.size(); ++i)
-      other[i] = other[i].transpose(-2, -1).contiguous();
+      other[i] = other[i].transpose(-2, -1);
     auto other_grad = _grouped_matmul(grad_outs, other);
     variable_list input_grad;
     // For Simplicity:
@@ -131,17 +131,13 @@ at::Tensor segment_matmul(const at::Tensor& input,
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
-// TORCH_LIBRARY_FRAGMENT(pyg, m) {
-//   m.def(TORCH_SELECTIVE_SCHEMA(
-//       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
-//   m.def(
-//       TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
-//                              "Tensor other) -> Tensor"));
-// }
-
-static auto registry = torch::RegisterOperators()
-                           .op("pyg_lib::segment_matmul", &segment_matmul)
-                           .op("pyg_lib::grouped_matmul", &grouped_matmul);
+TORCH_LIBRARY_FRAGMENT(pyg, m) {
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
+                             "Tensor other) -> Tensor"));
+}
 
 }  // namespace ops
 }  // namespace pyg
