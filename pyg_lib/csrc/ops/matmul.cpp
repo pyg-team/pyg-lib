@@ -131,13 +131,17 @@ at::Tensor segment_matmul(const at::Tensor& input,
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
-TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
-  m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
-                             "Tensor other) -> Tensor"));
-}
+// TORCH_LIBRARY_FRAGMENT(pyg, m) {
+//   m.def(TORCH_SELECTIVE_SCHEMA(
+//       "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+//   m.def(
+//       TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
+//                              "Tensor other) -> Tensor"));
+// }
+
+static auto registry = torch::RegisterOperators()
+                           .op("pyg::segment_matmul", &segment_matmul)
+                           .op("pyg::grouped_matmul", &grouped_matmul);
 
 }  // namespace ops
 }  // namespace pyg
