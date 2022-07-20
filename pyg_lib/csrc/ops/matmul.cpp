@@ -140,8 +140,8 @@ at::Tensor segment_matmul(const at::Tensor& input,
 // }
 
 static auto registry = torch::RegisterOperators()
-                           .op("pyg::segment_matmul", &segment_matmul)
-                           .op("pyg::grouped_matmul", &grouped_matmul);
+                           .op("pyg_lib::segment_matmul", &segment_matmul)
+                           .op("pyg_lib::grouped_matmul", &grouped_matmul);
 
 }  // namespace ops
 }  // namespace pyg
