@@ -85,8 +85,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
                                Variable input,
                                Variable ptr,
                                Variable other) {
-    Variable out = _segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
+    Variable out = _segment_matmul(input, ptr, other);
     return {out};
   }
 
