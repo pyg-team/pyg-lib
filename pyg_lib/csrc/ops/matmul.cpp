@@ -16,7 +16,7 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul", "")
-                       .typed<decltype(grouped_matmul)>();
+                       .typed<decltype(grouped_matmul_autograd)>();
   return op.call(input, other);
 }
 
@@ -26,7 +26,7 @@ at::Tensor _segment_matmul(const at::Tensor& input,
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul", "")
-                       .typed<decltype(segment_matmul)>();
+                       .typed<decltype(segment_matmul_autograd)>();
   return op.call(input, ptr, other);
 }
 
