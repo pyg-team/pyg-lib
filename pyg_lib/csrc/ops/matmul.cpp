@@ -44,8 +44,8 @@ using torch::autograd::variable_list;
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
-                               std::vector<Variable> input,
-                               std::vector<Variable> other) {
+                               variable_list input,
+                               variable_list other) {
     auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
     ctx->save_for_backward(input_and_other);
