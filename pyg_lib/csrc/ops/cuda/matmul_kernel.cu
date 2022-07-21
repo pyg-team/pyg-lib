@@ -5,7 +5,7 @@
 #include <cutlass/gemm/device/gemm_grouped.h>
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
-
+#include <iostream>
 #include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
@@ -128,7 +128,10 @@ std::vector<at::Tensor> grouped_matmul_kernel(
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
-
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << input;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << other;
   grouped_matmul_out_kernel(input, other, out);
 
   return out;
