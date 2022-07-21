@@ -147,7 +147,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   m.impl("pyg::my_grouped_matmul", my_grouped_matmul);
-  m.impl("pyg::my_segment_matmul", my_grouped_matmul);
+  m.impl("pyg::my_segment_matmul", my_segment_matmul);
 }
 
 }  // namespace ops
