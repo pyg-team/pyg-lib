@@ -110,8 +110,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       auto split_input_t =
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
       auto grad_out_split =
-          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0) std::cout
-          << "================= DEBUG =================" << std::endl;
+          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+      std::cout << "================= DEBUG =================" << std::endl;
       std::cout << split_input_t;
       std::cout << "================= DEBUG =================" << std::endl;
       std::cout << grad_out_split;
