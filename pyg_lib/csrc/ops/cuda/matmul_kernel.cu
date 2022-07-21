@@ -154,7 +154,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 }  // namespace
 
 // TODO (matthias) Add as CUDA library once dispatcher support lands.
-TORCH_LIBRARY(pyg, m) {
+TORCH_LIBRARY(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
 }

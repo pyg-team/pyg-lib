@@ -138,11 +138,8 @@ at::Tensor my_segment_matmul(const at::Tensor& input,
 }
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::my_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
-  m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::my_segment_matmul(Tensor input, Tensor ptr, "
-                             "Tensor other) -> Tensor"));
+  m.impl("pyg::my_grouped_matmul", my_grouped_matmul);
+  m.impl("pyg::my_segment_matmul", my_segment_matmul);
 }
 
 }  // namespace ops
