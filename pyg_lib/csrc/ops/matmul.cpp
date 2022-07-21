@@ -4,7 +4,6 @@
 #include <torch/library.h>
 #include <torch/script.h>
 
-#include <iostream>
 #include "pyg_lib/csrc/utils/convert.h"
 namespace pyg {
 namespace ops {
