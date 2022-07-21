@@ -139,15 +139,15 @@ at::Tensor my_segment_matmul(const at::Tensor& input,
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::my_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+      "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
   m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::my_segment_matmul(Tensor input, Tensor ptr, "
+      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
                              "Tensor other) -> Tensor"));
 }
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl("pyg::my_grouped_matmul", my_grouped_matmul);
-  m.impl("pyg::my_segment_matmul", my_segment_matmul);
+  m.impl("pyg::grouped_matmul", my_grouped_matmul);
+  m.impl("pyg::segment_matmul", my_segment_matmul);
 }
 
 }  // namespace ops
