@@ -63,13 +63,13 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     variable_list other_grad;
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
-    if (torch::autograd::any_variable_requires_grad(other)) {
+    if (torch::autograd::any_variable_requires_grad(other)){
       for (size_t i = 0; i < input.size(); ++i)
         other[i] = other[i].transpose(-2, -1);
       other_grad = _grouped_matmul(grad_outs, other);
     } else {
       for (size_t i = 0; i < other.size(); ++i)
-        other_grad.push_back(Variable());
+        other_grad.push_back(Variable());      
     }
 
     variable_list input_grad;
@@ -109,18 +109,17 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto other_grad = Variable();
     if (torch::autograd::any_variable_requires_grad({other})) {
-      auto input_t = other.transpose(-2, -1);
-      other_grad = _segment_matmul(input_t, ptr, grad_out);
-      // auto size = pyg::utils::size_from_ptr(ptr).cpu();
-      // // TODO (matthias) Allow for other types than `int64_t`.
-      // auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-      // auto input_t = input.transpose(-2, -1);
-      // auto split_input_t =
-      //     input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
-      // auto grad_out_split =
-      //     grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      // auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
-      // other_grad = at::stack(others_grad);
+      auto size = pyg::utils::size_from_ptr(ptr).cpu();
+      // TODO (matthias) Allow for other types than `int64_t`.
+      auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+      auto input_t = input.transpose(-2, -1);
+      auto split_input_t =
+          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+      auto grad_out_split =
+          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+      other_grad = at::stack(others_grad);
+
     }
     return {input_grad, Variable(), other_grad};
   }
