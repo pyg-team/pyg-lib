@@ -131,7 +131,7 @@ std::vector<at::Tensor> grouped_matmul_autograd(
 }
 
 // Performs matrix multiplication according to segments.
-at::Tensor my_segment_matmul_autograd(const at::Tensor& input,
+at::Tensor segment_matmul_autograd(const at::Tensor& input,
                              const at::Tensor& ptr,
                              const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
@@ -146,8 +146,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
 }
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl("pyg::grouped_matmul", grouped_matmul);
-  m.impl("pyg::segment_matmul", segment_matmul);
+  m.impl("pyg::grouped_matmul", grouped_matmul_autograd);
+  m.impl("pyg::segment_matmul", segment_matmul_autograd);
 }
 
 }  // namespace ops
