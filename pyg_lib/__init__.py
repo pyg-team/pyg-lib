@@ -6,7 +6,7 @@ import warnings
 import torch
 
 import pyg_lib.sampler  # noqa
-import pyg_lib.ops
+import pyg_lib.ops # noqa
 
 from .home import get_home_dir, set_home_dir
 
