@@ -163,7 +163,7 @@ TORCH_LIBRARY(pyg, m) {
       "Tensor");
 }
 
-TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
+TORCH_LIBRARY_IMPL(pyg, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_kern"),
          TORCH_FN(segment_matmul_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_kern"),
