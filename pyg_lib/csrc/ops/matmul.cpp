@@ -96,6 +96,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input = saved[0], ptr = saved[1], other = saved[2];
 
     auto input_grad = Variable();
+    std::cout << "================= DEBUG =================" << std::endl;
     std:cout << torch::autograd::any_variable_requires_grad({input});
     if (torch::autograd::any_variable_requires_grad({input})) {
       auto other_t = other.transpose(-2, -1);
@@ -103,6 +104,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     }
 
     auto other_grad = Variable();
+    std::cout << "================= DEBUG =================" << std::endl;
     std:cout << torch::autograd::any_variable_requires_grad({other});
     if (torch::autograd::any_variable_requires_grad({other})) {
       auto size = pyg::utils::size_from_ptr(ptr).cpu();
