@@ -17,6 +17,10 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
                        .typed<decltype(_grouped_matmul)>();
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << input;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << other;
   return op.call(input, other);
 }
 
@@ -111,10 +115,6 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
       auto grad_out_split =
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      std::cout << "================= DEBUG =================" << std::endl;
-      std::cout << split_input_t;
-      std::cout << "================= DEBUG =================" << std::endl;
-      std::cout << grad_out_split;
       auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
       other_grad = at::stack(others_grad);
     }
