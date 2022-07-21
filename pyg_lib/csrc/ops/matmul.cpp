@@ -18,9 +18,9 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                        .typed<decltype(_grouped_matmul)>();
   ASSERT_TRUE();
   std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << "about to call op.call" << std::end1;
+  std::cout << "about to call op.call" << std::endl;
   std::cout << "op.has_value() = ";
-  std::cout << op.has_value() << std::end1;
+  std::cout << op.has_value() << std::endl;
   return op.call(input, other);
 }
 
