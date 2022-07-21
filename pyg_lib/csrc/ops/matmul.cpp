@@ -4,8 +4,8 @@
 #include <torch/library.h>
 #include <torch/script.h>
 
-#include "pyg_lib/csrc/utils/convert.h"
 #include <iostream>
+#include "pyg_lib/csrc/utils/convert.h"
 namespace pyg {
 namespace ops {
 
@@ -97,7 +97,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto input_grad = Variable();
     std::cout << "================= DEBUG =================" << std::endl;
-    std:cout << torch::autograd::any_variable_requires_grad({input});
+    std::cout << torch::autograd::any_variable_requires_grad({input});
     if (torch::autograd::any_variable_requires_grad({input})) {
       auto other_t = other.transpose(-2, -1);
       input_grad = _segment_matmul(grad_out, ptr, other_t);
@@ -105,7 +105,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
     auto other_grad = Variable();
     std::cout << "================= DEBUG =================" << std::endl;
-    std:cout << torch::autograd::any_variable_requires_grad({other});
+    std::cout << torch::autograd::any_variable_requires_grad({other});
     if (torch::autograd::any_variable_requires_grad({other})) {
       auto size = pyg::utils::size_from_ptr(ptr).cpu();
       // TODO (matthias) Allow for other types than `int64_t`.
