@@ -15,11 +15,11 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
+                       .typed<decltype(_grouped_matmul)>();
   std::cout << "================= DEBUG =================" << std::endl;
   std::cout << "about to call op.call" << std::endl;
-  std::cout << "op.has_value() = ";
-  std::cout << op.has_value() << std::endl;
-  static auto op = op.typed<decltype(_grouped_matmul)>();
+  // std::cout << "op.has_value() = ";
+  // std::cout << op.has_value() << std::endl;
   return op.call(input, other);
 }
 
