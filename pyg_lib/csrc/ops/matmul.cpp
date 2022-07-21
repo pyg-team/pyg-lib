@@ -96,23 +96,22 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input = saved[0], ptr = saved[1], other = saved[2];
 
     auto input_grad = Variable();
-    // std::cout << "================= DEBUG =================" << std::endl;
-    // std::cout << torch::autograd::any_variable_requires_grad({input});
     if (torch::autograd::any_variable_requires_grad({input})) {
       auto other_t = other.transpose(-2, -1);
       input_grad = _segment_matmul(grad_out, ptr, other_t);
     }
 
     auto other_grad = Variable();
-    // std::cout << "================= DEBUG =================" << std::endl;
-    // std::cout << torch::autograd::any_variable_requires_grad({other});
     if (torch::autograd::any_variable_requires_grad({other})) {
       auto size = pyg::utils::size_from_ptr(ptr).cpu();
       // TODO (matthias) Allow for other types than `int64_t`.
       auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
       auto input_t = input.transpose(-2, -1);
+      auto split_input_t = input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1)
+      std::cout << "================= DEBUG =================" << std::endl;
+      std::cout << split_input_t;
       auto others_grad = _grouped_matmul(
-          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
+          split_input_t,
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
       other_grad = at::stack(others_grad);
     }
