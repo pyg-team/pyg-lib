@@ -145,5 +145,10 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                              "Tensor other) -> Tensor"));
 }
 
+TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
+  m.impl("pyg::my_grouped_matmul", my_grouped_matmul);
+  m.impl("pyg::my_segment_matmul", my_grouped_matmul);
+}
+
 }  // namespace ops
 }  // namespace pyg
