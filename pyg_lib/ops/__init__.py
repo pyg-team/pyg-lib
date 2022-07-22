@@ -38,7 +38,7 @@ class GroupedMatmul(torch.autograd.Function):
         assert all([
             'cuda' in str(inputs[i].device) and 'cuda' in str(others[i].device)
             for i in range(len(inputs))
-        ]),  'Only CUDA Tensors supported'
+        ]), 'Only CUDA Tensors supported'
         ctx.save_for_backward(inputs, others)
         return torch.ops.pyg.grouped_matmul_kern(inputs, others)
 
