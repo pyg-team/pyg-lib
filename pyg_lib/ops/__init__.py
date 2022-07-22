@@ -17,8 +17,9 @@ class SegmentMatmul(torch.autograd.Function):
         if input_tensor.requires_grad:
             input_grad = torch.ops.pyg.segment_matmul_kern(gradout, ptr, other.T)
         if other.requires_grad:
-            split_input_T = 
-            grad_out_split = 
+            sizes = ptr[1:] - ptr[:-1]
+            split_input_T = torch.split(input_tensor.T, sizes, dim=1)
+            grad_out_split = torch.split(gradout, sizes, dim=0)
             other_grad = torch.stack(torch.ops.pyg.grouped_matmul_kern(split_input_T, grad_out_split))
 
         return input_grad, None, other_grad
@@ -26,11 +27,20 @@ class SegmentMatmul(torch.autograd.Function):
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, others):
+        for i in range(len(inputs))
+                assert 'cuda' in inputs[i].device and 'others' in others[i].device
+        ctx.save_for_backward(inputs, others)
         return torch.ops.pyg.grouped_matmul_kern(inputs, others)
 
     @staticmethod
     def backward(ctx, gradouts):
-        pass
+        inputs, others = ctx.saved_tensors
+        inputs_grads, others_grads = None, None
+        if any([i.requires_grad for i in inputs]):
+            pass
+        if any([i.requires_grad for i in others]):
+            pass
+        return inputs_grads, others_grads
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
