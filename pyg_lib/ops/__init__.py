@@ -3,6 +3,35 @@ from typing import List
 import torch
 from torch import Tensor
 
+class SegmentMatmul(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input_tensor, ptr, other):
+        assert 'cuda' in input_t.device and 'cuda' in ptr.device and 'cuda' in other.device, 'Only CUDA Tensors supported'
+        ctx.save_for_backward(input_t, ptr, other)
+        return torch.ops.pyg.segment_matmul_kern(input_tensor, ptr, other)
+
+    @staticmethod
+    def backward(ctx, gradout):
+        input_tensor, ptr, other = ctx.saved_tensors
+        input_grad, other_grad = None, None
+        if input_tensor.requires_grad:
+            input_grad = torch.ops.pyg.segment_matmul_kern(gradout, ptr, other.T)
+        if other.requires_grad:
+            split_input_T = 
+            grad_out_split = 
+            other_grad = torch.stack(torch.ops.pyg.grouped_matmul_kern(split_input_T, grad_out_split))
+
+        return input_grad, None, other_grad
+
+class GroupedMatmul(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, inputs, others):
+        return torch.ops.pyg.grouped_matmul_kern(inputs, others)
+
+    @staticmethod
+    def backward(ctx, gradouts):
+        pass
+
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
@@ -29,7 +58,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
             :obj:`[N_i, M_i]`.
     """
-    return torch.ops.pyg.grouped_matmul(inputs, others)
+    return GroupedMatmul.apply(inputs, others)
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -59,7 +88,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    return SegmentMatmul.apply(inputs, ptr, other)
 
 
 __all__ = [
