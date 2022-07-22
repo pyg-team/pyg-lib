@@ -10,6 +10,14 @@ namespace ops {
 
 namespace {
 
+std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
+                               std::vector<at::Tensor> t2) {
+  for (size_t i = 0; i < t2.size(); ++i) {
+    t1.push_back(t2[i]);
+  }
+  return t1;
+}
+
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
@@ -33,14 +41,6 @@ at::Tensor _segment_matmul(const at::Tensor& input,
                        .findSchemaOrThrow("pyg::segment_matmul_kern", "")
                        .typed<decltype(_segment_matmul)>();
   return op.call(input, ptr, other);
-}
-
-std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
-                               std::vector<at::Tensor> t2) {
-  for (size_t i = 0; i < t2.size(); ++i) {
-    t1.push_back(t2[i]);
-  }
-  return t1;
 }
 
 using torch::autograd::AutogradContext;
