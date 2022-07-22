@@ -17,7 +17,7 @@ class SegmentMatmul(torch.autograd.Function):
         if input_tensor.requires_grad:
             input_grad = torch.ops.pyg.segment_matmul_kern(gradout, ptr, other.T)
         if other.requires_grad:
-            sizes = ptr[1:] - ptr[:-1]
+            sizes = (ptr[1:] - ptr[:-1]).tolist()
             split_input_T = torch.split(input_tensor.T, sizes, dim=1)
             grad_out_split = torch.split(gradout, sizes, dim=0)
             other_grad = torch.stack(torch.ops.pyg.grouped_matmul_kern(split_input_T, grad_out_split))
