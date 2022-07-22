@@ -18,6 +18,10 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                        .typed<decltype(_grouped_matmul)>();
   std::cout << "================= DEBUG =================" << std::endl;
   std::cout << "about to call op.call" << std::endl;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << input;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << other;
   // std::cout << "op.has_value() = ";
   // std::cout << op.has_value() << std::endl;
   return op.call(input, other);
