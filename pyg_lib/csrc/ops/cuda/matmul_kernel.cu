@@ -123,16 +123,9 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 }
 
 std::vector<at::Tensor> grouped_matmul_kernel(
-    const std::vector<at::Tensor>& input_and_other) {
-  int split_len = (int)input_and_other.size() / 2;
-  std::vector<at::Tensor> input(input_and_other.begin(),
-                                input_and_other.begin() + split_len);
-  std::vector<at::Tensor> other(input_and_other.begin() + split_len,
-                                input_and_other.end());
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << input;
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << other;
+    const std::vector<at::Tensor>& input,
+    const std::vector<at::Tensor>& other) {
+  std::cout << "================= DEBUG =================... inside kernel" << std::endl;
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
@@ -160,8 +153,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def("pyg::grouped_matmul_kern(Tensor[] input_and_other) -> Tensor[]");
+TORCH_LIBRARY(pyg, m) {
+  m.def("pyg::grouped_matmul_kern(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
       "Tensor");
