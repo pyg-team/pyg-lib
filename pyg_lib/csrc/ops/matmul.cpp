@@ -59,9 +59,9 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = ctx->saved_data["input_len"].toInt();
     variable_list input(input_and_other.begin(),
-                                  input_and_other.begin() + input_len);
+                        input_and_other.begin() + input_len);
     variable_list other(input_and_other.begin() + input_len,
-                                  input_and_other.end());
+                        input_and_other.end());
     variable_list other_grad;
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
