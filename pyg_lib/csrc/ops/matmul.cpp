@@ -17,13 +17,7 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
                        .typed<decltype(_grouped_matmul)>();
   std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << "about to call op.call" << std::endl;
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << input;
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << other;
-  // std::cout << "op.has_value() = ";
-  // std::cout << op.has_value() << std::endl;
+  std::cout << "about to call op" << std::endl;
   return op.call(input, other);
 }
 
@@ -149,7 +143,7 @@ at::Tensor segment_matmul_autograd(const at::Tensor& input,
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
+  m.def(TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
   m.def(
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
 }
