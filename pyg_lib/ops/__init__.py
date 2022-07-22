@@ -27,8 +27,7 @@ class SegmentMatmul(torch.autograd.Function):
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, others):
-        for i in range(len(inputs))
-                assert 'cuda' in inputs[i].device and 'others' in others[i].device
+        assert all(['cuda' in inputs[i].device and 'cuda' in others[i].device for i in range(len(inputs))])
         ctx.save_for_backward(inputs, others)
         return torch.ops.pyg.grouped_matmul_kern(inputs, others)
 
