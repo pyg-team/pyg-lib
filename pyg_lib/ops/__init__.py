@@ -7,7 +7,7 @@ from torch import Tensor
 class SegmentMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_tensor, ptr, other):
-        assert 'cuda' in input_tensor.device and 'cuda' in ptr.device and 'cuda' in other.device, 'Only CUDA Tensors supported'
+        assert 'cuda' in str(input_tensor.device) and 'cuda' in str(ptr.device) and 'cuda' in str(other.device), 'Only CUDA Tensors supported'
         ctx.save_for_backward(input_tensor, ptr, other)
         return torch.ops.pyg.segment_matmul_kern(input_tensor, ptr, other)
 
@@ -33,7 +33,7 @@ class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, others):
         assert all([
-            'cuda' in inputs[i].device and 'cuda' in others[i].device
+            'cuda' in str(inputs[i].device) and 'cuda' in str(others[i].device)
             for i in range(len(inputs))
         ])
         ctx.save_for_backward(inputs, others)
