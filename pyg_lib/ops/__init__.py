@@ -12,7 +12,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         inputs = [torch.randn(5, 16), torch.randn(3, 32)]
         others = [torch.randn(16, 32), torch.randn(32, 64)]
 
-        outs = pyg_lib.segment.grouped_matmul(inputs, others)
+        outs = pyg_lib.ops.grouped_matmul(inputs, others)
         assert len(outs) == 2
         assert outs[0].size() == (5, 32)
         assert outs[0] == inputs[0] @ others[0]
@@ -42,7 +42,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
         ptr = torch.tensor([0, 5, 8])
         other = torch.randn(2, 16, 32)
 
-        out = pyg_lib.segment.segment_matmul(inputs, ptr, other)
+        out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
         assert out.size() == (8, 32)
         assert out[0:5] == inputs[0:5] @ other[0]
         assert out[5:8] == inputs[5:8] @ other[1]
