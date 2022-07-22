@@ -155,8 +155,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 }  // namespace
 
 TORCH_LIBRARY(pyg, m) {
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::grouped_matmul_kern(Tensor[] input, Tensor[] other) -> Tensor[]"));
+  m.def("pyg::grouped_matmul_kern(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
       "Tensor");
