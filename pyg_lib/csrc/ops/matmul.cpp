@@ -24,7 +24,8 @@ std::vector<at::Tensor> _grouped_matmul(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
                        .typed<decltype(_grouped_matmul)>();
-  std::cout << "================= DEBUG =================... calling op" << std::endl;
+  std::cout << "================= DEBUG =================... calling op"
+            << std::endl;
   return op.call(input_and_other);
 }
 
