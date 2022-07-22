@@ -23,13 +23,7 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input_and
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
                        .typed<decltype(_grouped_matmul)>();
-  // std::cout << "================= DEBUG =================" << std::endl;
-  // std::cout << "about to call op.call" << std::endl;
-  // std::cout << "================= DEBUG =================" << std::endl;
-  // std::cout << input;
-  // std::cout << "================= DEBUG =================" << std::endl;
-  // std::cout << other;
-  return op.call(concat(input, other));
+  return op.call(input_and_other);
 }
 
 at::Tensor _segment_matmul(const at::Tensor& input,
@@ -51,8 +45,9 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list forward(AutogradContext* ctx,
                                variable_list input,
                                variable_list other) {
-    auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
+    auto out = _grouped_matmul(input_and_other);
+    
     ctx->save_for_backward(input_and_other);
     ctx->saved_data["input_len"] = (int)input.size();
     return out;
@@ -71,7 +66,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     if (torch::autograd::any_variable_requires_grad(other)) {
       for (size_t i = 0; i < input.size(); ++i)
         other[i] = other[i].transpose(-2, -1);
-      other_grad = _grouped_matmul(grad_outs, other);
+      other_grad = _grouped_matmul(concat(grad_outs, other));
     } else {
       for (size_t i = 0; i < other.size(); ++i)
         other_grad.push_back(Variable());
@@ -81,7 +76,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     if (torch::autograd::any_variable_requires_grad(input)) {
       for (size_t i = 0; i < input.size(); ++i)
         input[i] = input[i].transpose(-2, -1);
-      input_grad = _grouped_matmul(input, grad_outs);
+      input_grad = _grouped_matmul(concat(input, grad_outs));
     } else {
       for (size_t i = 0; i < input.size(); ++i)
         input_grad.push_back(Variable());
@@ -122,7 +117,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
       std::vector<at::Tensor> grad_out_split =
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+      auto others_grad = _grouped_matmul(concat(split_input_t, grad_out_split));
       other_grad = at::stack(others_grad);
     }
     return {input_grad, Variable(), other_grad};
