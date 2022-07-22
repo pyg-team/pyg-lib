@@ -24,8 +24,7 @@ std::vector<at::Tensor> _grouped_matmul(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
                        .typed<decltype(_grouped_matmul)>();
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << input_and_other;
+  std::cout << "================= DEBUG =================... calling op" << std::endl;
   return op.call(input_and_other);
 }
 
@@ -46,19 +45,15 @@ using torch::autograd::variable_list;
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
-                               variable_list input,
-                               variable_list other) {
-    variable_list input_and_other = concat(input, other);
+                               variable_list input_and_other) {
     auto out = _grouped_matmul(input_and_other);
-
     ctx->save_for_backward(input_and_other);
-    ctx->saved_data["input_len"] = (int)input.size();
     return out;
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
-    int input_len = ctx->saved_data["input_len"].toInt();
+    int input_len = (int)input_and_other.size() / 2;
     std::vector<at::Tensor> input(input_and_other.begin(),
                                   input_and_other.begin() + input_len);
     std::vector<at::Tensor> other(input_and_other.begin() + input_len,
@@ -131,9 +126,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul_autograd(
-    const std::vector<at::Tensor>& input,
-    const std::vector<at::Tensor>& other) {
-  return GroupedMatmul::apply(input, other);
+    const std::vector<at::Tensor>& input_and_other) {
+  return GroupedMatmul::apply(input_and_other);
 }
 
 // Performs matrix multiplication according to segments.
@@ -144,7 +138,7 @@ at::Tensor segment_matmul_autograd(const at::Tensor& input,
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
+  m.def("pyg::grouped_matmul(Tensor[] input_and_other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
 }
