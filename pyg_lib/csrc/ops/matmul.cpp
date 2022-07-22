@@ -30,7 +30,8 @@ std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
   // std::cout << input;
   // std::cout << "================= DEBUG =================" << std::endl;
   // std::cout << other;
-  return op.call(concat(input, other));
+  auto input_and_other = concat(input, other)
+  return op.call(input_and_other);
 }
 
 at::Tensor _segment_matmul(const at::Tensor& input,
