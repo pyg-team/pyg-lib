@@ -47,9 +47,11 @@ class GroupedMatmul(torch.autograd.Function):
         inputs, others = ctx.saved_tensors
         inputs_grads, others_grads = None, None
         if any([i.requires_grad for i in inputs]):
-            pass
+            for i in range(len(inputs)):
+                inputs[i] = inputs[i].T
         if any([i.requires_grad for i in others]):
-            pass
+            for i in range(len(inputs)):
+                inputs[i] = inputs[i].T
         return inputs_grads, others_grads
 
 
