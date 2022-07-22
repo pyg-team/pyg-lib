@@ -43,15 +43,17 @@ class GroupedMatmul(torch.autograd.Function):
         return torch.ops.pyg.grouped_matmul_kern(inputs, others)
 
     @staticmethod
-    def backward(ctx, gradouts):
+    def backward(ctx, grad_outs):
         inputs, others = ctx.saved_tensors
         inputs_grads, others_grads = None, None
         if any([i.requires_grad for i in inputs]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].T
+            input_grads = torch.ops.pyg.grouped_matmul_kern(grad_outs, others)
         if any([i.requires_grad for i in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].T
+            others_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
         return inputs_grads, others_grads
 
 
