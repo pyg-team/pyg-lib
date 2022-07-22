@@ -166,8 +166,8 @@ TORCH_LIBRARY(pyg, m) {
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_kern"),
          TORCH_FN(segment_matmul_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_kern"),
-         TORCH_FN(grouped_matmul_kernel));
+//  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_kern"),
+//         TORCH_FN(grouped_matmul_kernel));
 }
 
 }  // namespace ops
