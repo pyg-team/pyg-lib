@@ -160,7 +160,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY(pyg, m) {
+TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def("pyg::grouped_matmul_kern(Tensor[] input_and_other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
