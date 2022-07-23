@@ -34,20 +34,20 @@ class SegmentMatmul(torch.autograd.Function):
 
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, others):
+    def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
         assert all([
             'cuda' in str(inputs[i].device) and 'cuda' in str(others[i].device)
             for i in range(len(inputs))
         ]), 'Only CUDA Tensors supported'
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
-        # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
-        for i in range(len(outs)):
-            outs[i].requires_grad = True
+        # # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
+        # for i in range(len(outs)):
+        #     outs[i].requires_grad = True
         return outs
 
     @staticmethod
-    def backward(ctx, grad_outs):
+    def backward(ctx, grad_outs: List[Tensor]):
         inputs, others = ctx.saved_tensors
         inputs_grads, others_grads = None, None
         if any([i.requires_grad for i in inputs]):
@@ -57,7 +57,6 @@ class GroupedMatmul(torch.autograd.Function):
         if any([i.requires_grad for i in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].T
-            others_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
         return inputs_grads, others_grads
 
 
