@@ -41,7 +41,7 @@ class GroupedMatmul(torch.autograd.Function):
         ]), 'Only CUDA Tensors supported'
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
-        # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
+        # Autograd doesnt set out[i].requires_grad = True automatically
         for i in range(len(outs)):
             outs[i].requires_grad = True
         return outs
@@ -50,13 +50,14 @@ class GroupedMatmul(torch.autograd.Function):
     def backward(ctx, grad_outs: List[Tensor]):
         inputs, others = ctx.saved_tensors
         inputs_grads, others_grads = None, None
-        if any([i.requires_grad for i in inputs]):
-            for i in range(len(inputs)):
-                inputs[i] = inputs[i].T
+        if all([i.requires_grad for i in inputs]):
+            for i in range(len(others)):
+                others[i] = others[i].T
             input_grads = torch.ops.pyg.grouped_matmul_kern(grad_outs, others)
-        if any([i.requires_grad for i in others]):
+        if all([i.requires_grad for i in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].T
+            other_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
         return inputs_grads, others_grads
 
 
