@@ -33,9 +33,9 @@ def test_grouped_matmul_autograd():
     assert outs[0].grad.size() == (5, 32)
     assert outs[1].grad.size() == (3, 64)
     assert (outs[0] == inputs[0] @ others[0]).all(), 'Abs Err: ' + str(
-        (inputs[0] @ others[0] - outs[0]).abs().max())
+        (inputs[0] @ others[0] - outs[0]).abs())
     assert (outs[1] == inputs[1] @ others[1]).all(), 'Abs Err: ' + str(
-        (inputs[1] @ others[1] - outs[1]).abs().max())
+        (inputs[1] @ others[1] - outs[1]).abs())
     print('test_grouped_matmul_autograd passed!')
 
 
