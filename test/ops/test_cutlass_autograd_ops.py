@@ -3,7 +3,7 @@ import torch
 import pyg_lib
 
 
-def assert_close_enough(x, y, tol=6e-3)
+def assert_close_enough(x, y, tol=6e-3):
     # TODO Rishi: Work w/ Cutlass to lower the high error (as large as ~5e-3)
     assert ((x - y).abs().max() <= tol), 'Max Abs Err: ' + str((x-y).abs().max()) + ', Tolerace: ' + str(tol)
 
