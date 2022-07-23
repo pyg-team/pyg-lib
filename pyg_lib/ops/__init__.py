@@ -41,9 +41,9 @@ class GroupedMatmul(torch.autograd.Function):
         ]), 'Only CUDA Tensors supported'
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
-        # # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
-        # for i in range(len(outs)):
-        #     outs[i].requires_grad = True
+        # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
+        for i in range(len(outs)):
+            outs[i].requires_grad = True
         return outs
 
     @staticmethod
