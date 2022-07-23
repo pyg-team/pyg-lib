@@ -9,8 +9,8 @@ def test_segment_matmul_autograd():
     other = torch.randn((2, 16, 32), requires_grad=True, device='cuda:0')
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
     assert out.size() == (8, 32)
-    # assert (out[0:5] == inputs[0:5] @ other[0]).all()
-    # assert (out[5:8] == inputs[5:8] @ other[1]).all()
+    assert (out[0:5] == inputs[0:5] @ other[0]).all(), 'Abs Max Err: ' + str((inputs[0:5] @ others[0] - outs[0:5]).abs().max())
+    assert (out[5:8] == inputs[5:8] @ other[1]).all(), 'Abs Max Err: ' + str((inputs[5:8] @ others[1] - outs[5:8]).abs().max())
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
@@ -26,9 +26,9 @@ def test_grouped_matmul_autograd():
     outs = pyg_lib.ops.grouped_matmul(inputs, others)
     assert len(outs) == 2
     assert outs[0].size() == (5, 32)
-    assert (outs[0] == inputs[0] @ others[0]).all()
     assert outs[1].size() == (3, 64)
-    assert (outs[1] == inputs[1] @ others[1]).all()
+    assert (outs[0] == inputs[0] @ others[0]).all(), 'Abs Max Err: ' + str((inputs[0] @ others[0] - outs[0]).abs().max())
+    assert (outs[1] == inputs[1] @ others[1]).all(), 'Abs Max Err: ' + str((inputs[1] @ others[1] - outs[1]).abs().max()) 
     (outs[0].sum() + outs[1].sum()).backward()
     assert outs[0].grad.size() == (5, 32)
     assert outs[1].grad.size() == (3, 64)
