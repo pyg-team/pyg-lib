@@ -21,7 +21,7 @@ def test_grouped_matmul_autograd():
 	assert outs[0].size() == (5, 32)
 	assert outs[0] == inputs[0] @ others[0]
 	assert outs[1].size() == (3, 64)
-    assert outs[1] == inputs[1] @ others[1]
+	assert outs[1] == inputs[1] @ others[1]
 	(out[0].sum()+out[1].sum()).backward()
 	assert outs[0].grad.size() == (5, 32)
 	assert outs[1].grad.size() == (3, 64)
