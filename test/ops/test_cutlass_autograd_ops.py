@@ -14,6 +14,7 @@ def test_segment_matmul_autograd():
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
+    print('test_segment_matmul_autograd passed!')
 
 
 def test_grouped_matmul_autograd():
@@ -31,6 +32,7 @@ def test_grouped_matmul_autograd():
     (outs[0].sum() + outs[1].sum()).backward()
     assert outs[0].grad.size() == (5, 32)
     assert outs[1].grad.size() == (3, 64)
+    print('test_grouped_matmul_autograd passed!')
 
 
 test_segment_matmul_autograd()
