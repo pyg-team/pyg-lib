@@ -42,7 +42,7 @@ class GroupedMatmul(torch.autograd.Function):
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
         # Unfortunately autograd doesnt set out[i].requires_grad = True automatically
-        for i in range(len(outs))
+        for i in range(len(outs)):
             outs[i].requires_grad = True
         return outs
 
