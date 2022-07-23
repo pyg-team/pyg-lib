@@ -53,11 +53,11 @@ class GroupedMatmul(torch.autograd.Function):
         if all([i.requires_grad for i in inputs]):
             for i in range(len(others)):
                 others[i] = others[i].T
-            input_grads = torch.ops.pyg.grouped_matmul_kern(grad_outs, others)
+            inputs_grads = torch.ops.pyg.grouped_matmul_kern(grad_outs, others)
         if all([i.requires_grad for i in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].T
-            other_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
+            others_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
         return inputs_grads, others_grads
 
 
