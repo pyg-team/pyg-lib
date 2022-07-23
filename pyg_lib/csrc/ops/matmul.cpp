@@ -46,6 +46,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   static variable_list forward(AutogradContext* ctx,
                                variable_list input,
                                variable_list other) {
+    at::AutoNonVariableTypeMode g;
     auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
     ctx->save_for_backward(input_and_other);
@@ -91,6 +92,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
                                Variable input,
                                Variable ptr,
                                Variable other) {
+    at::AutoNonVariableTypeMode g;
     Variable out = _segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return {out};
