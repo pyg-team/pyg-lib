@@ -12,7 +12,7 @@ def test_segment_matmul_autograd():
     # assert (out[0:5] == inputs[0:5] @ other[0]).all()
     # assert (out[5:8] == inputs[5:8] @ other[1]).all()
     out.sum().backward()
-    print(out.grad.shape)
+    print(other.grad.shape)
 
 
 def test_grouped_matmul_autograd():
