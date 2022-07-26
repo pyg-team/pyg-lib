@@ -157,7 +157,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 TORCH_LIBRARY(pyg, m) {
   m.def("pyg::grouped_matmul_kern(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
-      "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> Tensor");
+      "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
+      "Tensor");
 }
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_kern"),
