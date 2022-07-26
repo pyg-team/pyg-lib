@@ -107,15 +107,15 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       // TODO (matthias) Allow for other types than `int64_t`.
       auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
       auto input_t = input.transpose(-2, -1);
-      auto split_input_t = input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
-      auto grad_out_split = grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0)
-      std::cout << "================= DEBUG =================" << std::endl;
+      auto split_input_t =
+          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+      auto grad_out_split =
+          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0) std::cout
+          << "================= DEBUG =================" << std::endl;
       std::cout << split_input_t;
       std::cout << "================= DEBUG =================" << std::endl;
       std::cout << grad_out_split;
-      auto others_grad = _grouped_matmul(
-          split_input_t,
-          grad_out_split);
+      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
       other_grad = at::stack(others_grad);
     }
     return {input_grad, Variable(), other_grad};
