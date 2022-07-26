@@ -132,8 +132,8 @@ std::vector<at::Tensor> grouped_matmul_autograd(
 
 // Performs matrix multiplication according to segments.
 at::Tensor segment_matmul_autograd(const at::Tensor& input,
-                             const at::Tensor& ptr,
-                             const at::Tensor& other) {
+                                   const at::Tensor& ptr,
+                                   const at::Tensor& other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
