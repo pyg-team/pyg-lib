@@ -18,7 +18,8 @@ std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
   return t1;
 }
 
-std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input_and_other) {
+std::vector<at::Tensor> _grouped_matmul(
+    const std::vector<at::Tensor>& input_and_other) {
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
