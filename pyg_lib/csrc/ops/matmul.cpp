@@ -13,9 +13,9 @@ namespace {
 std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
                                         const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add TensorArg definitions.
-  static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::grouped_matmul_kern", "")
-  std::cout << "================= DEBUG =================" << std::endl;
+  static auto op = c10::Dispatcher::singleton().findSchemaOrThrow(
+                       "pyg::grouped_matmul_kern", "") std::cout
+                   << "================= DEBUG =================" << std::endl;
   std::cout << "about to call op.call" << std::endl;
   std::cout << "op.has_value() = ";
   std::cout << op.has_value() << std::endl;
