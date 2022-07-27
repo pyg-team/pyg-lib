@@ -160,7 +160,8 @@ TORCH_LIBRARY(pyg, m) {
       "Tensor");
 }
 
-// TODO (matthias) Add grouped_matmul_kern as CUDA library once dispatcher support lands.
+// TODO (matthias) Add grouped_matmul_kern as CUDA library once dispatcher
+// support lands.
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_kern"),
          TORCH_FN(segment_matmul_kernel));
