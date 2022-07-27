@@ -48,7 +48,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
                                variable_list other) {
     variable_list input_and_other = concat(input, other);
     auto out = _grouped_matmul(input_and_other);
-    
+
     ctx->save_for_backward(input_and_other);
     ctx->saved_data["input_len"] = (int)input.size();
     return out;
