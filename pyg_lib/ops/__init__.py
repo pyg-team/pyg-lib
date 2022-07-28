@@ -3,6 +3,7 @@ from typing import List
 import torch
 from torch import Tensor
 
+
 class SegmentMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_tensor, ptr, other):
@@ -15,19 +16,26 @@ class SegmentMatmul(torch.autograd.Function):
         input_tensor, ptr, other = ctx.saved_tensors
         input_grad, other_grad = None, None
         if input_tensor.requires_grad:
-            input_grad = torch.ops.pyg.segment_matmul_kern(gradout, ptr, other.T)
+            input_grad = torch.ops.pyg.segment_matmul_kern(
+                gradout, ptr, other.T)
         if other.requires_grad:
             sizes = (ptr[1:] - ptr[:-1]).tolist()
             split_input_T = torch.split(input_tensor.T, sizes, dim=1)
             grad_out_split = torch.split(gradout, sizes, dim=0)
-            other_grad = torch.stack(torch.ops.pyg.grouped_matmul_kern(split_input_T, grad_out_split))
+            other_grad = torch.stack(
+                torch.ops.pyg.grouped_matmul_kern(split_input_T,
+                                                  grad_out_split))
 
         return input_grad, None, other_grad
+
 
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, others):
-        assert all(['cuda' in inputs[i].device and 'cuda' in others[i].device for i in range(len(inputs))])
+        assert all([
+            'cuda' in inputs[i].device and 'cuda' in others[i].device
+            for i in range(len(inputs))
+        ])
         ctx.save_for_backward(inputs, others)
         return torch.ops.pyg.grouped_matmul_kern(inputs, others)
 
