@@ -1,5 +1,7 @@
 import torch
+
 import pyg_lib
+
 
 def test_segment_matmul_autograd():
 	inputs = torch.randn((8, 16), requires_grad=True, device='cuda:0')
