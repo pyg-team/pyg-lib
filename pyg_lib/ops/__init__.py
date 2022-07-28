@@ -7,7 +7,9 @@ from torch import Tensor
 class SegmentMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_tensor, ptr, other):
-        assert 'cuda' in str(input_tensor.device) and 'cuda' in str(ptr.device) and 'cuda' in str(other.device), 'Only CUDA Tensors supported'
+        assert 'cuda' in str(input_tensor.device) and 'cuda' in str(
+            ptr.device) and 'cuda' in str(
+                other.device), 'Only CUDA Tensors supported'
         ctx.save_for_backward(input_tensor, ptr, other)
         return torch.ops.pyg.segment_matmul_kern(input_tensor, ptr, other)
 
