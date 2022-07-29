@@ -162,7 +162,7 @@ at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
   grouped_matmul_out_kernel(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
       other.contiguous().split(/*split_size=*/1, /*dim=*/0),
-      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/1));
+      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
   return out;
 }
 
