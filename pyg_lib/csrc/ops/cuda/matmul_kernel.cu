@@ -164,11 +164,7 @@ at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
 
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(split_input, split_other, out);
-  std::cout << "================= INSIDE KERNEL DEBUG =================" << std::endl;
-  std::cout << out << std::endl;
   auto out_stacked = at::stack(out);
-  std::cout << "================= INSIDE KERNEL DEBUG =================" << std::endl;
-  std::cout << out_stacked << std::endl;
   return out_stacked;
 }
 
