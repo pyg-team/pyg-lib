@@ -150,6 +150,22 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   return out;
 }
 
+at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
+                                 const at::Tensor& ptr,
+                                 const at::Tensor& other) {
+  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
+  // TODO (matthias) Allow for other types than `int64_t`.
+  const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+  const auto out = input.new_empty({input.size(0), other.size(-1)});
+
+  // TODO (matthias) Better handle non-contiguous memory layouts.
+  grouped_matmul_out_kernel(
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0),
+      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/1));
+  return out;
+}
+
 }  // namespace
 
 TORCH_LIBRARY(pyg, m) {
@@ -157,11 +173,16 @@ TORCH_LIBRARY(pyg, m) {
   m.def(
       "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
       "Tensor");
+  m.def(
+      "pyg::segment_matmul_back_kern(Tensor input, Tensor ptr, Tensor other) -> "
+      "Tensor");
 }
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_kern"),
          TORCH_FN(segment_matmul_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_back_kern"),
+         TORCH_FN(segment_matmul_back_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_kern"),
          TORCH_FN(grouped_matmul_kernel));
 }

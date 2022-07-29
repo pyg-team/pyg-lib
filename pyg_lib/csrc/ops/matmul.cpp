@@ -29,6 +29,16 @@ at::Tensor _segment_matmul(const at::Tensor& input,
   return op.call(input, ptr, other);
 }
 
+at::Tensor _segment_matmul_back(const at::Tensor& input,
+                           const at::Tensor& ptr,
+                           const at::Tensor& other) {
+  // TODO (matthias) Add TensorArg definitions.
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::segment_matmul_back_kern", "")
+                       .typed<decltype(_segment_matmul_back)>();
+  return op.call(input, ptr, other);
+}
+
 std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
                                std::vector<at::Tensor> t2) {
   for (size_t i = 0; i < t2.size(); ++i) {
@@ -99,16 +109,8 @@ std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& in
 
   auto other_grad = Variable();
   if (other_req_grad) {
-    auto size = pyg::utils::size_from_ptr(ptr).cpu();
-    // TODO (matthias) Allow for other types than `int64_t`.
-    auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
     auto input_t = input.transpose(-2, -1);
-    variable_list split_input_t =
-        input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
-    variable_list grad_out_split =
-        grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-
-    auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+    auto others_grad = _segment_matmul_back(input_t, grad_out);
     other_grad = at::stack(others_grad);
   }
   return std::make_tuple(input_grad, other_grad);
