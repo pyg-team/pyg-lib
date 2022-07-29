@@ -161,7 +161,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
-  m.def("pyg::segment_matmul_backwards(Tensor input, Tensor ptr, Tensor other, bool input_req_grad, bool ) -> (Tensor, Tensor)");
+  m.def("pyg::segment_matmul_backwards(Tensor input, Tensor ptr, Tensor other, bool input_req_grad, bool other_req_grad) -> (Tensor, Tensor)");
 }
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
