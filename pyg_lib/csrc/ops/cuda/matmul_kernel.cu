@@ -156,13 +156,14 @@ at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-  const auto out = input.new_empty({input.size(0), other.size(-1)});
+  auto split_input = input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1)
+  auto split_other = other.contiguous().split(/*split_size=*/1, /*dim=*/0)
+  std::vector<at::Tensor> out(split_input.size());
+  for (size_t i = 0; i < input.size(); ++i)
+    out[i] = input[i].new_empty({split_input[i].size(0), split_other[i].size(-1)});
 
   // TODO (matthias) Better handle non-contiguous memory layouts.
-  grouped_matmul_out_kernel(
-      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1),
-      other.contiguous().split(/*split_size=*/1, /*dim=*/0),
-      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+  grouped_matmul_out_kernel(split_input, split_other, out);
   return out;
 }
 
