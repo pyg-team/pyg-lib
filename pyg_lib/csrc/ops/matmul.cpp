@@ -85,6 +85,36 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   }
 };
 
+std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& input,
+                                   const at::Tensor& ptr,
+                                   const at::Tensor& other,
+                                   const at::Tensor& grad_out,
+                                   bool input_req_grad,
+                                   bool other_req_grad) {
+  auto input_grad = Variable();
+  if (input_req_grad) {
+    auto other_t = other.transpose(-2, -1);
+    input_grad = _segment_matmul(grad_out, ptr, other_t);
+  }
+
+  auto other_grad = Variable();
+  if (other_req_grad) {
+    auto size = pyg::utils::size_from_ptr(ptr).cpu();
+    // TODO (matthias) Allow for other types than `int64_t`.
+    auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+    auto input_t = input.transpose(-2, -1);
+    variable_list split_input_t =
+        input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+    variable_list grad_out_split =
+        grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+
+    auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+    other_grad = at::stack(others_grad);
+  }
+  return std::make_tuple(input_grad, other_grad);
+};
+
+
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
@@ -100,26 +130,11 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto grad_out = grad_outs[0];
     auto saved = ctx->get_saved_variables();
     auto input = saved[0], ptr = saved[1], other = saved[2];
-
     auto input_grad = Variable();
-    if (torch::autograd::any_variable_requires_grad({input})) {
-      auto other_t = other.transpose(-2, -1);
-      input_grad = _segment_matmul(grad_out, ptr, other_t);
-    }
-
     auto other_grad = Variable();
-    if (torch::autograd::any_variable_requires_grad({other})) {
-      auto size = pyg::utils::size_from_ptr(ptr).cpu();
-      // TODO (matthias) Allow for other types than `int64_t`.
-      auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-      auto input_t = input.transpose(-2, -1);
-      variable_list split_input_t =
-          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
-      variable_list grad_out_split =
-          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
-      other_grad = at::stack(others_grad);
-    }
+    bool input_req_grad = torch::autograd::any_variable_requires_grad({input});
+    bool other_req_grad = torch::autograd::any_variable_requires_grad({other})
+    input_grad, other_grad = segment_matmul_backwards(input, ptr, other, grad_out, input_req_grad, other_req_grad)
     return {input_grad, Variable(), other_grad};
   }
 };
@@ -144,8 +159,12 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
+  m.def("pyg::segment_matmul_backward(Tensor input, Tensor ptr, Tensor other, bool input_req_grad, bool ) -> (Tensor, Tensor)");
 }
 
+TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
+  m.impl("pyg::segment_matmul_backward", segment_matmul_backwards);
+}
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   m.impl("pyg::grouped_matmul", grouped_matmul_autograd);
   m.impl("pyg::segment_matmul", segment_matmul_autograd);
