@@ -133,8 +133,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto input_grad = Variable();
     auto other_grad = Variable();
     bool input_req_grad = torch::autograd::any_variable_requires_grad({input});
-    bool other_req_grad = torch::autograd::any_variable_requires_grad({other})
-    input_grad, other_grad = segment_matmul_backwards(input, ptr, other, grad_out, input_req_grad, other_req_grad)
+    bool other_req_grad = torch::autograd::any_variable_requires_grad({other});
+    input_grad, other_grad = segment_matmul_backwards(input, ptr, other, grad_out, input_req_grad, other_req_grad);
     return {input_grad, Variable(), other_grad};
   }
 };
