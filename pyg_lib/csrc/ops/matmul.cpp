@@ -111,7 +111,7 @@ std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& in
   if (other_req_grad) {
     std::cout << "_____________entered other if_______________" << std::endl;
     auto input_t = input.transpose(-2, -1);
-    auto other_grad = _segment_matmul_back(input_t, ptr, grad_out);
+    other_grad = _segment_matmul_back(input_t, ptr, grad_out);
   }
   std::cout << "================= IN CPP DEBUG =================" << std::endl;
   std::cout << other_grad << std::endl;
