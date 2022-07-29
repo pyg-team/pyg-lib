@@ -113,8 +113,8 @@ std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& in
     auto input_t = input.transpose(-2, -1);
     auto other_grad = _segment_matmul_back(input_t, ptr, grad_out);
   }
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << other_grad;
+  std::cout << "================= IN CPP DEBUG =================" << std::endl;
+  std::cout << other_grad << std::endl;
   return std::make_tuple(input_grad, other_grad);
 };
 
