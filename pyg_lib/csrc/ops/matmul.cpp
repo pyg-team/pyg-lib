@@ -111,7 +111,6 @@ std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& in
   if (other_req_grad) {
     auto input_t = input.transpose(-2, -1);
     auto others_grad = _segment_matmul_back(input_t, grad_out);
-    other_grad = at::stack(others_grad);
   }
   return std::make_tuple(input_grad, other_grad);
 };
