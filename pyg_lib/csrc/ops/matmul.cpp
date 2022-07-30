@@ -30,8 +30,8 @@ at::Tensor _segment_matmul(const at::Tensor& input,
 }
 
 at::Tensor _segment_matmul_back(const at::Tensor& input,
-                           const at::Tensor& ptr,
-                           const at::Tensor& other) {
+                                const at::Tensor& ptr,
+                                const at::Tensor& other) {
   // TODO (matthias) Add TensorArg definitions.
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul_back_kern", "")
@@ -95,12 +95,13 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
   }
 };
 
-std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& input,
-                                   const at::Tensor& ptr,
-                                   const at::Tensor& other,
-                                   const at::Tensor& grad_out,
-                                   bool input_req_grad,
-                                   bool other_req_grad) {
+std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(
+    const at::Tensor& input,
+    const at::Tensor& ptr,
+    const at::Tensor& other,
+    const at::Tensor& grad_out,
+    bool input_req_grad,
+    bool other_req_grad) {
   auto input_grad = Variable();
   if (input_req_grad) {
     auto other_t = other.transpose(-2, -1);
@@ -114,7 +115,6 @@ std::tuple<at::Tensor, at::Tensor> segment_matmul_backwards(const at::Tensor& in
   }
   return std::make_tuple(input_grad, other_grad);
 };
-
 
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
@@ -135,7 +135,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto other_grad = Variable();
     bool input_req_grad = torch::autograd::any_variable_requires_grad({input});
     bool other_req_grad = torch::autograd::any_variable_requires_grad({other});
-    auto both_grads = segment_matmul_backwards(input, ptr, other, grad_out, input_req_grad, other_req_grad);
+    auto both_grads = segment_matmul_backwards(input, ptr, other, grad_out,
+                                               input_req_grad, other_req_grad);
     input_grad = std::get<0>(both_grads);
     other_grad = std::get<1>(both_grads);
     return {input_grad, Variable(), other_grad};
@@ -162,7 +163,10 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
-  m.def("pyg::segment_matmul_backwards(Tensor input, Tensor ptr, Tensor other, Tensor grad_out, bool input_req_grad, bool other_req_grad) -> (Tensor, Tensor)");
+  m.def(
+      "pyg::segment_matmul_backwards(Tensor input, Tensor ptr, Tensor other, "
+      "Tensor grad_out, bool input_req_grad, bool other_req_grad) -> (Tensor, "
+      "Tensor)");
 }
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {

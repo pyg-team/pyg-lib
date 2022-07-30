@@ -151,16 +151,19 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 }
 
 at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
-                                 const at::Tensor& ptr,
-                                 const at::Tensor& other) {
+                                      const at::Tensor& ptr,
+                                      const at::Tensor& other) {
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-  auto split_input = input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
-  auto split_other = other.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+  auto split_input =
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+  auto split_other =
+      other.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
   std::vector<at::Tensor> out(split_input.size());
   for (size_t i = 0; i < split_input.size(); ++i)
-    out[i] = input[i].new_empty({split_input[i].size(0), split_other[i].size(-1)});
+    out[i] =
+        input[i].new_empty({split_input[i].size(0), split_other[i].size(-1)});
 
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(split_input, split_other, out);
@@ -176,7 +179,8 @@ TORCH_LIBRARY(pyg, m) {
       "pyg::segment_matmul_kern(Tensor input, Tensor ptr, Tensor other) -> "
       "Tensor");
   m.def(
-      "pyg::segment_matmul_back_kern(Tensor input, Tensor ptr, Tensor other) -> "
+      "pyg::segment_matmul_back_kern(Tensor input, Tensor ptr, Tensor other) "
+      "-> "
       "Tensor");
 }
 
