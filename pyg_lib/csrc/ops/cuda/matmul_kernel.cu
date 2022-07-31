@@ -12,6 +12,7 @@ namespace pyg {
 namespace ops {
 
 namespace {
+using namespace torch::indexing;
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
@@ -153,7 +154,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
                                       const at::Tensor& ptr,
                                       const at::Tensor& other) {
-  auto split_ptr = ptr.index({torch::indexing::Slice(1,-1)});                                    
+  auto split_ptr = ptr.index({Slice(1,-1)});                                    
   auto split_input =
       input.contiguous().tensor_split(/*split_size=*/split_ptr, /*dim=*/1);
   auto split_other =
