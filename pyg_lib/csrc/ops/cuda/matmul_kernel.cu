@@ -35,11 +35,11 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity A
+      4,                                             // Granularity A
       float,                                         // Element B
       cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity B
+      4,                                             // Granularity B
       float,                                         // Element C&D
       cutlass::layout::RowMajor,                     // Layout C&D
       float,                                         // Element Accumulator
@@ -49,7 +49,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
       cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
       cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 1, float, float>,                   //
+          float, 4, float, float>,                   //
       cutlass::gemm::threadblock::                   // Swizzling Operator
       GemmIdentityThreadblockSwizzle<8>,             //
       3,                                             // Stages
