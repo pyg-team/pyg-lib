@@ -22,12 +22,14 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 
   const auto num_matrices = input.size();
 
-  // TODO (matthias) Better handle non-contiguous memory layouts.
-  std::vector<at::Tensor> new_input, new_other;
-  for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    new_other.push_back(other[i].contiguous());
-  }
+  // // TODO (matthias) Better handle non-contiguous memory layouts.
+  // std::vector<at::Tensor> new_input, new_other;
+  // for (size_t i = 0; i < num_matrices; ++i) {
+  //   new_input.push_back(input[i].contiguous());
+  //   new_other.push_back(other[i].contiguous());
+  // }
+
+
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -35,11 +37,11 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
-      8,                                             // Granularity A
+      1,                                             // Granularity A
       float,                                         // Element B
       cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
-      8,                                             // Granularity B
+      1,                                             // Granularity B
       float,                                         // Element C&D
       cutlass::layout::RowMajor,                     // Layout C&D
       float,                                         // Element Accumulator
@@ -49,10 +51,10 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
       cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
       cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 8, float, float>,                   //
+          float, 1, float, float>,                   //
       cutlass::gemm::threadblock::                   // Swizzling Operator
       GemmIdentityThreadblockSwizzle<8>,             //
-      2,                                             // Stages
+      3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
 
@@ -61,8 +63,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = new_input[i].data_ptr<float>();
-    ptr_B_host[i] = new_other[i].data_ptr<float>();
+    ptr_A_host[i] = input[i].data_ptr<float>();
+    ptr_B_host[i] = other[i].data_ptr<float>();
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
