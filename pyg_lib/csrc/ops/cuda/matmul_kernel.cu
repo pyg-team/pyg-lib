@@ -153,13 +153,11 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
                                       const at::Tensor& ptr,
                                       const at::Tensor& other) {
-  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
-  // TODO (matthias) Allow for other types than `int64_t`.
-  const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
+  auto split_ptr = ptr.index({torch::indexing::Slice(1,-1)})                                    
   auto split_input =
-      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+      input.contiguous().tensor_split(/*split_size=*/split_ptr, /*dim=*/1);
   auto split_other =
-      other.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+      other.contiguous().tensor_split(/*split_size=*/split_ptr, /*dim=*/0);
   std::vector<at::Tensor> out(split_input.size());
   for (size_t i = 0; i < split_input.size(); ++i)
     out[i] =
