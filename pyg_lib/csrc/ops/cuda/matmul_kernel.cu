@@ -138,7 +138,7 @@ std::vector<at::Tensor> grouped_matmul_kernel(
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
                                  const at::Tensor& other) {
-  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
+  const auto size = pyg::utils::size_from_ptr(ptr);
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto out = input.new_empty({input.size(0), other.size(-1)});
@@ -155,7 +155,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
                                       const at::Tensor& ptr,
                                       const at::Tensor& other) {
-  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
+  const auto size = pyg::utils::size_from_ptr(ptr);
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   auto split_input =
