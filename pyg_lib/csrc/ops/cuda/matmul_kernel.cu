@@ -155,7 +155,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 at::Tensor segment_matmul_back_kernel(const at::Tensor& input,
                                       const at::Tensor& ptr,
                                       const at::Tensor& other) {
-  auto split_ptr = ptr.index({Slice(1,-1)});                                    
+  auto split_ptr = ptr.index({Slice(1,-1)}).cpu();                                    
   auto split_input =
       input.contiguous().tensor_split(/*split_size=*/split_ptr, /*dim=*/1);
   auto split_other =
