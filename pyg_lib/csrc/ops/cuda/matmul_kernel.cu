@@ -6,6 +6,8 @@
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
 
+#include "pyg_lib/csrc/utils/convert.h"
+
 namespace pyg {
 namespace ops {
 
@@ -15,7 +17,15 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
   // TODO (matthias) Check tensor devices.
-  // TODO (matthias) Check for contiguous memory.
+
+  const auto num_matrices = input.size();
+
+  // TODO (matthias) Better handle non-contiguous memory layouts.
+  std::vector<at::Tensor> new_input, new_other;
+  for (size_t i = 0; i < num_matrices; ++i) {
+    new_input.push_back(input[i].contiguous());
+    new_other.push_back(other[i].contiguous());
+  }
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -23,11 +33,11 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
-      8,                                             // Granularity A
+      1,                                             // Granularity A
       float,                                         // Element B
       cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
-      8,                                             // Granularity B
+      1,                                             // Granularity B
       float,                                         // Element C&D
       cutlass::layout::RowMajor,                     // Layout C&D
       float,                                         // Element Accumulator
@@ -37,22 +47,20 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
       cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
       cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 8, float, float>,                   //
+          float, 1, float, float>,                   //
       cutlass::gemm::threadblock::                   // Swizzling Operator
       GemmIdentityThreadblockSwizzle<8>,             //
-      2,                                             // Stages
+      3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
-
-  auto num_matrices = input.size();
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = input[i].data_ptr<float>();
-    ptr_B_host[i] = other[i].data_ptr<float>();
+    ptr_A_host[i] = new_input[i].data_ptr<float>();
+    ptr_B_host[i] = new_other[i].data_ptr<float>();
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
@@ -120,7 +128,6 @@ std::vector<at::Tensor> grouped_matmul_kernel(
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
-
   grouped_matmul_out_kernel(input, other, out);
 
   return out;
@@ -129,17 +136,15 @@ std::vector<at::Tensor> grouped_matmul_kernel(
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
                                  const at::Tensor& other) {
-  auto size = ptr.narrow(/*dim=*/0, /*start=*/1, /*length=*/ptr.numel() - 1) -
-              ptr.narrow(/*dim=*/0, /*start=*/0, /*length=*/ptr.numel() - 1);
-  size = size.cpu();  // `at::split` requires CPU-allocated data.
+  const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
-  auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-
+  const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto out = input.new_empty({input.size(0), other.size(-1)});
 
+  // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
-      input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      other.split(/*split_size=*/1, /*dim=*/0),
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0),
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
 
   return out;
@@ -148,7 +153,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
