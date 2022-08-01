@@ -6,28 +6,30 @@ from torch import Tensor
 
 class SegmentMatmul(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, input_tensor, ptr, other):
-        assert 'cuda' in str(input_tensor.device) and 'cuda' in str(
-            ptr.device) and 'cuda' in str(
-                other.device), 'Only CUDA Tensors supported'
-        ctx.save_for_backward(input_tensor, ptr, other)
-        return torch.ops.pyg.segment_matmul_kern(input_tensor, ptr, other)
+    def forward(ctx, inputs, ptr, other):
+        assert inputs.is_cuda
+        assert ptr.is_cuda
+        assert other.is_cuda
+        ctx.save_for_backward(inputs, ptr, other)
+        return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
     @staticmethod
-    def backward(ctx, gradout):
-        input_tensor, ptr, other = ctx.saved_tensors
-        input_grad, other_grad = None, None
-        if input_tensor.requires_grad:
-            input_grad = torch.ops.pyg.segment_matmul_kern(
-                gradout, ptr, torch.transpose(other, -2, -1))
+    def backward(ctx, out_grad):
+        inputs, ptr, other = ctx.saved_tensors
+
+        input_grad = None
+        if inputs.requires_grad:
+            input_grad = torch.ops.pyg.segment_matmul(
+                out_grad, ptr, torch.transpose(other, -2, -1))
+
+        other_grad = None, None
         if other.requires_grad:
             sizes = (ptr[1:] - ptr[:-1]).tolist()
-            split_input_T = torch.split(torch.transpose(input_tensor, -2, -1),
-                                        sizes, dim=1)
-            grad_out_split = torch.split(gradout, sizes, dim=0)
-            other_grad = torch.stack(
-                torch.ops.pyg.grouped_matmul_kern(split_input_T,
-                                                  grad_out_split))
+            inputs_t = inputs.transpose(-2, -1).split(sizes, dim=1)
+            outs_grad = out_grad.split(sizes, dim=0)
+            others_grad = torch.ops.pyg.grouped_matmul_kern(
+                inputs_t, outs_grad)
+            other_grad = torch.stack(others_grad, dim=0)
 
         return input_grad, None, other_grad
 
@@ -35,30 +37,35 @@ class SegmentMatmul(torch.autograd.Function):
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
-        assert all([
-            'cuda' in str(inputs[i].device) and 'cuda' in str(others[i].device)
-            for i in range(len(inputs))
-        ]), 'Only CUDA Tensors supported'
+        for x, other in zip(inputs, others):
+            assert x.is_cuda
+            assert other.is_cuda
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
-        # Autograd doesnt set out[i].requires_grad = True automatically
+
+        # NOTE Autograd doesnt set out[i].requires_grad = True automatically
         for i in range(len(outs)):
             outs[i].requires_grad = True
+
         return outs
 
     @staticmethod
-    def backward(ctx, grad_outs: List[Tensor]):
+    def backward(ctx, outs_grad: List[Tensor]):
         inputs, others = ctx.saved_tensors
-        inputs_grads, others_grads = None, None
-        if all([i.requires_grad for i in inputs]):
+
+        inputs_grad = None
+        if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
-                others[i] = others[i].T
-            inputs_grads = torch.ops.pyg.grouped_matmul_kern(grad_outs, others)
-        if all([i.requires_grad for i in others]):
+                others[i] = others[i].t()
+            inputs_grad = torch.ops.pyg.grouped_matmul_kern(outs_grad, others)
+
+        others_grad = None
+        if all([other.requires_grad for other in others]):
             for i in range(len(inputs)):
-                inputs[i] = inputs[i].T
-            others_grads = torch.ops.pyg.grouped_matmul_kern(inputs, grad_outs)
-        return inputs_grads, others_grads
+                inputs[i] = inputs[i].t()
+            others_grad = torch.ops.pyg.grouped_matmul_kern(inputs, outs_grad)
+
+        return inputs_grad, others_grad
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:

@@ -42,5 +42,6 @@ def test_grouped_matmul_autograd():
     print('test_grouped_matmul_autograd passed!')
 
 
-test_segment_matmul_autograd()
-test_grouped_matmul_autograd()
+if __name__ == '__main__':
+    test_segment_matmul_autograd()
+    test_grouped_matmul_autograd()

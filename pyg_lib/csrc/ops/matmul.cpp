@@ -133,7 +133,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
                                        const std::vector<at::Tensor>& other) {
   // TODO (matthias) Add autograd support.
-  /* return GroupedMatmul::apply(input, other); */
+  /* return GroupedMatmul::apply(input, other)[0]; */
   return _grouped_matmul(input, other);
 }
 
@@ -142,8 +142,8 @@ at::Tensor segment_matmul(const at::Tensor& input,
                           const at::Tensor& ptr,
                           const at::Tensor& other) {
   // TODO (matthias) Add autograd support.
-  /* return SegmentMatmul::apply(input, ptr, other); */
-  return _segment_matul(input, ptr, other);
+  /* return SegmentMatmul::apply(input, ptr, other)[0]; */
+  return _segment_matmul(input, ptr, other);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
