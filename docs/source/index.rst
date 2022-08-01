@@ -8,6 +8,7 @@ pyg_lib Documentation
    :caption: Package Reference
 
    modules/root
+   modules/ops
    modules/sampler
 
 Indices and Tables

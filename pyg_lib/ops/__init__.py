@@ -66,6 +66,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     utilizing dedicated kernels that effectively parallelize over groups.
 
     .. code-block:: python
+
         inputs = [torch.randn(5, 16), torch.randn(3, 32)]
         others = [torch.randn(16, 32), torch.randn(32, 64)]
 
@@ -84,7 +85,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
 
     Returns:
         List[torch.Tensor]: List of 2D output matrices of shapes
-            :obj:`[N_i, M_i]`.
+        :obj:`[N_i, M_i]`.
     """
     return GroupedMatmul.apply(inputs, others)
 
@@ -95,6 +96,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     dedicated kernels that effectively parallelize over groups.
 
     .. code-block:: python
+
         inputs = torch.randn(8, 16)
         ptr = torch.tensor([0, 5, 8])
         other = torch.randn(2, 16, 32)

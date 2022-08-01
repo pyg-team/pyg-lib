@@ -5,6 +5,7 @@ import warnings
 
 import torch
 
+import pyg_lib.ops  # noqa
 import pyg_lib.sampler  # noqa
 import pyg_lib.ops  # noqa
 
