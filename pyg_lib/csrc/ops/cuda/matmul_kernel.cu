@@ -59,8 +59,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = input[i].data_ptr<float>();
-    ptr_B_host[i] = other[i].data_ptr<float>();
+    ptr_A_host[i] = new_input[i].data_ptr<float>();
+    ptr_B_host[i] = new_other[i].data_ptr<float>();
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
