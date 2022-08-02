@@ -15,13 +15,13 @@ namespace {
 
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
-  if dim == -1{
+  if (dim == -1){
     return torch::nn::functional::pad(input, {0, num_to_pad});
   } else {
     return torch::nn::functional::pad(input, {0, 0, 0, num_to_pad});
   }
-
 }
+
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
@@ -71,7 +71,11 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     } else {
       ptr_B_host[i] = other[i].contiguous().data_ptr<float>();
     }
-    ptr_C_host[i] = pad_to_align(out[i]).data_ptr<float>();
+    if (out[i].size(-1) % 4 != 0) {
+      ptr_C_host[i] = pad_to_align(out[i], -1).data_ptr<float>();
+    } else {
+      ptr_C_host[i] = out[i].data_ptr<float>();
+    }
   }
 
   cutlass::DeviceAllocation<float*> ptr_A;
