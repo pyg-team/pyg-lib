@@ -62,19 +62,19 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    if (input[i].size(0) % 4 != 0 || input[i].size(1) % 4 != 0) {
+    if (input[i].size(-1) % 4 != 0 || input[i].size(-2) % 4 != 0) {
       new_input.push_back(pad_to_align(input[i]).contiguous());
     } else {
       new_input.push_back(input[i].contiguous());
     }
     ptr_A_host[i] = new_input[i].data_ptr<float>();
-    if (other[i].size(0) % 4 != 0 || other[i].size(1) % 4 != 0) {
+    if (other[i].size(-1) % 4 != 0 || other[i].size(-2) % 4 != 0) {
       new_other.push_back(pad_to_align(other[i]).contiguous());
     } else {
       new_other.push_back(other[i].contiguous());
     }
     ptr_B_host[i] = new_other[i].data_ptr<float>();
-    if (out[i].size(0) % 4 != 0 || out[i].size(1) % 4 != 0) {
+    if (out[i].size(-1) % 4 != 0 || out[i].size(-2) % 4 != 0) {
       new_out.push_back(pad_to_align(out[i]).contiguous());
     } else {
       new_out.push_back(out[i].contiguous());
