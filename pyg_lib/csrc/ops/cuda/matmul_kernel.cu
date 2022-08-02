@@ -152,10 +152,17 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
+  TORCH_LIBRARY(pyg, m) {
+  m.def("pyg::cuda_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
+  m.def(
+      "pyg::cuda_segment_matmul(Tensor input, Tensor ptr, Tensor other) -> "
+      "Tensor");
+}
+
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
 }
 
