@@ -26,7 +26,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
-      4,                                             // Granularity A
+      4,                                             // Granularity A (4 is the max for 32 bit)
       float,                                         // Element B
       cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
