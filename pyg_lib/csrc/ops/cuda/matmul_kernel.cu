@@ -67,19 +67,19 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     } else {
       new_input.push_back(input[i].contiguous());
     }
-    ptr_A_host[i] = input[i].data_ptr<float>();
+    ptr_A_host[i] = new_input[i].data_ptr<float>();
     if (other[i].size(0) % 4 != 0 || other[i].size(1) % 4 != 0) {
       new_other.push_back(pad_to_align(other[i]).contiguous());
     } else {
       new_other.push_back(other[i].contiguous());
     }
-    ptr_B_host[i] = other[i].data_ptr<float>();
+    ptr_B_host[i] = new_other[i].data_ptr<float>();
     if (out[i].size(0) % 4 != 0 || out[i].size(1) % 4 != 0) {
       new_out.push_back(pad_to_align(out[i]).contiguous());
     } else {
       new_out.push_back(out[i].contiguous());
     }
-    ptr_C_host[i] = out[i].data_ptr<float>();
+    ptr_C_host[i] = new_out[i].data_ptr<float>();
   }
 
   cutlass::DeviceAllocation<float*> ptr_A;
@@ -100,8 +100,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = input[i].size(0), k = other[i].size(1), n = out[i].size(1);
-    TORCH_CHECK(input[i].size(-1) == other[i].size(-2), "Shape mismatch");
+    auto m = new_input[i].size(0), k = new_other[i].size(1), n = new_out[i].size(1);
+    TORCH_CHECK(new_input[i].size(-1) == new_other[i].size(-2), "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
