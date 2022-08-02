@@ -35,12 +35,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                             // Element A
-      cutlass::layout::RowMajor,         // Layout A
-      cutlass::ComplexTransform::kNone,  //
-      4,                          // Granularity A (4 is the max for 32 bit)
-      float,                      // Element B
-      cutlass::layout::RowMajor,  // Layout B
+      float,                                         // Element A
+      cutlass::layout::RowMajor,                     // Layout A
+      cutlass::ComplexTransform::kNone,              //
+      4,                                             // Granularity A (4 is the max for 32 bit)
+      float,                                         // Element B
+      cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
       4,                                             // Granularity B
       float,                                         // Element C&D
@@ -76,7 +76,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     }
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
-
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << ptr_A_host << std::endl;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << ptr_B_host << std::endl;
+  std::cout << "================= DEBUG =================" << std::endl;
+  std::cout << ptr_C_host << std::endl;
   cutlass::DeviceAllocation<float*> ptr_A;
   ptr_A.reset(num_matrices);
   ptr_A.copy_from_host(ptr_A_host.data());
