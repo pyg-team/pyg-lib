@@ -14,15 +14,10 @@ namespace ops {
 namespace {
 namespace F = torch::nn::functional;
 
-at::Tensor pad_to_align(const at::Tensor& input, int dim) {
-  int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
-  if (dim == -1) {
-    return F::pad(input,
-                  F::PadFuncOptions({0, num_to_pad}).mode(torch::kConstant));
-  } else {
-    return F::pad(
-        input, F::PadFuncOptions({0, 0, 0, num_to_pad}).mode(torch::kConstant));
-  }
+at::Tensor pad_to_align(const at::Tensor& input) {
+  int dim_0_pad = (((input.size(0) / 4) + 1) * 4) - input.size(0);
+  int dim_1_pad = (((input.size(0) / 4) + 1) * 4) - input.size(0);
+  return F::pad(input, F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
 }
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
@@ -64,24 +59,22 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    if (input[i].size(-1) % 4 != 0) {
-      ptr_A_host[i] = pad_to_align(input[i], -1).contiguous().data_ptr<float>();
+    if (input[i].size(0) % 4 != 0 || input[i].size(1) % 4 != 0) {
+      ptr_A_host[i] = pad_to_align(input[i]).contiguous().data_ptr<float>();
     } else {
       ptr_A_host[i] = input[i].contiguous().data_ptr<float>();
     }
-    if (other[i].size(-2) % 4 != 0) {
-      ptr_B_host[i] = pad_to_align(other[i], -2).contiguous().data_ptr<float>();
+    if (other[i].size(0) % 4 != 0 || other[i].size(1) % 4 != 0) {
+      ptr_B_host[i] = pad_to_align(other[i]).contiguous().data_ptr<float>();
     } else {
       ptr_B_host[i] = other[i].contiguous().data_ptr<float>();
     }
-    ptr_C_host[i] = out[i].data_ptr<float>();
+    if (out[i].size(0) % 4 != 0 || out[i].size(1) % 4 != 0) {
+      ptr_C_host[i] = pad_to_align(out[i]).data_ptr<float>();
+    } else {
+      ptr_C_host[i] = out[i].data_ptr<float>();
   }
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << ptr_A_host << std::endl;
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << ptr_B_host << std::endl;
-  std::cout << "================= DEBUG =================" << std::endl;
-  std::cout << ptr_C_host << std::endl;
+
   cutlass::DeviceAllocation<float*> ptr_A;
   ptr_A.reset(num_matrices);
   ptr_A.copy_from_host(ptr_A_host.data());
