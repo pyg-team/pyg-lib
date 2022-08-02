@@ -105,7 +105,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     std::cout << "================= DEBUG =================" << std::endl;
     std::cout << new_input[i].size(1) << std::endl;
     std::cout << "================= DEBUG =================" << std::endl;
-    std::cout << new_input[i].size(0) << std::endl;
+    std::cout << new_other[i].size(0) << std::endl;
     TORCH_CHECK(new_input[i].size(1) == new_other[i].size(0), "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
