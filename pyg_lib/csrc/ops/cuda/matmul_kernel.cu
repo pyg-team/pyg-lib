@@ -99,10 +99,20 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_B_host(num_matrices);
   std::vector<int64_t> ld_C_host(num_matrices);
   for (size_t i = 0; i < num_matrices; ++i) {
-    std::cout << "================= DEBUG =================" << std::endl;
+    std::cout << "================= input =================" << std::endl;
+    std::cout << input[i].size(0) << std::endl;
+    std::cout << input[i].size(1) << std::endl;
+    std::cout << "================= other =================" << std::endl;
+    std::cout << other[i].size(0) << std::endl;
+    std::cout << other[i].size(1) << std::endl;
+  }
+  std::cout << "================= After Pad =================" << std::endl;
+
+  for (size_t i = 0; i < num_matrices; ++i) {
+    std::cout << "================= input =================" << std::endl;
     std::cout << new_input[i].size(0) << std::endl;
     std::cout << new_input[i].size(1) << std::endl;
-    std::cout << "================= DEBUG =================" << std::endl;
+    std::cout << "================= other =================" << std::endl;
     std::cout << new_other[i].size(0) << std::endl;
     std::cout << new_other[i].size(1) << std::endl;
   }
