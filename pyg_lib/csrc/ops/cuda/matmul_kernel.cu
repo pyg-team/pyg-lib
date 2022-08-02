@@ -74,11 +74,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     } else {
       ptr_B_host[i] = other[i].contiguous().data_ptr<float>();
     }
-    if (out[i].size(-1) % 4 != 0) {
-      ptr_C_host[i] = pad_to_align(out[i], -1).data_ptr<float>();
-    } else {
-      ptr_C_host[i] = out[i].data_ptr<float>();
-    }
+    ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
   cutlass::DeviceAllocation<float*> ptr_A;
