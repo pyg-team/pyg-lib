@@ -12,13 +12,15 @@ namespace pyg {
 namespace ops {
 
 namespace {
+namespace F = torch::nn::functional;
+F::pad(input, F::PadFuncOptions({1, 2, 2, 1, 1, 2}).mode(torch::kConstant));
 
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
   if (dim == -1) {
-    return torch::nn::functional::pad(input, {0, num_to_pad});
+    return F::pad(input, F::PadFuncOptions({0, num_to_pad}.mode(torch::kConstant));
   } else {
-    return torch::nn::functional::pad(input, {0, 0, 0, num_to_pad});
+    return F::pad(input, F::PadFuncOptions({0, 0, 0, num_to_pad}).mode(torch::kConstant));
   }
 }
 
