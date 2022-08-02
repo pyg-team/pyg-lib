@@ -39,7 +39,7 @@ def test_grouped_matmul_autograd():
     # (outs[0].sum() + outs[1].sum()).backward()
     # assert outs[0].grad.size() == (5, 32)
     # assert outs[1].grad.size() == (3, 64)
-    # print('test_grouped_matmul_autograd passed!')
+    print('test_grouped_matmul_autograd passed!')
 
 
 if __name__ == '__main__':
