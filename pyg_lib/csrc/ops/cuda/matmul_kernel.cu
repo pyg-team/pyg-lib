@@ -152,7 +152,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-  TORCH_LIBRARY(pyg, m) {
+TORCH_LIBRARY(pyg, m) {
   m.def("pyg::cuda_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
       "pyg::cuda_segment_matmul(Tensor input, Tensor ptr, Tensor other) -> "
