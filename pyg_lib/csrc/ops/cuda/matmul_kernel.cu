@@ -96,8 +96,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = input[i].size(0), k = input[i].size(1), n = out[i].size(1);
-    TORCH_CHECK(input[i].size(-1) == other[i].size(-2), "Shape mismatch");
+    auto m = ptr_A_host[i].size(0), k = ptr_B_host[i].size(1), n = ptr_C_host[i].size(1);
+    TORCH_CHECK(ptr_A_host[i].size(-1) == ptr_B_host[i].size(-2), "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
