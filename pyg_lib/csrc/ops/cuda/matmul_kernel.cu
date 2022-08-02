@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
-
+#include <torch/script.h>
 #include <cutlass/gemm/device/gemm_grouped.h>
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
@@ -13,8 +13,14 @@ namespace ops {
 
 namespace {
 
-at::Tensor pad_to_align(const at::Tensor& input) {
-  return input;
+at::Tensor pad_to_align(const at::Tensor& input, int dim) {
+  int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
+  if dim == -1{
+    return torch::nn::functional::pad(input, {0, num_to_pad});
+  } else {
+    return torch::nn::functional::pad(input, {0, 0, 0, num_to_pad});
+  }
+
 }
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
@@ -55,13 +61,13 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    if (input[i].size(-1) % 4 == 0) {
-      ptr_A_host[i] = pad_to_align(input[i]).contiguous().data_ptr<float>();
+    if (input[i].size(-1) % 4 != 0) {
+      ptr_A_host[i] = pad_to_align(input[i], -1).contiguous().data_ptr<float>();
     } else {
       ptr_A_host[i] = input[i].contiguous().data_ptr<float>();
     }
-    if (other[i].size(-2) % 4 == 0) {
-      ptr_B_host[i] = pad_to_align(other[i]).contiguous().data_ptr<float>();
+    if (other[i].size(-2) % 4 != 0) {
+      ptr_B_host[i] = pad_to_align(other[i], -2).contiguous().data_ptr<float>();
     } else {
       ptr_B_host[i] = other[i].contiguous().data_ptr<float>();
     }
