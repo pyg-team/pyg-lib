@@ -4,7 +4,7 @@
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
-#include <torch/script.h>
+#include <torch/nn/functional/padding.h>
 
 #include "pyg_lib/csrc/utils/convert.h"
 
