@@ -36,12 +36,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                                         // Element A
-      cutlass::layout::RowMajor,                     // Layout A
-      cutlass::ComplexTransform::kNone,              //
-      4,                                             // Granularity A (4 is the max for 32 bit)
-      float,                                         // Element B
-      cutlass::layout::RowMajor,                     // Layout B
+      float,                             // Element A
+      cutlass::layout::RowMajor,         // Layout A
+      cutlass::ComplexTransform::kNone,  //
+      4,                          // Granularity A (4 is the max for 32 bit)
+      float,                      // Element B
+      cutlass::layout::RowMajor,  // Layout B
       cutlass::ComplexTransform::kNone,              //
       4,                                             // Granularity B
       float,                                         // Element C&D
