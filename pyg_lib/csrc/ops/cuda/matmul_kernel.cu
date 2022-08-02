@@ -12,9 +12,6 @@ namespace pyg {
 namespace ops {
 
 namespace {
-bool check_aligns(const at::Tensor& input){
-  return False
-}
 
 at::Tensor pad_to_align(const at::Tensor& input){
   return input
@@ -25,13 +22,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Check tensor devices.
 
   const auto num_matrices = input.size();
-
-  // TODO (matthias) Better handle non-contiguous memory layouts.
-  std::vector<at::Tensor> new_input, new_other;
-  for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    new_other.push_back(other[i].contiguous());
-  }
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -65,11 +55,15 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    if (check_aligns(new_input[i].data_ptr<float>())){
+    if (input[i].size(-1) % 4 == 0){
       ptr_A_host[i] = pad_to_align(input[i].contiguous().data_ptr<float>());
+    } else {
+      ptr_A_host[i] = input[i].contiguous().data_ptr<float>();
     }
-    if (check_aligns(new_input[i].data_ptr<float>())){
+    if (other[i].size(-2) % 4 == 0){
       ptr_B_host[i] = pad_to_align(other[i].contiguous().data_ptr<float>());
+    } else {
+      ptr_B_host[i] = other[i].contiguous().data_ptr<float>();
     }
     ptr_C_host[i] = pad_to_align(out[i].data_ptr<float>());
   }
