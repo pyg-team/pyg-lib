@@ -28,6 +28,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Check tensor devices.
 
   const auto num_matrices = input.size();
+  std::vector<at::Tensor> new_input, new_other, new_out;
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -62,21 +63,21 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 
   for (size_t i = 0; i < num_matrices; ++i) {
     if (input[i].size(0) % 4 != 0 || input[i].size(1) % 4 != 0) {
-      input[i] = pad_to_align(input[i]).contiguous();
+      new_input.push_back(pad_to_align(input[i]).contiguous());
     } else {
-      input[i] = input[i].contiguous();
+      new_input.push_back(input[i].contiguous());
     }
     ptr_A_host[i] = input[i].data_ptr<float>();
     if (other[i].size(0) % 4 != 0 || other[i].size(1) % 4 != 0) {
-      other[i] = pad_to_align(other[i]).contiguous();
+      new_other.push_back(pad_to_align(other[i]).contiguous());
     } else {
-      other[i] = other[i].contiguous();
+      new_other.push_back(other[i].contiguous());
     }
     ptr_B_host[i] = other[i].data_ptr<float>();
     if (out[i].size(0) % 4 != 0 || out[i].size(1) % 4 != 0) {
-      out[i] = pad_to_align(out[i]).contiguous();
+      new_out.push_back(pad_to_align(out[i]).contiguous());
     } else {
-      out[i] = out[i].contiguous();
+      new_out.push_back(out[i].contiguous());
     }
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
