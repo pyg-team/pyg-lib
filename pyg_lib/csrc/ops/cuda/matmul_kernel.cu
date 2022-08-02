@@ -13,8 +13,8 @@ namespace ops {
 
 namespace {
 
-at::Tensor pad_to_align(const at::Tensor& input){
-  return input
+at::Tensor pad_to_align(const at::Tensor& input) {
+  return input;
 }
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
