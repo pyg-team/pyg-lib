@@ -11,7 +11,7 @@ class SegmentMatmul(torch.autograd.Function):
         assert ptr.is_cuda
         assert other.is_cuda
         ctx.save_for_backward(inputs, ptr, other)
-        return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+        return torch.ops.pyg.cuda_segment_matmul(inputs, ptr, other)
 
     @staticmethod
     def backward(ctx, out_grad):
@@ -19,7 +19,7 @@ class SegmentMatmul(torch.autograd.Function):
 
         input_grad = None
         if inputs.requires_grad:
-            input_grad = torch.ops.pyg.segment_matmul(
+            input_grad = torch.ops.pyg.cuda_segment_matmul(
                 out_grad, ptr, torch.transpose(other, -2, -1))
 
         other_grad = None, None
@@ -27,7 +27,7 @@ class SegmentMatmul(torch.autograd.Function):
             sizes = (ptr[1:] - ptr[:-1]).tolist()
             inputs_t = inputs.transpose(-2, -1).split(sizes, dim=1)
             outs_grad = out_grad.split(sizes, dim=0)
-            others_grad = torch.ops.pyg.grouped_matmul_kern(
+            others_grad = torch.ops.pyg.cuda_grouped_matmul(
                 inputs_t, outs_grad)
             other_grad = torch.stack(others_grad, dim=0)
 
@@ -41,7 +41,7 @@ class GroupedMatmul(torch.autograd.Function):
             assert x.is_cuda
             assert other.is_cuda
         ctx.save_for_backward(inputs, others)
-        outs = torch.ops.pyg.grouped_matmul_kern(inputs, others)
+        outs = torch.ops.pyg.cuda_grouped_matmul(inputs, others)
 
         # NOTE Autograd doesnt set out[i].requires_grad = True automatically
         for i in range(len(outs)):
@@ -57,13 +57,13 @@ class GroupedMatmul(torch.autograd.Function):
         if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
                 others[i] = others[i].t()
-            inputs_grad = torch.ops.pyg.grouped_matmul_kern(outs_grad, others)
+            inputs_grad = torch.ops.pyg.cuda_grouped_matmul(outs_grad, others)
 
         others_grad = None
         if all([other.requires_grad for other in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].t()
-            others_grad = torch.ops.pyg.grouped_matmul_kern(inputs, outs_grad)
+            others_grad = torch.ops.pyg.cuda_grouped_matmul(inputs, outs_grad)
 
         return inputs_grad, others_grad
 
