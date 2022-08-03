@@ -13,12 +13,21 @@ namespace ops {
 
 namespace {
 namespace F = torch::nn::functional;
-using namespace torch::indexing;
 
-at::Tensor pad_to_align(const at::Tensor& input) {
+at::Tensor pad_dim(const at::Tensor& input, int dim) {
+  int to_pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
+  if (dim == -1) {
+    return F::pad(input,
+                  F::PadFuncOptions({0, to_pad, 0, 0}).mode(torch::kConstant));
+  } else {
+    return F::pad(input,
+                  F::PadFuncOptions({0, 0, 0, to_pad}).mode(torch::kConstant));
+  }
+}
+
+at::Tensor pad_both(const at::Tensor& input) {
   int dim_0_pad = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
   int dim_1_pad = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
-
   return F::pad(
       input,
       F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
@@ -64,20 +73,20 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    if (input[i].size(-1) % 4 != 0 || input[i].size(-2) % 4 != 0) {
-      new_input.push_back(pad_to_align(input[i]).contiguous());
+    if (input[i].size(-1) % 4 != 0) {
+      new_input.push_back(pad_dim(input[i], -1).contiguous());
     } else {
       new_input.push_back(input[i].contiguous());
     }
     ptr_A_host[i] = new_input[i].data_ptr<float>();
     if (other[i].size(-1) % 4 != 0 || other[i].size(-2) % 4 != 0) {
-      new_other.push_back(pad_to_align(other[i]).contiguous());
+      new_other.push_back(pad_both(other[i]).contiguous());
     } else {
       new_other.push_back(other[i].contiguous());
     }
     ptr_B_host[i] = new_other[i].data_ptr<float>();
-    if (out[i].size(-1) % 4 != 0 || out[i].size(-2) % 4 != 0) {
-      new_out.push_back(pad_to_align(out[i]).contiguous());
+    if (out[i].size(-1) % 4 != 0) {
+      new_out.push_back(pad_dim(out[i], -1).contiguous());
     } else {
       new_out.push_back(out[i].contiguous());
     }
@@ -101,8 +110,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_B_host(num_matrices);
   std::vector<int64_t> ld_C_host(num_matrices);
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = new_input[i].size(0), k = new_input[i].size(1),
-         n = new_out[i].size(1);
+    auto m = new_input[i].size(0), k = new_input[i].size(1), n = out[i].size(1);
 
     TORCH_CHECK(new_input[i].size(-1) == new_other[i].size(-2),
                 "Shape mismatch");
@@ -142,19 +150,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM init failed");
   status = gemm.run();
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
-  for (size_t i = 0; i < num_matrices; ++i) {
-    std::cout << "================= out.shape =================" << std::endl;
-    std::cout << out[i].size(0);
-    std::cout << ",";
-    std::cout << out[i].size(1) << std::endl;
-    std::cout << "================= new_out.shape ================="
-              << std::endl;
-    std::cout << new_out[i].size(0);
-    std::cout << ",";
-    std::cout << new_out[i].size(1) << std::endl;
-    out[i].index_put_({None}, new_out[i].index({Slice(None, out[i].size(0)),
-                                                Slice(None, out[i].size(1))}));
-  }
 }
 
 std::vector<at::Tensor> grouped_matmul_kernel(
