@@ -16,16 +16,8 @@ namespace F = torch::nn::functional;
 using namespace torch::indexing;
 
 at::Tensor pad_to_align(const at::Tensor& input) {
-  std::cout << "================= input.shape =================" << std::endl;
-  std::cout << input.size(-2);
-  std::cout << ",";
-  std::cout << input.size(-1) << std::endl;
   int dim_0_pad = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
   int dim_1_pad = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
-  std::cout << "================= pads =================" << std::endl;
-  std::cout << dim_0_pad;
-  std::cout << ",";
-  std::cout << dim_1_pad << std::endl;
 
   return F::pad(
       input,
