@@ -18,6 +18,7 @@ def test_segment_matmul_autograd():
     other = torch.randn((2, 16, 32), requires_grad=True, device='cuda:0')
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
     assert out.size() == (8, 32)
+    print(out)
     assert_close_enough(out[0:5], inputs[0:5] @ other[0])
     assert_close_enough(out[5:8], inputs[5:8] @ other[1])
     out.sum().backward()
