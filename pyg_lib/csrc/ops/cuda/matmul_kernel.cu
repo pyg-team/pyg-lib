@@ -20,7 +20,8 @@ at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   if (dim == -1) {
     return F::pad(input, F::PadFuncOptions({0, num_to_pad}.mode(torch::kConstant));
   } else {
-    return F::pad(input, F::PadFuncOptions({0, 0, 0, num_to_pad}).mode(torch::kConstant));
+    return F::pad(
+        input, F::PadFuncOptions({0, 0, 0, num_to_pad}).mode(torch::kConstant));
   }
 }
 
