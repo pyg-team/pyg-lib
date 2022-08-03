@@ -17,7 +17,9 @@ namespace F = torch::nn::functional;
 at::Tensor pad_to_align(const at::Tensor& input) {
   int dim_0_pad = (((input.size(0) / 4) + 1) * 4) - input.size(0);
   int dim_1_pad = (((input.size(1) / 4) + 1) * 4) - input.size(1);
-  return F::pad(input, F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
+  return F::pad(
+      input,
+      F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
 }
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
@@ -30,12 +32,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                                         // Element A
-      cutlass::layout::RowMajor,                     // Layout A
-      cutlass::ComplexTransform::kNone,              //
-      4,                                             // Granularity A (4 is the max for 32 bit)
-      float,                                         // Element B
-      cutlass::layout::RowMajor,                     // Layout B
+      float,                             // Element A
+      cutlass::layout::RowMajor,         // Layout A
+      cutlass::ComplexTransform::kNone,  //
+      4,                          // Granularity A (4 is the max for 32 bit)
+      float,                      // Element B
+      cutlass::layout::RowMajor,  // Layout B
       cutlass::ComplexTransform::kNone,              //
       4,                                             // Granularity B
       float,                                         // Element C&D
@@ -74,7 +76,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     } else {
       ptr_C_host[i] = out[i].data_ptr<float>();
     }
-  } 
+  }
 
   cutlass::DeviceAllocation<float*> ptr_A;
   ptr_A.reset(num_matrices);
