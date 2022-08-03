@@ -17,8 +17,8 @@ namespace F = torch::nn::functional;
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int pad_amt = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
   if (dim == 1) {
-      return F::pad(
-          input, F::PadFuncOptions({0, 0, 0, pad_amt}).mode(torch::kConstant));
+    return F::pad(input,
+                  F::PadFuncOptions({0, 0, 0, pad_amt}).mode(torch::kConstant));
   } else {
     return F::pad(input,
                   F::PadFuncOptions({0, pad_amt, 0, 0}).mode(torch::kConstant));
