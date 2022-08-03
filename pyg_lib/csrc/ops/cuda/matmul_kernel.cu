@@ -31,7 +31,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Check tensor devices.
 
   const auto num_matrices = input.size();
-  std::vector<at::Tensor> new_input, new_other, new_out;
+  std::vector<at::Tensor> new_input, new_other;
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
