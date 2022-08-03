@@ -15,7 +15,7 @@ namespace {
 
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
-  if (dim == -1){
+  if (dim == -1) {
     return torch::nn::functional::pad(input, {0, num_to_pad});
   } else {
     return torch::nn::functional::pad(input, {0, 0, 0, num_to_pad});
