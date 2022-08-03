@@ -20,8 +20,8 @@ at::Tensor pad_to_align(const at::Tensor& input) {
   std::cout << input.size(-2);
   std::cout << ",";
   std::cout << input.size(-1) << std::endl;
-  int dim_0_pad = (ceil(input.size(-2) / 4) * 4) - input.size(-2);
-  int dim_1_pad = (ceil(input.size(-1) / 4) * 4) - input.size(-1);
+  int dim_0_pad = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
+  int dim_1_pad = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
   std::cout << "================= pads =================" << std::endl;
   std::cout << dim_0_pad;
   std::cout << ",";
