@@ -74,11 +74,7 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       new_other.push_back(other[i].contiguous());
     }
     ptr_B_host[i] = new_other[i].data_ptr<float>();
-    if (out[i].size(-1) % 4 != 0 || out[i].size(-2) % 4 != 0) {
-      new_out.push_back(pad_to_align(out[i]).contiguous());
-    } else {
-      new_out.push_back(out[i].contiguous());
-    }
+    new_out.push_back(out[i].contiguous());
     ptr_C_host[i] = new_out[i].data_ptr<float>();
   }
 
