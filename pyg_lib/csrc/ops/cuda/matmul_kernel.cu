@@ -142,6 +142,14 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   status = gemm.run();
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
   for (size_t i = 0; i < num_matrices; ++i) {
+    std::cout << "================= out.shape =================" << std::endl;
+    std::cout << out[i].size(0);
+    std::cout << ",";
+    std::cout << out[i].size(1) << std::endl;
+    std::cout << "================= new_out.shape =================" << std::endl;
+    std::cout << new_out[i].size(0);
+    std::cout << ",";
+    std::cout << new_out[i].size(1) << std::endl;
     out[i].index_put_({None}, new_out[i].index({Slice(None,out[i].size(0)), Slice(None,out[i].size(1))}));
   }
 }
