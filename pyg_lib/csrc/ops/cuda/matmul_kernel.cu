@@ -1,10 +1,10 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
-#include <torch/library.h>
-#include <torch/script.h>
 #include <cutlass/gemm/device/gemm_grouped.h>
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
+#include <torch/library.h>
+#include <torch/script.h>
 
 #include "pyg_lib/csrc/utils/convert.h"
 
@@ -15,12 +15,13 @@ namespace {
 
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int num_to_pad = (((input.size(dim) / 4) + 1) * 4) - input.size(dim);
-  if dim == -1{
-    return torch::nn::functional::pad(input, {0, num_to_pad});
-  } else {
+  if dim
+    == -1 {
+      return torch::nn::functional::pad(input, {0, num_to_pad});
+    }
+  else {
     return torch::nn::functional::pad(input, {0, 0, 0, num_to_pad});
   }
-
 }
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
