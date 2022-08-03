@@ -20,12 +20,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 
   const auto num_matrices = input.size();
 
-  // TODO (matthias) Better handle non-contiguous memory layouts.
-  std::vector<at::Tensor> new_input, new_other;
-  for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    new_other.push_back(other[i].contiguous());
-  }
+//   // TODO (matthias) Better handle non-contiguous memory layouts.
+//   std::vector<at::Tensor> new_input, new_other;
+//   for (size_t i = 0; i < num_matrices; ++i) {
+//     new_input.push_back(input[i].contiguous());
+//     new_other.push_back(other[i].contiguous());
+//   }
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -59,8 +59,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
-    ptr_A_host[i] = new_input[i].data_ptr<float>();
-    ptr_B_host[i] = new_other[i].data_ptr<float>();
+    ptr_A_host[i] = input[i].data_ptr<float>();
+    ptr_B_host[i] = other[i].data_ptr<float>();
     ptr_C_host[i] = out[i].data_ptr<float>();
   }
 
