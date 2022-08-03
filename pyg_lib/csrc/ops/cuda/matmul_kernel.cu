@@ -15,7 +15,7 @@ namespace {
 namespace F = torch::nn::functional;
 
 at::Tensor pad_dim(const at::Tensor& input, int dim) {
-  //int to_pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
+  // int to_pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
   int to_pad = ((input.size(dim) + 3 / 4) * 4) - input.size(dim);
   if (dim == -1) {
     return F::pad(input,
