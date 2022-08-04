@@ -146,11 +146,13 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
     std::cout << out[i].size(0);
     std::cout << ",";
     std::cout << out[i].size(1) << std::endl;
-    std::cout << "================= new_out.shape =================" << std::endl;
+    std::cout << "================= new_out.shape ================="
+              << std::endl;
     std::cout << new_out[i].size(0);
     std::cout << ",";
     std::cout << new_out[i].size(1) << std::endl;
-    out[i].index_put_({None}, new_out[i].index({Slice(None,out[i].size(0)), Slice(None,out[i].size(1))}));
+    out[i].index_put_({None}, new_out[i].index({Slice(None, out[i].size(0)),
+                                                Slice(None, out[i].size(1))}));
   }
 }
 
