@@ -16,14 +16,14 @@ namespace F = torch::nn::functional;
 
 at::Tensor pad_to_align(const at::Tensor& input, int dim) {
   int to_pad = (ceil(input.size(dim) / 4) * 4) - input.size(dim);
-  if dim == -1{
-    return F::pad(
-        input,
-        F::PadFuncOptions({0, to_pad, 0, 0}).mode(torch::kConstant));
-  } else {
-    return F::pad(
-        input,
-        F::PadFuncOptions({0, 0, 0, to_pad}).mode(torch::kConstant));
+  if dim
+    == -1 {
+      return F::pad(
+          input, F::PadFuncOptions({0, to_pad, 0, 0}).mode(torch::kConstant));
+    }
+  else {
+    return F::pad(input,
+                  F::PadFuncOptions({0, 0, 0, to_pad}).mode(torch::kConstant));
   }
 }
 
