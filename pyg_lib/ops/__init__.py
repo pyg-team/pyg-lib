@@ -27,8 +27,10 @@ class SegmentMatmul(torch.autograd.Function):
             sizes = (ptr[1:] - ptr[:-1]).tolist()
             inputs_t = inputs.transpose(-2, -1).split(sizes, dim=1)
             outs_grad = out_grad.split(sizes, dim=0)
-            others_grad = torch.ops.pyg.cuda_grouped_matmul(
-                inputs_t, outs_grad)
+            others_grad = []
+            # Considering GPU utilization, this is actually preferred over grouped matmul
+            for i in range(len(inputs_t)):
+                others_grad.append(inputs_t @ outs_grad)
             other_grad = torch.stack(others_grad, dim=0)
 
         return input_grad, None, other_grad
