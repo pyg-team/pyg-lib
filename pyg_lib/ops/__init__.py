@@ -30,7 +30,7 @@ class SegmentMatmul(torch.autograd.Function):
             others_grad = []
             # Considering GPU utilization, this is actually preferred over grouped matmul
             for i in range(len(inputs_t)):
-                others_grad.append(inputs_t @ outs_grad)
+                others_grad.append(inputs_t[i] @ outs_grad[i])
             other_grad = torch.stack(others_grad, dim=0)
 
         return input_grad, None, other_grad
