@@ -14,7 +14,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
-                const std::vector<int64_t> num_neighbors,
+                const std::vector<int64_t>& num_neighbors,
                 bool replace = false,
                 bool directed = true,
                 bool isolated = true,
