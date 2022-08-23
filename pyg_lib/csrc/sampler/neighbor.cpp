@@ -2,9 +2,9 @@
 #include <Python.h>
 #endif
 
-#include <torch/script.h>
-#include <torch/library.h>
 #include <ATen/core/dispatch/Dispatcher.h>
+#include <torch/library.h>
+#include <torch/script.h>
 
 #include "neighbor.h"
 

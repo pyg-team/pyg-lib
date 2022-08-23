@@ -3,10 +3,11 @@ from typing import Tuple, Optional
 import torch
 from torch import Tensor
 
-def neighbor_sample(rowptr: Tensor, col: Tensor, seed: Tensor,
-                    num_neighbors: list[int], replace: bool = False,
-                    directed: bool = True, isolated: bool = True,
-                    return_edge_id: bool = True
+
+def neighbor_sample(
+    rowptr: Tensor, col: Tensor, seed: Tensor, num_neighbors: list[int],
+    replace: bool = False, directed: bool = True, isolated: bool = True,
+    return_edge_id: bool = True
 ) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor]]:
     r"""Recursively samples neighbors from all nodes indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
@@ -34,7 +35,8 @@ def neighbor_sample(rowptr: Tensor, col: Tensor, seed: Tensor,
         #TODO(kgajdamo): add description
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                        replace, directed, isolated, return_edge_id)
+                                         replace, directed, isolated,
+                                         return_edge_id)
 
 
 def subgraph(
