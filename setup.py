@@ -98,5 +98,4 @@ setup(
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,
-    include_package_data=True,
 )

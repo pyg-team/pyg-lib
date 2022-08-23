@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
 ### Changed
+- Prevent absolute paths in wheel ([#75](https://github.com/pyg-team/pyg-lib/pull/75))
 - Improved installation instructions ([#68](https://github.com/pyg-team/pyg-lib/pull/68))
 - Replaced std::unordered_map with a faster phmap::flat_hash_map ([#65](https://github.com/pyg-team/pyg-lib/pull/65))
 - Fixed versions of `checkout` and `setup-python` in CI ([#52](https://github.com/pyg-team/pytorch_geometric/pull/52))
