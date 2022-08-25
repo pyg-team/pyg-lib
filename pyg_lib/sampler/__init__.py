@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import List, Tuple, Optional
 
 import torch
 from torch import Tensor
@@ -8,7 +8,7 @@ def neighbor_sample(
     rowptr: Tensor,
     col: Tensor,
     seed: Tensor,
-    num_neighbors: list[int],
+    num_neighbors: List[int],
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = True,
@@ -21,7 +21,7 @@ def neighbor_sample(
         rowptr (torch.Tensor): Compressed source node indices.
         col (torch.Tensor): Target node indices.
         seed (torch.Tensor): The seed node indices.
-        num_neighbors (list[int]): The number of neighbors to sample for each
+        num_neighbors (List[int]): The number of neighbors to sample for each
             node in each iteration. In heterogeneous graphs, may also take in a
             dictionary denoting the amount of neighbors to sample for each
             individual edge type. If an entry is set to :obj:`-1`,
