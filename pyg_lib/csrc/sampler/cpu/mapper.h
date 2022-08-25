@@ -37,6 +37,16 @@ class Mapper {
     fill(nodes.data_ptr<scalar_t>(), nodes.numel());
   }
 
+  bool insert_to_local_map(const scalar_t& node, const scalar_t pos) {
+    if (use_vec) {
+      const auto res = to_local_vec.insert(to_local_vec.begin() + node, pos);
+      return res != to_local_vec.end();
+    } else {
+      const auto res = to_local_map.insert({node, pos});
+      return res.second;
+    }
+  }
+
   bool exists(const scalar_t& node) {
     if (use_vec)
       return to_local_vec[node] >= 0;
