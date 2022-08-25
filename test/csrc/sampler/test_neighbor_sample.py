@@ -6,30 +6,30 @@ import pyg_lib
 neighbor_sample = pyg_lib.sampler.neighbor_sample
 
 
-def test_neighbor_sample():  # row, col
-    adj = SparseTensor.from_edge_index(torch.tensor([[0], [1]]))
+def test_neighbor_sample():
+    adj = SparseTensor.from_edge_index(torch.tensor([[1], [0]]))
     rowptr, col, _ = adj.csr()
 
-    # Sampling in a non-directed way should not sample in wrong direction:
+    # Sampling should work:
     out = neighbor_sample(rowptr, col, torch.tensor([1]), [1], False, False,
+                          False, True)
+    assert out[0].tolist() == [0]
+    assert out[1].tolist() == [1]
+    assert out[2].tolist() == [1, 0]
+
+    # Sampling in a non-directed way should not sample in wrong direction:
+    out = neighbor_sample(rowptr, col, torch.tensor([0]), [1], False, False,
                           False, True)
     assert out[0].tolist() == []
     assert out[1].tolist() == []
-    assert out[2].tolist() == [1]
-
-    # Sampling should work:
-    out = neighbor_sample(rowptr, col, torch.tensor([0]), [1], False, False,
-                          False, True)
-    assert out[0].tolist() == [0]
-    assert out[1].tolist() == [1]
-    assert out[2].tolist() == [0, 1]
+    assert out[2].tolist() == [0]
 
     # Sampling with more hops:
-    out = neighbor_sample(rowptr, col, torch.tensor([0]), [1, 1], False, False,
+    out = neighbor_sample(rowptr, col, torch.tensor([1]), [1, 1], False, False,
                           False, True)
     assert out[0].tolist() == [0]
     assert out[1].tolist() == [1]
-    assert out[2].tolist() == [0, 1]
+    assert out[2].tolist() == [1, 0]
 
 
 def test_neighbor_sample_seed():
