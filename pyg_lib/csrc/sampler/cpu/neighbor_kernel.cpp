@@ -131,8 +131,15 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        const std::vector<int64_t>& num_neighbors,
                        bool replace,
                        bool directed,
-                       bool isolated,
+                       bool disjoint,
                        bool return_edge_id) {
+  if (disjoint) {
+    AT_ERROR("Disjoint subgraphs are currently not supported");
+  }
+  if (!return_edge_id) {
+    AT_ERROR("The indices of edges of the original graph must be returned");
+  }
+
   if (replace && directed) {
     return sample<true, true>(rowptr, col, seed, num_neighbors);
   } else if (replace && !directed) {
