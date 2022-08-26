@@ -1,7 +1,48 @@
-from typing import Tuple, Optional
+from typing import List, Tuple, Optional
 
 import torch
 from torch import Tensor
+
+
+def neighbor_sample(
+    rowptr: Tensor,
+    col: Tensor,
+    seed: Tensor,
+    num_neighbors: List[int],
+    replace: bool = False,
+    directed: bool = True,
+    disjoint: bool = False,
+    return_edge_id: bool = True,
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor]]:
+    r"""Recursively samples neighbors from all node indices in :obj:`seed`
+    in the graph given by :obj:`(rowptr, col)`.
+
+    Args:
+        rowptr (torch.Tensor): Compressed source node indices.
+        col (torch.Tensor): Target node indices.
+        seed (torch.Tensor): The seed node indices.
+        num_neighbors (List[int]): The number of neighbors to sample for each
+            node in each iteration. If an entry is set to :obj:`-1`, all
+            neighbors will be included.
+        replace (bool, optional): If set to :obj:`True`, will sample with
+            replacement. (default: :obj:`False`)
+        directed (bool, optional): If set to :obj:`False`, will include all
+            edges between all sampled nodes. (default: :obj:`True`)
+        disjoint (bool, optional): If set to :obj:`True` , will create disjoint
+            subgraphs for every seed node. (default: :obj:`False`)
+        return_edge_id (bool, optional): If set to :obj:`False`, will not
+            return the indices of edges of the original graph.
+            (default: :obj: `True`)
+
+    Returns:
+        (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor]):
+        Row indices, col indices of the returned subtree/subgraph, as well as
+        original node indices for all nodes sampled.
+        In addition, may return the indices of edges of the original graph.
+    """
+    return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
+                                         replace, directed, disjoint,
+                                         return_edge_id)
 
 
 def subgraph(
@@ -24,8 +65,7 @@ def subgraph(
     Returns:
         (torch.Tensor, torch.Tensor, Optional[torch.Tensor]): Compressed source
         node indices and target node indices of the induced subgraph.
-        In addition, may return the indices of edges of the original graph
-        contained in the induced subgraph.
+        In addition, may return the indices of edges of the original graph.
     """
     return torch.ops.pyg.subgraph(rowptr, col, nodes, return_edge_id)
 
@@ -56,6 +96,7 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
 
 
 __all__ = [
+    'neighbor_sample',
     'subgraph',
     'random_walk',
 ]

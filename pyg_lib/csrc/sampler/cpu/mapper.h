@@ -23,14 +23,25 @@ class Mapper {
       to_local_vec = std::vector<scalar_t>(num_nodes, -1);
   }
 
-  void fill(const scalar_t* nodes_data, const scalar_t size) {
+  std::pair<scalar_t, bool> insert(const scalar_t& node) {
+    std::pair<scalar_t, bool> res;
     if (use_vec) {
-      for (scalar_t i = 0; i < size; ++i)
-        to_local_vec[nodes_data[i]] = i;
+      auto old = to_local_vec[node];
+      res = std::pair<scalar_t, bool>(old == -1 ? curr : old, old == -1);
+      if (res.second)
+        to_local_vec[node] = curr;
     } else {
-      for (scalar_t i = 0; i < size; ++i)
-        to_local_map.insert({nodes_data[i], i});
+      auto out = to_local_map.insert({node, curr});
+      res = std::pair<scalar_t, bool>(out.first->second, out.second);
     }
+    if (res.second)
+      curr++;
+    return res;
+  }
+
+  void fill(const scalar_t* nodes_data, const scalar_t size) {
+    for (size_t i = 0; i < size; ++i)
+      insert(nodes_data[i]);
   }
 
   void fill(const at::Tensor& nodes) {
@@ -54,7 +65,7 @@ class Mapper {
   }
 
  private:
-  scalar_t num_nodes, num_entries;
+  scalar_t num_nodes, num_entries, curr = 0;
 
   bool use_vec;
   std::vector<scalar_t> to_local_vec;
