@@ -1,12 +1,7 @@
-#ifdef WITH_PYTHON
-#include <Python.h>
-#endif
+#include "neighbor.h"
 
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
-#include <torch/script.h>
-
-#include "neighbor.h"
 
 namespace pyg {
 namespace sampler {

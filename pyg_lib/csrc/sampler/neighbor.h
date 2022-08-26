@@ -17,7 +17,7 @@ neighbor_sample(const at::Tensor& rowptr,
                 const std::vector<int64_t>& num_neighbors,
                 bool replace = false,
                 bool directed = true,
-                bool disjoint = true,
+                bool disjoint = false,
                 bool return_edge_id = true);
 
 }  // namespace sampler
