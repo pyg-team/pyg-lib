@@ -18,6 +18,8 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors) {
+  at::Tensor out_row, out_col, out_node_id, out_edge_id;
+
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
     const auto num_nodes = rowptr.size(0) - 1;
 
@@ -28,7 +30,7 @@ sample(const at::Tensor& rowptr,
     pyg::random::RandintEngine<scalar_t> eng;
 
     // Initialize some data structures for the sampling process:
-    std::vector<scalar_t> samples, rows, cols, edges;
+    std::vector<scalar_t> rows, cols, samples, edges;
     // TODO (matthias) Approximate number of sampled entries for mapper.
     auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, seed.size(0));
 
@@ -78,7 +80,7 @@ sample(const at::Tensor& rowptr,
         } else {
           std::unordered_set<scalar_t> rnd_indices;
           for (scalar_t j = row_count - num_samples; j < row_count; ++j) {
-            scalar_t rnd = eng(0, j);
+            scalar_t rnd = eng(0, j + 1);
             if (!rnd_indices.insert(rnd).second) {
               rnd = j;
               rnd_indices.insert(j);
@@ -116,11 +118,13 @@ sample(const at::Tensor& rowptr,
       }
     }
 
-    return std::make_tuple(pyg::utils::from_vector<scalar_t>(rows),
-                           pyg::utils::from_vector<scalar_t>(cols),
-                           pyg::utils::from_vector<scalar_t>(samples),
-                           pyg::utils::from_vector<scalar_t>(edges));
+    out_row = pyg::utils::from_vector(rows);
+    out_col = pyg::utils::from_vector(cols);
+    out_node_id = pyg::utils::from_vector(samples);
+    out_edge_id = pyg::utils::from_vector(edges);
   });
+
+  return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
