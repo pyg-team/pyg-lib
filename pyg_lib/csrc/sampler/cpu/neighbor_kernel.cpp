@@ -12,13 +12,14 @@ namespace sampler {
 
 namespace {
 
-template <bool replace, bool directed>
+template <bool replace, bool directed, bool return_edge_id>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors) {
-  at::Tensor out_row, out_col, out_node_id, out_edge_id;
+  at::Tensor out_row, out_col, out_node_id;
+  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
     const auto num_nodes = rowptr.size(0) - 1;
@@ -61,7 +62,8 @@ sample(const at::Tensor& rowptr,
             if (directed) {
               rows.push_back(i);
               cols.push_back(res.first);
-              edges.push_back(e);
+              if (return_edge_id)
+                edges.push_back(e);
             }
           }
         } else if (replace) {
@@ -74,7 +76,8 @@ sample(const at::Tensor& rowptr,
             if (directed) {
               rows.push_back(i);
               cols.push_back(res.first);
-              edges.push_back(e);
+              if (return_edge_id)
+                edges.push_back(e);
             }
           }
         } else {
@@ -93,7 +96,8 @@ sample(const at::Tensor& rowptr,
             if (directed) {
               rows.push_back(i);
               cols.push_back(res.first);
-              edges.push_back(e);
+              if (return_edge_id)
+                edges.push_back(e);
             }
           }
         }
@@ -112,7 +116,8 @@ sample(const at::Tensor& rowptr,
           if (local_node != -1) {
             rows.push_back(i);
             cols.push_back(local_node);
-            edges.push_back(e);
+            if (return_edge_id)
+              edges.push_back(e);
           }
         }
       }
@@ -121,7 +126,8 @@ sample(const at::Tensor& rowptr,
     out_row = pyg::utils::from_vector(rows);
     out_col = pyg::utils::from_vector(cols);
     out_node_id = pyg::utils::from_vector(samples);
-    out_edge_id = pyg::utils::from_vector(edges);
+    if (return_edge_id)
+      out_edge_id = pyg::utils::from_vector(edges);
   });
 
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
@@ -143,14 +149,26 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
     AT_ERROR("The indices of edges of the original graph must be returned");
   }
 
-  if (replace && directed) {
-    return sample<true, true>(rowptr, col, seed, num_neighbors);
-  } else if (replace && !directed) {
-    return sample<true, false>(rowptr, col, seed, num_neighbors);
-  } else if (!replace && directed) {
-    return sample<false, true>(rowptr, col, seed, num_neighbors);
+  if (return_edge_id) {
+    if (replace && directed) {
+      return sample<true, true, true>(rowptr, col, seed, num_neighbors);
+    } else if (replace && !directed) {
+      return sample<true, false, true>(rowptr, col, seed, num_neighbors);
+    } else if (!replace && directed) {
+      return sample<false, true, true>(rowptr, col, seed, num_neighbors);
+    } else {
+      return sample<false, false, true>(rowptr, col, seed, num_neighbors);
+    }
   } else {
-    return sample<false, false>(rowptr, col, seed, num_neighbors);
+    if (replace && directed) {
+      return sample<true, true, false>(rowptr, col, seed, num_neighbors);
+    } else if (replace && !directed) {
+      return sample<true, false, false>(rowptr, col, seed, num_neighbors);
+    } else if (!replace && directed) {
+      return sample<false, true, false>(rowptr, col, seed, num_neighbors);
+    } else {
+      return sample<false, false, false>(rowptr, col, seed, num_neighbors);
+    }
   }
 }
 
