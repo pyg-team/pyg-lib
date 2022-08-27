@@ -15,7 +15,6 @@ neighbor_sample(const at::Tensor& rowptr,
                 bool directed,
                 bool disjoint,
                 bool return_edge_id) {
-  std::cout << "DRIN" << std::endl;
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg seed_t{seed, "seed", 1};
@@ -27,12 +26,8 @@ neighbor_sample(const at::Tensor& rowptr,
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::neighbor_sample", "")
                        .typed<decltype(neighbor_sample)>();
-  std::cout << "HEHE" << std::endl;
-  auto out = op.call(rowptr, col, seed, num_neighbors, replace, directed,
-                     disjoint, return_edge_id);
-  std::cout << "LOL" << std::endl;
-  /* std::cout << out << std::endl; */
-  return out;
+  return op.call(rowptr, col, seed, num_neighbors, replace, directed, disjoint,
+                 return_edge_id);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
