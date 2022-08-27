@@ -142,12 +142,8 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        bool directed,
                        bool disjoint,
                        bool return_edge_id) {
-  if (disjoint) {
+  if (disjoint)
     AT_ERROR("Disjoint subgraphs are currently not supported");
-  }
-  if (!return_edge_id) {
-    AT_ERROR("The indices of edges of the original graph must be returned");
-  }
 
   if (return_edge_id) {
     if (replace && directed) {
