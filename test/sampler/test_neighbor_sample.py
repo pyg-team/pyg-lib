@@ -33,7 +33,7 @@ def test_neighbor_sample():
 
 
 def test_neighbor_sample_seed():
-    rowptr = torch.tensor([0, 3, 5])
+    rowptr = torch.tensor([0, 3, 5, 7])
     col = torch.tensor([0, 1, 2, 0, 1, 0, 2])
     input_nodes = torch.tensor([0, 1])
 
@@ -47,3 +47,8 @@ def test_neighbor_sample_seed():
 
     for data1, data2 in zip(out1, out2):
         assert data1.tolist() == data2.tolist()
+
+
+if __name__ == '__main__':
+    test_neighbor_sample()
+    test_neighbor_sample_seed()
