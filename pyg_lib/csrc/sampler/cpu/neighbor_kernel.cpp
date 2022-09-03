@@ -12,6 +12,84 @@ namespace sampler {
 
 namespace {
 
+template <typename scalar_t, bool replace, bool save_edges, bool save_edge_ids>
+class NeighborSampler {
+ public:
+  NeighborSampler(const scalar_t* rowptr, const scalar_t* col)
+      : rowptr(rowptr), col(col) {}
+
+  void uniform_sample(const scalar_t global_src_node,
+                      const scalar_t local_src_node,
+                      const size_t count,
+                      pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                      pyg::random::RandintEngine<scalar_t>& generator,
+                      std::vector<scalar_t>& out_global_dst_nodes) {
+    if (count == 0)
+      return;
+
+    const auto row_start = rowptr[global_src_node];
+    const auto row_end = rowptr[global_src_node + 1];
+    const auto population = row_end - row_start;
+
+    if (population == 0)
+      return;
+
+    // Case 1: Sample the full neighborhood:
+    if (count < 0 || (!replace && count >= population)) {
+      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+
+    // Case 2: Sample with replacement:
+    else if (replace) {
+      for (size_t i = 0; i < count; ++i) {
+        const auto edge_id = generator(row_start, row_end);
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+
+    // Case 3: Sample without replacement:
+    else {
+      std::unordered_set<scalar_t> rnd_indices;
+      for (size_t i = population - count; i < population; ++i) {
+        auto rnd = generator(0, i + 1);
+        if (!rnd_indices.insert(rnd).second) {
+          rnd = i;
+          rnd_indices.insert(i);
+        }
+        const auto edge_id = row_start + rnd;
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+  }
+
+ private:
+  inline void add(const scalar_t edge_id,
+                  const scalar_t local_src_node,
+                  pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                  std::vector<scalar_t>& out_global_dst_nodes) {
+    const auto global_dst_node = col[edge_id];
+    const auto res = dst_mapper.insert(global_dst_node);
+    if (res.second) {  // not yet sampled.
+      out_global_dst_nodes.push_back(global_dst_node);
+      if (save_edges) {
+        sampled_rows.push_back(local_src_node);
+        sampled_cols.push_back(res.first);
+      }
+      if (save_edge_ids) {
+        sampled_edge_ids.push_back(edge_id);
+      }
+    }
+  }
+
+  const scalar_t* rowptr;
+  const scalar_t* col;
+  std::vector<scalar_t> sampled_rows;
+  std::vector<scalar_t> sampled_cols;
+  std::vector<scalar_t> sampled_edge_ids;
+};
+
 template <bool replace, bool directed, bool return_edge_id>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 sample(const at::Tensor& rowptr,
@@ -30,15 +108,15 @@ sample(const at::Tensor& rowptr,
 
     pyg::random::RandintEngine<scalar_t> eng;
 
-    // Initialize some data structures for the sampling process:
-    std::vector<scalar_t> rows, cols, samples, edges;
     // TODO (matthias) Approximate number of sampled entries for mapper.
     auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, seed.size(0));
+    mapper.fill(seed);
 
-    for (size_t i = 0; i < seed.numel(); i++) {
+    // Initialize some data structures for the sampling process:
+    std::vector<scalar_t> rows, cols, samples, edges;
+
+    for (size_t i = 0; i < seed.numel(); i++)
       samples.push_back(seed_data[i]);
-      mapper.insert(seed_data[i]);
-    }
 
     size_t begin = 0, end = samples.size();
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
@@ -46,8 +124,7 @@ sample(const at::Tensor& rowptr,
 
       for (size_t i = begin; i < end; i++) {
         const auto v = samples[i];
-        const auto row_start = rowptr_data[v];
-        const auto row_end = rowptr_data[v + 1];
+        const auto row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
         const auto row_count = row_end - row_start;
 
         if (row_count == 0)
