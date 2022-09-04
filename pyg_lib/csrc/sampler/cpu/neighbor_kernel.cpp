@@ -108,8 +108,6 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors) {
-  const auto num_nodes = rowptr.size(0) - 1;
-
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
@@ -117,6 +115,7 @@ sample(const at::Tensor& rowptr,
     pyg::random::RandintEngine<scalar_t> generator;
 
     // TODO (matthias) Approximate number of sampled entries for mapper.
+    const auto num_nodes = rowptr.size(0) - 1;
     auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, seed.size(0));
     mapper.fill(seed);
 
