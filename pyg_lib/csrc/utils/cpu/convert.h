@@ -23,5 +23,12 @@ at::Tensor from_vector(const std::vector<std::pair<scalar_t, scalar_t>>& vec,
   return inplace ? out : out.clone();
 }
 
+template <typename scalar_t>
+std::vector<scalar_t> to_vector(const at::Tensor& vec) {
+  TORCH_CHECK(vec.is_contiguous(), "'vec' needs to be contiguous");
+  const auto vec_data = vec.data_ptr<scalar_t>();
+  return std::vector<scalar_t>(vec_data, vec_data + vec.numel());
+}
+
 }  // namespace utils
 }  // namespace pyg
