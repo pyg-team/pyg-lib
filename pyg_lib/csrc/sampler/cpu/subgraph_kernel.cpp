@@ -30,7 +30,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
     auto mapper = pyg::sampler::Mapper<scalar_t, scalar_t>(rowptr.size(0) - 1,
                                                            nodes.size(0));
-    mapper.fill(nodes_data, nodes.size(0));
+    mapper.fill(nodes);
 
     // We first iterate over all nodes and collect information about the number
     // of edges in the induced subgraph.
