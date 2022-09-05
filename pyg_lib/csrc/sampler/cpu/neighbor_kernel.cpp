@@ -214,11 +214,11 @@ sample(const at::Tensor& rowptr,
     std::vector<node_t> sampled_nodes;
 
     const auto seed_data = seed.data_ptr<scalar_t>();
-    for (size_t i = 0; i < seed.numel(); i++) {
-      if constexpr (!disjoint) {
-        mapper.insert(seed_data[i]);
-        sampled_nodes.push_back(seed_data[i]);
-      } else {
+    if constexpr (!disjoint) {
+      sampled_nodes = pyg::utils::to_vector<scalar_t>(seed);
+      mapper.fill(seed);
+    } else {
+      for (size_t i = 0; i < seed.numel(); i++) {
         mapper.insert({i, seed_data[i]});
         sampled_nodes.push_back({i, seed_data[i]});
       }
