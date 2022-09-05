@@ -40,8 +40,10 @@ def test_neighbor(dataset, **kwargs):
                 num_nodes) if args.shuffle else torch.arange(0, num_nodes)
             for seed in tqdm(nodes_ids.split(batch_size)):
                 pyg_lib.sampler.neighbor_sample(rowptr, col, seed,
-                                                num_neighbors, args.replace,
-                                                args.directed, disjoint=False,
+                                                num_neighbors,
+                                                replace=args.replace,
+                                                directed=args.directed,
+                                                disjoint=False,
                                                 return_edge_id=True)
             stop = time.perf_counter()
             print('-------------------------')

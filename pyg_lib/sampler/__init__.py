@@ -9,6 +9,7 @@ def neighbor_sample(
     col: Tensor,
     seed: Tensor,
     num_neighbors: List[int],
+    time: Optional[Tensor] = None,
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
@@ -24,6 +25,11 @@ def neighbor_sample(
         num_neighbors (List[int]): The number of neighbors to sample for each
             node in each iteration. If an entry is set to :obj:`-1`, all
             neighbors will be included.
+        time (torch.Tensor, optional): Timestamps for the nodes in the graph.
+            If set, temporal sampling will be used such that neighbors are
+            guaranteed to fulfill temporal constraints, *i.e.* neighbors have
+            an earlier timestamp than the seed node.
+            Requires :obj:`disjoint=True`. (default: :obj:`None`)
         replace (bool, optional): If set to :obj:`True`, will sample with
             replacement. (default: :obj:`False`)
         directed (bool, optional): If set to :obj:`False`, will include all
@@ -41,7 +47,7 @@ def neighbor_sample(
         In addition, may return the indices of edges of the original graph.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         replace, directed, disjoint,
+                                         time, replace, directed, disjoint,
                                          return_edge_id)
 
 
