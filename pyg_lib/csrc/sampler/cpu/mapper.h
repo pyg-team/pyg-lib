@@ -14,9 +14,11 @@ class Mapper {
  public:
   Mapper(scalar_t num_nodes, scalar_t num_entries)
       : num_nodes(num_nodes), num_entries(num_entries) {
-    // Use a some simple heuristic to determine whether we can use a std::vector
+    // We use some simple heuristic to determine whether we can use a vector
     // to perform the mapping instead of relying on the more memory-friendly,
-    // but slower phmap::flat_hash_map implementation:
+    // but slower hash map implementation. As a general rule of thumb, we are
+    // safe to use vectors in case the number of nodes are small, or it is
+    // expected that we sample a large amount of nodes.
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
     if (use_vec)
