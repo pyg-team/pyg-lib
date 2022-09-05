@@ -15,10 +15,6 @@ TEST(NeighborTest, BasicAssertions) {
                                            /*col=*/std::get<1>(graph), seed,
                                            num_neighbors);
 
-  std::cout << std::get<0>(out) << std::endl;
-  std::cout << std::get<1>(out) << std::endl;
-  std::cout << std::get<2>(out) << std::endl;
-
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
   auto expected_col = at::tensor({1, 2, 3, 0, 0, 4}, options);

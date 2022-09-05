@@ -23,9 +23,9 @@ class NeighborSampler {
   NeighborSampler(const scalar_t* rowptr, const scalar_t* col)
       : rowptr_(rowptr), col_(col) {}
 
-  void uniform_sample(const node_t& global_src_node,
-                      const scalar_t& local_src_node,
-                      const size_t& count,
+  void uniform_sample(const node_t global_src_node,
+                      const scalar_t local_src_node,
+                      const size_t count,
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
                       std::vector<node_t>& out_global_dst_nodes) {
@@ -107,9 +107,9 @@ class NeighborSampler {
     return {std::get<0>(ref), node};
   }
 
-  inline void add(const scalar_t& edge_id,
-                  const node_t& global_src_node,
-                  const scalar_t& local_src_node,
+  inline void add(const scalar_t edge_id,
+                  const node_t global_src_node,
+                  const scalar_t local_src_node,
                   pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                   std::vector<node_t>& out_global_dst_nodes) {
     const auto global_dst_node_value = col_[edge_id];
@@ -183,7 +183,7 @@ sample(const at::Tensor& rowptr,
     if constexpr (!disjoint)
       out_node_id = pyg::utils::from_vector(sampled_nodes);
     else {
-      std::vector<scalar_t> sampled_node_values(sampled_nodes.size());
+      std::vector<scalar_t> sampled_node_values;
       for (const node_t& v : sampled_nodes)
         sampled_node_values.push_back(v.second);
       out_node_id = pyg::utils::from_vector(sampled_node_values);
@@ -209,44 +209,38 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        bool directed,
                        bool disjoint,
                        bool return_edge_id) {
-  if (disjoint)
+  if (replace && directed && disjoint && return_edge_id)
+    return sample<true, true, true, true>(rowptr, col, seed, num_neighbors);
+  if (replace && directed && disjoint && !return_edge_id)
+    return sample<true, true, true, false>(rowptr, col, seed, num_neighbors);
+  if (replace && directed && !disjoint && return_edge_id)
+    return sample<true, true, false, true>(rowptr, col, seed, num_neighbors);
+  if (replace && directed && !disjoint && !return_edge_id)
+    return sample<true, true, false, false>(rowptr, col, seed, num_neighbors);
+  if (replace && !directed && disjoint && return_edge_id)
+    return sample<true, false, true, true>(rowptr, col, seed, num_neighbors);
+  if (replace && !directed && disjoint && !return_edge_id)
+    return sample<true, false, true, false>(rowptr, col, seed, num_neighbors);
+  if (replace && !directed && !disjoint && return_edge_id)
+    return sample<true, false, false, true>(rowptr, col, seed, num_neighbors);
+  if (replace && !directed && !disjoint && !return_edge_id)
+    return sample<true, false, false, false>(rowptr, col, seed, num_neighbors);
+  if (!replace && directed && disjoint && return_edge_id)
     return sample<false, true, true, true>(rowptr, col, seed, num_neighbors);
-  else
+  if (!replace && directed && disjoint && !return_edge_id)
+    return sample<false, true, true, false>(rowptr, col, seed, num_neighbors);
+  if (!replace && directed && !disjoint && return_edge_id)
     return sample<false, true, false, true>(rowptr, col, seed, num_neighbors);
-
-  /* if (return_edge_id) { */
-  /*   if (replace && directed) { */
-  /*     return sample<true, true, true>(rowptr, col, seed, num_neighbors);
-   */
-  /*   } else if (replace && !directed) { */
-  /*     return sample<true, false, true>(rowptr, col, seed, num_neighbors);
-   */
-  /*   } else if (!replace && directed) { */
-  /*     return sample<false, true, true>(rowptr, col, seed, num_neighbors);
-   */
-  /*   } else { */
-  /*     return sample<false, false, true>(rowptr, col, seed,
-   * num_neighbors);
-   */
-  /*   } */
-  /* } else { */
-  /*   if (replace && directed) { */
-  /*     return sample<true, true, false>(rowptr, col, seed, num_neighbors);
-   */
-  /*   } else if (replace && !directed) { */
-  /*     return sample<true, false, false>(rowptr, col, seed,
-   * num_neighbors);
-   */
-  /*   } else if (!replace && directed) { */
-  /*     return sample<false, true, false>(rowptr, col, seed,
-   * num_neighbors);
-   */
-  /*   } else { */
-  /*     return sample<false, false, false>(rowptr, col, seed,
-   * num_neighbors);
-   */
-  /*   } */
-  /* } */
+  if (!replace && directed && !disjoint && !return_edge_id)
+    return sample<false, true, false, false>(rowptr, col, seed, num_neighbors);
+  if (!replace && !directed && disjoint && return_edge_id)
+    return sample<false, false, true, true>(rowptr, col, seed, num_neighbors);
+  if (!replace && !directed && disjoint && !return_edge_id)
+    return sample<false, false, true, false>(rowptr, col, seed, num_neighbors);
+  if (!replace && !directed && !disjoint && return_edge_id)
+    return sample<false, false, false, true>(rowptr, col, seed, num_neighbors);
+  if (!replace && !directed && !disjoint && !return_edge_id)
+    return sample<false, false, false, false>(rowptr, col, seed, num_neighbors);
 }
 
 }  // namespace

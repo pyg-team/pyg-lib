@@ -22,7 +22,7 @@ class Mapper {
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
     // We can only utilize vector mappings in case entries are scalar:
-    if (std::is_scalar<node_t>::value) {
+    if (!std::is_scalar<node_t>::value) {
       use_vec = false;
     }
 
