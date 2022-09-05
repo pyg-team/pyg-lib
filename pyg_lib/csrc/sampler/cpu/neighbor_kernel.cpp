@@ -4,6 +4,7 @@
 #include "parallel_hashmap/phmap.h"
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
+#include "pyg_lib/csrc/sampler/cpu/indices_tracker.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
@@ -52,12 +53,12 @@ class NeighborSampler {
 
     // Case 3: Sample without replacement:
     else {
-      std::unordered_set<scalar_t> rnd_indices;
+      auto indicesTracker = pyg::sampler::IndicesTracker<scalar_t>(population);
       for (size_t i = population - count; i < population; ++i) {
         auto rnd = generator(0, i + 1);
-        if (!rnd_indices.insert(rnd).second) {
+        if (!indicesTracker.tryInsert(rnd)) {
           rnd = i;
-          rnd_indices.insert(i);
+          indicesTracker.insert(i);
         }
         const auto edge_id = row_start + rnd;
         add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
