@@ -12,7 +12,7 @@ namespace sampler {
 template <typename node_t, typename scalar_t>
 class Mapper {
  public:
-  Mapper(size_t num_nodes, size_t num_entries)
+  Mapper(size_t num_nodes, size_t num_entries = -1)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // We use some simple heuristic to determine whether we can use a vector
     // to perform the mapping instead of relying on the more memory-friendly,
@@ -22,32 +22,38 @@ class Mapper {
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
     // We can only utilize vector mappings in case entries are scalar:
-    if (std::is_scalar<node_t>::value)
+    if (std::is_scalar<node_t>::value) {
       use_vec = false;
+    }
 
-    if (use_vec)
+    if (use_vec) {
       to_local_vec = std::vector<scalar_t>(num_nodes, -1);
+    }
   }
 
   std::pair<scalar_t, bool> insert(const node_t& node) {
     std::pair<scalar_t, bool> res;
     if (use_vec) {
-      auto old = to_local_vec[node];
-      res = std::pair<scalar_t, bool>(old == -1 ? curr : old, old == -1);
-      if (res.second)
-        to_local_vec[node] = curr;
+      if constexpr (std::is_scalar<node_t>::value) {
+        auto old = to_local_vec[node];
+        res = std::pair<scalar_t, bool>(old == -1 ? curr : old, old == -1);
+        if (res.second)
+          to_local_vec[node] = curr;
+      }
     } else {
       auto out = to_local_map.insert({node, curr});
       res = std::pair<scalar_t, bool>(out.first->second, out.second);
     }
-    if (res.second)
+    if (res.second) {
       curr++;
+    }
     return res;
   }
 
   void fill(const node_t* nodes, const size_t size) {
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
       insert(nodes[i]);
+    }
   }
 
   void fill(const at::Tensor& nodes) {
@@ -55,23 +61,25 @@ class Mapper {
   }
 
   bool exists(const node_t& node) {
-    if (use_vec)
+    if (use_vec) {
       return to_local_vec[node] >= 0;
-    else
+    } else {
       return to_local_map.count(node) > 0;
+    }
   }
 
   scalar_t map(const node_t& node) {
-    if (use_vec)
+    if (use_vec) {
       return to_local_vec[node];
-    else {
+    } else {
       const auto search = to_local_map.find(node);
       return search != to_local_map.end() ? search->second : -1;
     }
   }
 
  private:
-  size_t num_nodes, num_entries, curr = 0;
+  size_t num_nodes, num_entries;
+  scalar_t curr = 0;
 
   bool use_vec;
   std::vector<scalar_t> to_local_vec;
