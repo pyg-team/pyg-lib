@@ -12,39 +12,7 @@ namespace sampler {
 
 namespace {
 
-// node_t can either be a scalar or a pair of scalars, holding example ID and
-// node ID.
-template <typename node_t, typename scalar_t>
-struct NodeHelper {};
-
-template <typename scalar_t>
-struct NodeHelper<scalar_t, scalar_t> {
-  inline static std::pair<scalar_t, scalar_t> rowptr_offset(
-      const scalar_t* rowptr,
-      const scalar_t& node) {
-    return {rowptr[node], rowptr[node + 1]};
-  }
-
-  inline static scalar_t to_node_t(const scalar_t& node, const scalar_t& ref) {
-    return node;
-  }
-};
-
-template <typename scalar_t>
-struct NodeHelper<std::pair<scalar_t, scalar_t>, scalar_t> {
-  inline static std::pair<scalar_t, scalar_t> rowptr_offset(
-      const scalar_t* rowptr,
-      const std::pair<scalar_t, scalar_t>& node) {
-    return {rowptr[std::get<1>(node)], rowptr[std::get<1>(node) + 1]};
-  }
-
-  inline static std::pair<scalar_t, scalar_t> to_node_t(
-      const scalar_t& node,
-      const std::pair<scalar_t, scalar_t>& ref) {
-    return {std::get<0>(ref), node};
-  }
-};
-
+// `node_t` is either a scalar or a pair of scalars of (example_id, node_id):
 template <typename node_t,
           typename scalar_t,
           bool replace,
@@ -64,10 +32,9 @@ class NeighborSampler {
     if (count == 0)
       return;
 
-    const auto offset =
-        NodeHelper<node_t, scalar_t>::rowptr_offset(rowptr_, global_src_node);
-    const scalar_t row_start = std::get<0>(offset),
-                   row_end = std::get<1>(offset);
+    const auto offset = rowptr_offset(rowptr_, global_src_node);
+    const auto row_start = std::get<0>(offset);
+    const auto row_end = std::get<1>(offset);
     const auto population = row_end - row_start;
 
     if (population == 0)
@@ -119,14 +86,35 @@ class NeighborSampler {
   }
 
  private:
+  inline std::pair<scalar_t, scalar_t> rowptr_offset(const scalar_t* rowptr,
+                                                     const scalar_t& node) {
+    return {rowptr[node], rowptr[node + 1]};
+  }
+
+  inline std::pair<scalar_t, scalar_t> rowptr_offset(
+      const scalar_t* rowptr,
+      const std::pair<scalar_t, scalar_t>& node) {
+    return {rowptr[std::get<1>(node)], rowptr[std::get<1>(node) + 1]};
+  }
+
+  inline scalar_t to_node_t(const scalar_t& node, const scalar_t& ref) {
+    return node;
+  }
+
+  inline std::pair<scalar_t, scalar_t> to_node_t(
+      const scalar_t& node,
+      const std::pair<scalar_t, scalar_t>& ref) {
+    return {std::get<0>(ref), node};
+  }
+
   inline void add(scalar_t& edge_id,
                   const node_t& global_src_node,
                   const scalar_t& local_src_node,
                   pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                   std::vector<node_t>& out_global_dst_nodes) {
     const auto global_dst_node_value = col_[edge_id];
-    const auto global_dst_node = NodeHelper<node_t, scalar_t>::to_node_t(
-        global_dst_node_value, global_src_node);
+    const auto global_dst_node =
+        to_node_t(global_dst_node_value, global_src_node);
     const auto res = dst_mapper.insert(global_dst_node);
     if (res.second) {  // not yet sampled.
       out_global_dst_nodes.push_back(global_dst_node);
@@ -158,7 +146,8 @@ sample(const at::Tensor& rowptr,
 
   typedef int64_t scalar_t;
 
-  /* AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] { */
+  /* AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
+   */
   typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
   typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
 
@@ -225,13 +214,14 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
     AT_ERROR("Disjoint subgraphs are currently not supported");
 
   if (disjoint)
-    return sample<false, true, false, true>(rowptr, col, seed, num_neighbors);
+    return sample<false, true, true, true>(rowptr, col, seed, num_neighbors);
   else
     return sample<false, true, false, true>(rowptr, col, seed, num_neighbors);
 
   /* if (return_edge_id) { */
   /*   if (replace && directed) { */
-  /*     return sample<true, true, true>(rowptr, col, seed, num_neighbors); */
+  /*     return sample<true, true, true>(rowptr, col, seed, num_neighbors);
+   */
   /*   } else if (replace && !directed) { */
   /*     return sample<true, false, true>(rowptr, col, seed, num_neighbors);
    */
@@ -239,7 +229,8 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
   /*     return sample<false, true, true>(rowptr, col, seed, num_neighbors);
    */
   /*   } else { */
-  /*     return sample<false, false, true>(rowptr, col, seed, num_neighbors);
+  /*     return sample<false, false, true>(rowptr, col, seed,
+   * num_neighbors);
    */
   /*   } */
   /* } else { */
@@ -247,13 +238,16 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
   /*     return sample<true, true, false>(rowptr, col, seed, num_neighbors);
    */
   /*   } else if (replace && !directed) { */
-  /*     return sample<true, false, false>(rowptr, col, seed, num_neighbors);
+  /*     return sample<true, false, false>(rowptr, col, seed,
+   * num_neighbors);
    */
   /*   } else if (!replace && directed) { */
-  /*     return sample<false, true, false>(rowptr, col, seed, num_neighbors);
+  /*     return sample<false, true, false>(rowptr, col, seed,
+   * num_neighbors);
    */
   /*   } else { */
-  /*     return sample<false, false, false>(rowptr, col, seed, num_neighbors);
+  /*     return sample<false, false, false>(rowptr, col, seed,
+   * num_neighbors);
    */
   /*   } */
   /* } */
