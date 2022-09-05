@@ -73,6 +73,72 @@ class NeighborSampler {
     }
   }
 
+  void temporal_sample(const node_t global_src_node,
+                       const scalar_t local_src_node,
+                       const size_t count,
+                       const scalar_t seed_time,
+                       const scalar_t* time,
+                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                       pyg::random::RandintEngine<scalar_t>& generator,
+                       std::vector<node_t>& out_global_dst_nodes) {
+    if (count == 0)
+      return;
+
+    const auto offset = rowptr_offset(rowptr_, global_src_node);
+    const auto row_start = std::get<0>(offset);
+    const auto row_end = std::get<1>(offset);
+    const auto population = row_end - row_start;
+
+    if (population == 0)
+      return;
+
+    // Case 1: Sample the full neighborhood:
+    if (count < 0 || (!replace && count >= population)) {
+      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
+        if (time[col_[edge_id]] <= seed_time)
+          continue;
+        add(edge_id, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }
+    }
+
+    // Case 2: Sample with replacement:
+    else if (replace) {
+      for (size_t i = 0; i < count; ++i) {
+        const auto edge_id = generator(row_start, row_end);
+        // TODO (matthias) Improve temporal sampling logic. Currently, we sample
+        // `count` many random neighbors, and filter them based on temporal
+        // constraints afterwards. Ideally, we only sample exactly `count`
+        // neighbors which fullfill the time constraint.
+        if (time[col_[edge_id]] <= seed_time)
+          continue;
+        add(edge_id, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }
+    }
+
+    // Case 3: Sample without replacement:
+    else {
+      std::unordered_set<scalar_t> rnd_indices;
+      for (size_t i = population - count; i < population; ++i) {
+        auto rnd = generator(0, i + 1);
+        if (!rnd_indices.insert(rnd).second) {
+          rnd = i;
+          rnd_indices.insert(i);
+        }
+        const auto edge_id = row_start + rnd;
+        // TODO (matthias) Improve temporal sampling logic. Currently, we sample
+        // `count` many random neighbors, and filter them based on temporal
+        // constraints afterwards. Ideally, we only sample exactly `count`
+        // neighbors which fullfill the time constraint.
+        if (time[col_[edge_id]] <= seed_time)
+          continue;
+        add(edge_id, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }
+    }
+  }
+
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
   get_sampled_edges() {
     TORCH_CHECK(save_edges, "No edges have been stored")
@@ -140,7 +206,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
-       const std::vector<int64_t>& num_neighbors) {
+       const std::vector<int64_t>& num_neighbors,
+       const c10::optional<at::Tensor>& time) {
+  TORCH_CHECK(!time.has_value() || disjoint,
+              "Temporal sampling needs to create disjoint subgraphs");
+
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
@@ -172,10 +242,25 @@ sample(const at::Tensor& rowptr,
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
 
-      for (size_t i = begin; i < end; ++i) {
-        sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                               /*local_src_node=*/i, count, mapper, generator,
-                               /*out_global_dst_nodes=*/sampled_nodes);
+      if (!time.has_value()) {
+        for (size_t i = begin; i < end; ++i) {
+          sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
+                                 /*local_src_node=*/i, count, mapper, generator,
+                                 /*out_global_dst_nodes=*/sampled_nodes);
+        }
+      } else {  // Temporal sampling ...
+        if constexpr (!std::is_scalar<node_t>::value) {
+          // ... requires disjoint sampling:
+          const auto time_data = time.value().data_ptr<scalar_t>();
+          for (size_t i = begin; i < end; ++i) {
+            const auto seed_node = seed_data[std::get<0>(sampled_nodes[i])];
+            const auto seed_time = time_data[seed_node];
+            sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
+                                    /*local_src_node=*/i, count, seed_time,
+                                    time_data, mapper, generator,
+                                    /*out_global_dst_nodes=*/sampled_nodes);
+          }
+        }
       }
       begin = end, end = sampled_nodes.size();
     }
@@ -197,43 +282,44 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
                        const at::Tensor& seed,
-                       const std::vector<int64_t>& num_neighbors,
+                       const std::vector<int64_t>& count,
+                       const c10::optional<at::Tensor>& time,
                        bool replace,
                        bool directed,
                        bool disjoint,
                        bool return_edge_id) {
   if (replace && directed && disjoint && return_edge_id)
-    return sample<true, true, true, true>(rowptr, col, seed, num_neighbors);
+    return sample<true, true, true, true>(rowptr, col, seed, count, time);
   if (replace && directed && disjoint && !return_edge_id)
-    return sample<true, true, true, false>(rowptr, col, seed, num_neighbors);
+    return sample<true, true, true, false>(rowptr, col, seed, count, time);
   if (replace && directed && !disjoint && return_edge_id)
-    return sample<true, true, false, true>(rowptr, col, seed, num_neighbors);
+    return sample<true, true, false, true>(rowptr, col, seed, count, time);
   if (replace && directed && !disjoint && !return_edge_id)
-    return sample<true, true, false, false>(rowptr, col, seed, num_neighbors);
+    return sample<true, true, false, false>(rowptr, col, seed, count, time);
   if (replace && !directed && disjoint && return_edge_id)
-    return sample<true, false, true, true>(rowptr, col, seed, num_neighbors);
+    return sample<true, false, true, true>(rowptr, col, seed, count, time);
   if (replace && !directed && disjoint && !return_edge_id)
-    return sample<true, false, true, false>(rowptr, col, seed, num_neighbors);
+    return sample<true, false, true, false>(rowptr, col, seed, count, time);
   if (replace && !directed && !disjoint && return_edge_id)
-    return sample<true, false, false, true>(rowptr, col, seed, num_neighbors);
+    return sample<true, false, false, true>(rowptr, col, seed, count, time);
   if (replace && !directed && !disjoint && !return_edge_id)
-    return sample<true, false, false, false>(rowptr, col, seed, num_neighbors);
+    return sample<true, false, false, false>(rowptr, col, seed, count, time);
   if (!replace && directed && disjoint && return_edge_id)
-    return sample<false, true, true, true>(rowptr, col, seed, num_neighbors);
+    return sample<false, true, true, true>(rowptr, col, seed, count, time);
   if (!replace && directed && disjoint && !return_edge_id)
-    return sample<false, true, true, false>(rowptr, col, seed, num_neighbors);
+    return sample<false, true, true, false>(rowptr, col, seed, count, time);
   if (!replace && directed && !disjoint && return_edge_id)
-    return sample<false, true, false, true>(rowptr, col, seed, num_neighbors);
+    return sample<false, true, false, true>(rowptr, col, seed, count, time);
   if (!replace && directed && !disjoint && !return_edge_id)
-    return sample<false, true, false, false>(rowptr, col, seed, num_neighbors);
+    return sample<false, true, false, false>(rowptr, col, seed, count, time);
   if (!replace && !directed && disjoint && return_edge_id)
-    return sample<false, false, true, true>(rowptr, col, seed, num_neighbors);
+    return sample<false, false, true, true>(rowptr, col, seed, count, time);
   if (!replace && !directed && disjoint && !return_edge_id)
-    return sample<false, false, true, false>(rowptr, col, seed, num_neighbors);
+    return sample<false, false, true, false>(rowptr, col, seed, count, time);
   if (!replace && !directed && !disjoint && return_edge_id)
-    return sample<false, false, false, true>(rowptr, col, seed, num_neighbors);
+    return sample<false, false, false, true>(rowptr, col, seed, count, time);
   if (!replace && !directed && !disjoint && !return_edge_id)
-    return sample<false, false, false, false>(rowptr, col, seed, num_neighbors);
+    return sample<false, false, false, false>(rowptr, col, seed, count, time);
 }
 
 }  // namespace
