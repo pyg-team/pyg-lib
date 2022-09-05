@@ -32,9 +32,8 @@ class NeighborSampler {
     if (count == 0)
       return;
 
-    const auto offset = rowptr_offset(rowptr_, global_src_node);
-    const auto row_start = std::get<0>(offset);
-    const auto row_end = std::get<1>(offset);
+    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     const auto population = row_end - row_start;
 
     if (population == 0)
@@ -84,9 +83,8 @@ class NeighborSampler {
     if (count == 0)
       return;
 
-    const auto offset = rowptr_offset(rowptr_, global_src_node);
-    const auto row_start = std::get<0>(offset);
-    const auto row_end = std::get<1>(offset);
+    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     const auto population = row_end - row_start;
 
     if (population == 0)
@@ -152,21 +150,14 @@ class NeighborSampler {
   }
 
  private:
-  inline std::pair<scalar_t, scalar_t> rowptr_offset(const scalar_t* rowptr,
-                                                     const scalar_t& node) {
-    return {rowptr[node], rowptr[node + 1]};
-  }
-
-  inline std::pair<scalar_t, scalar_t> rowptr_offset(
-      const scalar_t* rowptr,
-      const std::pair<scalar_t, scalar_t>& node) {
-    return {rowptr[std::get<1>(node)], rowptr[std::get<1>(node) + 1]};
+  inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
+  inline scalar_t to_scalar_t(const std::pair<scalar_t, scalar_t>& node) {
+    return std::get<1>(node);
   }
 
   inline scalar_t to_node_t(const scalar_t& node, const scalar_t& ref) {
     return node;
   }
-
   inline std::pair<scalar_t, scalar_t> to_node_t(
       const scalar_t& node,
       const std::pair<scalar_t, scalar_t>& ref) {
