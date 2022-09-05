@@ -180,14 +180,7 @@ sample(const at::Tensor& rowptr,
       begin = end, end = sampled_nodes.size();
     }
 
-    if constexpr (!disjoint)
-      out_node_id = pyg::utils::from_vector(sampled_nodes);
-    else {
-      std::vector<scalar_t> sampled_node_values;
-      for (const node_t& v : sampled_nodes)
-        sampled_node_values.push_back(v.second);
-      out_node_id = pyg::utils::from_vector(sampled_node_values);
-    }
+    out_node_id = pyg::utils::from_vector(sampled_nodes);
 
     if (directed) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
