@@ -9,7 +9,7 @@ namespace sampler {
 
 // TODO Implement `Mapper` as an interface/abstract class to allow for other
 // implementations as well.
-template <typename scalar_t, typename node_t>
+template <typename node_t, typename scalar_t>
 class Mapper {
  public:
   Mapper(size_t num_nodes, size_t num_entries)
