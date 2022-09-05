@@ -1,4 +1,5 @@
 import argparse
+import ast
 import time
 
 import torch
@@ -17,9 +18,11 @@ argparser = argparse.ArgumentParser('Neighbor Sampler benchmark')
 argparser.add_argument('--batch-sizes', nargs='+',
                        default=[512, 1024, 2048, 4096, 8192], type=int)
 argparser.add_argument('--num_neighbors', default=[[-1], [15, 10, 5],
-                                                   [20, 15, 10]], type=int)
+                                                   [20, 15, 10]],
+                       type=ast.literal_eval)
 argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--directed', action='store_true')
+argparser.add_argument('--shuffle', action='store_true')
 
 args = argparser.parse_args()
 
@@ -33,10 +36,9 @@ def test_neighbor(dataset, **kwargs):
         for batch_size in args.batch_sizes:
             # pyg-lib neighbor sampler
             start = time.perf_counter()
-            for node in tqdm(range(0, num_nodes, batch_size)):
-                last_seed_node = node + batch_size \
-                            if node + batch_size < num_nodes else num_nodes
-                seed = torch.arange(node, last_seed_node)
+            nodes_ids = torch.randperm(
+                num_nodes) if args.shuffle else torch.arange(0, num_nodes)
+            for seed in tqdm(nodes_ids.split(batch_size)):
                 pyg_lib.sampler.neighbor_sample(rowptr, col, seed,
                                                 num_neighbors, args.replace,
                                                 args.directed, disjoint=False,
@@ -50,10 +52,7 @@ def test_neighbor(dataset, **kwargs):
 
             # pytorch-sparse neighbor sampler
             start = time.perf_counter()
-            for node in tqdm(range(0, num_nodes, batch_size)):
-                last_seed_node = node + batch_size \
-                            if node + batch_size < num_nodes else num_nodes
-                seed = torch.arange(node, last_seed_node)
+            for seed in tqdm(nodes_ids.split(batch_size)):
                 torch.ops.torch_sparse.neighbor_sample(rowptr, col, seed,
                                                        num_neighbors,
                                                        args.replace,
