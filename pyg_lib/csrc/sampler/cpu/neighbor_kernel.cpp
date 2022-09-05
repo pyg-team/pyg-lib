@@ -73,6 +73,15 @@ class NeighborSampler {
     }
   }
 
+  void temporal_sample(const node_t global_src_node,
+                       const scalar_t local_src_node,
+                       const size_t count,
+                       const scalar_t seed_time,
+                       const scalar_t* time,
+                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                       pyg::random::RandintEngine<scalar_t>& generator,
+                       std::vector<node_t>& out_global_dst_nodes) {}
+
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
   get_sampled_edges() {
     TORCH_CHECK(save_edges, "No edges have been stored")
@@ -142,7 +151,7 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
        const c10::optional<at::Tensor>& time) {
-  TORCH_CHECK(time.has_value() && !disjoint,
+  TORCH_CHECK(!time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
   at::Tensor out_row, out_col, out_node_id;
@@ -176,10 +185,25 @@ sample(const at::Tensor& rowptr,
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
 
-      for (size_t i = begin; i < end; ++i) {
-        sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                               /*local_src_node=*/i, count, mapper, generator,
-                               /*out_global_dst_nodes=*/sampled_nodes);
+      if (!time.has_value()) {
+        for (size_t i = begin; i < end; ++i) {
+          sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
+                                 /*local_src_node=*/i, count, mapper, generator,
+                                 /*out_global_dst_nodes=*/sampled_nodes);
+        }
+      } else {  // Temporal sampling ...
+        if constexpr (!std::is_scalar<node_t>::value) {
+          // ... requires disjoint sampling:
+          const auto time_data = time.value().data_ptr<scalar_t>();
+          for (size_t i = begin; i < end; ++i) {
+            const auto seed_node = seed_data[std::get<0>(sampled_nodes[i])];
+            const auto seed_time = time_data[seed_node];
+            sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
+                                    /*local_src_node=*/i, count, seed_time,
+                                    time_data, mapper, generator,
+                                    /*out_global_dst_nodes=*/sampled_nodes);
+          }
+        }
       }
       begin = end, end = sampled_nodes.size();
     }
