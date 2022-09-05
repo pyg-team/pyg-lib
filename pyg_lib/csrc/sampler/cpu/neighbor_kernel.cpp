@@ -51,7 +51,7 @@ class NeighborSampler {
     // Case 2: Sample with replacement:
     else if (replace) {
       for (size_t i = 0; i < count; ++i) {
-        auto edge_id = generator(row_start, row_end);
+        const auto edge_id = generator(row_start, row_end);
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
       }
@@ -66,7 +66,7 @@ class NeighborSampler {
           rnd = i;
           rnd_indices.insert(i);
         }
-        auto edge_id = row_start + rnd;
+        const auto edge_id = row_start + rnd;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
       }
@@ -107,7 +107,7 @@ class NeighborSampler {
     return {std::get<0>(ref), node};
   }
 
-  inline void add(scalar_t& edge_id,
+  inline void add(const scalar_t& edge_id,
                   const node_t& global_src_node,
                   const scalar_t& local_src_node,
                   pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
@@ -144,60 +144,57 @@ sample(const at::Tensor& rowptr,
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
-  typedef int64_t scalar_t;
+  AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
+    typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
+    typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
 
-  /* AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
-   */
-  typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
-  typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
+    pyg::random::RandintEngine<scalar_t> generator;
 
-  pyg::random::RandintEngine<scalar_t> generator;
+    auto mapper = Mapper<node_t, scalar_t>(/*num_nodes=*/rowptr.size(0) - 1);
+    std::vector<node_t> sampled_nodes;
+    auto sampler =
+        NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>(
+            rowptr.data_ptr<scalar_t>(), col.data_ptr<scalar_t>());
 
-  auto mapper = Mapper<node_t, scalar_t>(/*num_nodes=*/rowptr.size(0) - 1);
-  std::vector<node_t> sampled_nodes;
-  auto sampler =
-      NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>(
-          rowptr.data_ptr<scalar_t>(), col.data_ptr<scalar_t>());
+    const auto seed_data = seed.data_ptr<scalar_t>();
+    for (size_t i = 0; i < seed.numel(); i++) {
+      if constexpr (!disjoint) {
+        mapper.insert(seed_data[i]);
+        sampled_nodes.push_back(seed_data[i]);
+      } else {
+        mapper.insert({i, seed_data[i]});
+        sampled_nodes.push_back({i, seed_data[i]});
+      }
+    }
 
-  const auto seed_data = seed.data_ptr<scalar_t>();
-  for (size_t i = 0; i < seed.numel(); i++) {
-    if constexpr (!disjoint) {
-      mapper.insert(seed_data[i]);
-      sampled_nodes.push_back(seed_data[i]);
+    size_t begin = 0, end = seed.size(0);
+    for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
+      const auto count = num_neighbors[ell];
+
+      for (size_t i = begin; i < end; ++i) {
+        sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
+                               /*local_src_node=*/i, count, mapper, generator,
+                               /*out_global_dst_nodes=*/sampled_nodes);
+      }
+      begin = end, end = sampled_nodes.size();
+    }
+
+    if constexpr (!disjoint)
+      out_node_id = pyg::utils::from_vector(sampled_nodes);
+    else {
+      std::vector<scalar_t> sampled_node_values(sampled_nodes.size());
+      for (const node_t& v : sampled_nodes)
+        sampled_node_values.push_back(v.second);
+      out_node_id = pyg::utils::from_vector(sampled_node_values);
+    }
+
+    if (directed) {
+      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
     } else {
-      mapper.insert({i, seed_data[i]});
-      sampled_nodes.push_back({i, seed_data[i]});
+      std::tie(out_row, out_col, out_edge_id) =
+          pyg::sampler::subgraph(rowptr, col, out_node_id, return_edge_id);
     }
-  }
-
-  size_t begin = 0, end = seed.size(0);
-  for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-    const auto count = num_neighbors[ell];
-
-    for (size_t i = begin; i < end; ++i) {
-      sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                             /*local_src_node=*/i, count, mapper, generator,
-                             /*out_global_dst_nodes=*/sampled_nodes);
-    }
-    begin = end, end = sampled_nodes.size();
-  }
-
-  if constexpr (!disjoint)
-    out_node_id = pyg::utils::from_vector(sampled_nodes);
-  else {
-    std::vector<scalar_t> sampled_node_values(sampled_nodes.size());
-    for (const node_t& v : sampled_nodes)
-      sampled_node_values.push_back(v.second);
-    out_node_id = pyg::utils::from_vector(sampled_node_values);
-  }
-
-  if (directed) {
-    std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
-  } else {
-    std::tie(out_row, out_col, out_edge_id) =
-        pyg::sampler::subgraph(rowptr, col, out_node_id, return_edge_id);
-  }
-  /* }); */
+  });
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
 }
 
