@@ -5,12 +5,102 @@
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
+#include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 
 namespace pyg {
 namespace sampler {
 
 namespace {
+
+template <typename scalar_t, bool replace, bool save_edges, bool save_edge_ids>
+class NeighborSampler {
+ public:
+  NeighborSampler(const scalar_t* rowptr, const scalar_t* col)
+      : rowptr_(rowptr), col_(col) {}
+
+  void uniform_sample(const scalar_t global_src_node,
+                      const scalar_t local_src_node,
+                      const size_t count,
+                      pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                      pyg::random::RandintEngine<scalar_t>& generator,
+                      std::vector<scalar_t>& out_global_dst_nodes) {
+    if (count == 0)
+      return;
+
+    const auto row_start = rowptr_[global_src_node];
+    const auto row_end = rowptr_[global_src_node + 1];
+    const auto population = row_end - row_start;
+
+    if (population == 0)
+      return;
+
+    // Case 1: Sample the full neighborhood:
+    if (count < 0 || (!replace && count >= population)) {
+      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+
+    // Case 2: Sample with replacement:
+    else if (replace) {
+      for (size_t i = 0; i < count; ++i) {
+        const auto edge_id = generator(row_start, row_end);
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+
+    // Case 3: Sample without replacement:
+    else {
+      std::unordered_set<scalar_t> rnd_indices;
+      for (size_t i = population - count; i < population; ++i) {
+        auto rnd = generator(0, i + 1);
+        if (!rnd_indices.insert(rnd).second) {
+          rnd = i;
+          rnd_indices.insert(i);
+        }
+        const auto edge_id = row_start + rnd;
+        add(edge_id, local_src_node, dst_mapper, out_global_dst_nodes);
+      }
+    }
+  }
+
+  std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+  get_sampled_edges() {
+    TORCH_CHECK(save_edges, "No edges have been stored")
+    const auto row = pyg::utils::from_vector(sampled_rows_);
+    const auto col = pyg::utils::from_vector(sampled_cols_);
+    c10::optional<at::Tensor> edge_id = c10::nullopt;
+    if (save_edge_ids)
+      edge_id = pyg::utils::from_vector(sampled_edge_ids_);
+    return std::make_tuple(row, col, edge_id);
+  }
+
+ private:
+  inline void add(const scalar_t edge_id,
+                  const scalar_t local_src_node,
+                  pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                  std::vector<scalar_t>& out_global_dst_nodes) {
+    const auto global_dst_node = col_[edge_id];
+    const auto res = dst_mapper.insert(global_dst_node);
+    if (res.second) {  // not yet sampled.
+      out_global_dst_nodes.push_back(global_dst_node);
+    }
+    if (save_edges) {
+      sampled_rows_.push_back(local_src_node);
+      sampled_cols_.push_back(res.first);
+      if (save_edge_ids) {
+        sampled_edge_ids_.push_back(edge_id);
+      }
+    }
+  }
+
+  const scalar_t* rowptr_;
+  const scalar_t* col_;
+  std::vector<scalar_t> sampled_rows_;
+  std::vector<scalar_t> sampled_cols_;
+  std::vector<scalar_t> sampled_edge_ids_;
+};
 
 template <bool replace, bool directed, bool return_edge_id>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
@@ -22,114 +112,41 @@ sample(const at::Tensor& rowptr,
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
-    const auto num_nodes = rowptr.size(0) - 1;
+    pyg::random::RandintEngine<scalar_t> generator;
 
-    const auto* rowptr_data = rowptr.data_ptr<scalar_t>();
-    const auto* col_data = col.data_ptr<scalar_t>();
-    const auto* seed_data = seed.data_ptr<scalar_t>();
-
-    pyg::random::RandintEngine<scalar_t> eng;
-
-    // Initialize some data structures for the sampling process:
-    std::vector<scalar_t> rows, cols, samples, edges;
     // TODO (matthias) Approximate number of sampled entries for mapper.
+    const auto num_nodes = rowptr.size(0) - 1;
     auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, seed.size(0));
+    mapper.fill(seed);
 
-    for (size_t i = 0; i < seed.numel(); i++) {
-      samples.push_back(seed_data[i]);
-      mapper.insert(seed_data[i]);
-    }
+    auto sampler = NeighborSampler<scalar_t, replace, directed, return_edge_id>(
+        rowptr.data_ptr<scalar_t>(), col.data_ptr<scalar_t>());
 
-    size_t begin = 0, end = samples.size();
+    std::vector<scalar_t> sampled_nodes;
+    const auto* seed_data = seed.data_ptr<scalar_t>();
+    for (size_t i = 0; i < seed.numel(); i++)
+      sampled_nodes.push_back(seed_data[i]);
+
+    size_t begin = 0, end = seed.size(0);
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-      const auto num_samples = num_neighbors[ell];
+      const auto count = num_neighbors[ell];
 
-      for (size_t i = begin; i < end; i++) {
-        const auto v = samples[i];
-        const auto row_start = rowptr_data[v];
-        const auto row_end = rowptr_data[v + 1];
-        const auto row_count = row_end - row_start;
-
-        if (row_count == 0)
-          continue;
-
-        if ((num_samples < 0) || (!replace && (num_samples >= row_count))) {
-          for (scalar_t e = row_start; e < row_end; ++e) {
-            const auto w = col_data[e];
-            const auto res = mapper.insert(w);
-            if (res.second)
-              samples.push_back(w);
-            if (directed) {
-              rows.push_back(i);
-              cols.push_back(res.first);
-              if (return_edge_id)
-                edges.push_back(e);
-            }
-          }
-        } else if (replace) {
-          for (size_t j = 0; j < num_samples; ++j) {
-            const scalar_t e = eng(row_start, row_end);
-            const auto w = col_data[e];
-            const auto res = mapper.insert(w);
-            if (res.second)
-              samples.push_back(w);
-            if (directed) {
-              rows.push_back(i);
-              cols.push_back(res.first);
-              if (return_edge_id)
-                edges.push_back(e);
-            }
-          }
-        } else {
-          std::unordered_set<scalar_t> rnd_indices;
-          for (scalar_t j = row_count - num_samples; j < row_count; ++j) {
-            scalar_t rnd = eng(0, j + 1);
-            if (!rnd_indices.insert(rnd).second) {
-              rnd = j;
-              rnd_indices.insert(j);
-            }
-            const scalar_t e = row_start + rnd;
-            const auto w = col_data[e];
-            const auto res = mapper.insert(w);
-            if (res.second)
-              samples.push_back(w);
-            if (directed) {
-              rows.push_back(i);
-              cols.push_back(res.first);
-              if (return_edge_id)
-                edges.push_back(e);
-            }
-          }
-        }
+      for (size_t i = begin; i < end; ++i) {
+        sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
+                               /*local_src_node=*/i, count, mapper, generator,
+                               /*out_global_dst_nodes=*/sampled_nodes);
       }
-      begin = end, end = samples.size();
+      begin = end, end = sampled_nodes.size();
     }
+    out_node_id = pyg::utils::from_vector(sampled_nodes);
 
-    if (!directed) {
-      // TODO (matthias) Use pyg::sampler::subgraph() for this.
-      for (size_t i = 0; i < samples.size(); ++i) {
-        const auto v = samples[i];
-        const auto row_start = rowptr_data[v];
-        const auto row_end = rowptr_data[v + 1];
-        for (scalar_t e = row_start; e < row_end; ++e) {
-          const auto local_node = mapper.map(col_data[v]);
-          if (local_node != -1) {
-            rows.push_back(i);
-            cols.push_back(local_node);
-            if (return_edge_id)
-              edges.push_back(e);
-          }
-        }
-      }
+    if (directed) {
+      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
+    } else {
+      std::tie(out_row, out_col, out_edge_id) =
+          pyg::sampler::subgraph(rowptr, col, out_node_id, return_edge_id);
     }
-
-    out_row = pyg::utils::from_vector(rows);
-    out_col = pyg::utils::from_vector(cols);
-    out_node_id = pyg::utils::from_vector(samples);
-    if (return_edge_id)
-      out_edge_id = pyg::utils::from_vector(edges);
   });
-
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
 }
 
