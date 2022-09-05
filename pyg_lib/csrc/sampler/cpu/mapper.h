@@ -50,6 +50,10 @@ class Mapper {
       insert(nodes[i]);
   }
 
+  void fill(const at::Tensor& nodes) {
+    fill(nodes.data_ptr<node_t>(), nodes.numel());
+  }
+
   bool exists(const node_t& node) {
     if (use_vec)
       return to_local_vec[node] >= 0;
