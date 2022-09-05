@@ -19,18 +19,18 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
 
-  const auto num_nodes = rowptr.size(0) - 1;
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
   at::Tensor out_col;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
-    auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, nodes.size(0));
-    mapper.fill(nodes);
-
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();
     const auto col_data = col.data_ptr<scalar_t>();
     const auto nodes_data = nodes.data_ptr<scalar_t>();
+
+    auto mapper = pyg::sampler::Mapper<scalar_t, scalar_t>(rowptr.size(0) - 1,
+                                                           nodes.size(0));
+    mapper.fill(nodes);
 
     // We first iterate over all nodes and collect information about the number
     // of edges in the induced subgraph.

@@ -9,10 +9,10 @@ namespace sampler {
 
 // TODO Implement `Mapper` as an interface/abstract class to allow for other
 // implementations as well.
-template <typename scalar_t>
+template <typename node_t, typename scalar_t>
 class Mapper {
  public:
-  Mapper(scalar_t num_nodes, scalar_t num_entries)
+  Mapper(size_t num_nodes, size_t num_entries)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // We use some simple heuristic to determine whether we can use a vector
     // to perform the mapping instead of relying on the more memory-friendly,
@@ -21,11 +21,15 @@ class Mapper {
     // expected that we sample a large amount of nodes.
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
+    // We can only utilize vector mappings in case entries are scalar:
+    if (std::is_scalar<node_t>::value)
+      use_vec = false;
+
     if (use_vec)
       to_local_vec = std::vector<scalar_t>(num_nodes, -1);
   }
 
-  std::pair<scalar_t, bool> insert(const scalar_t& node) {
+  std::pair<scalar_t, bool> insert(const node_t& node) {
     std::pair<scalar_t, bool> res;
     if (use_vec) {
       auto old = to_local_vec[node];
@@ -41,23 +45,23 @@ class Mapper {
     return res;
   }
 
-  void fill(const scalar_t* nodes_data, const scalar_t size) {
+  void fill(const node_t* nodes, const size_t size) {
     for (size_t i = 0; i < size; ++i)
-      insert(nodes_data[i]);
+      insert(nodes[i]);
   }
 
   void fill(const at::Tensor& nodes) {
-    fill(nodes.data_ptr<scalar_t>(), nodes.numel());
+    fill(nodes.data_ptr<node_t>(), nodes.numel());
   }
 
-  bool exists(const scalar_t& node) {
+  bool exists(const node_t& node) {
     if (use_vec)
       return to_local_vec[node] >= 0;
     else
       return to_local_map.count(node) > 0;
   }
 
-  scalar_t map(const scalar_t& node) {
+  scalar_t map(const node_t& node) {
     if (use_vec)
       return to_local_vec[node];
     else {
@@ -67,11 +71,11 @@ class Mapper {
   }
 
  private:
-  scalar_t num_nodes, num_entries, curr = 0;
+  size_t num_nodes, num_entries, curr = 0;
 
   bool use_vec;
   std::vector<scalar_t> to_local_vec;
-  phmap::flat_hash_map<scalar_t, scalar_t> to_local_map;
+  phmap::flat_hash_map<node_t, scalar_t> to_local_map;
 };
 
 }  // namespace sampler

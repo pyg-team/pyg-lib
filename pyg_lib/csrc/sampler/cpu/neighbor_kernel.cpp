@@ -22,7 +22,7 @@ class NeighborSampler {
   void uniform_sample(const scalar_t global_src_node,
                       const scalar_t local_src_node,
                       const size_t count,
-                      pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                      pyg::sampler::Mapper<scalar_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
                       std::vector<scalar_t>& out_global_dst_nodes) {
     if (count == 0)
@@ -79,7 +79,7 @@ class NeighborSampler {
  private:
   inline void add(const scalar_t edge_id,
                   const scalar_t local_src_node,
-                  pyg::sampler::Mapper<scalar_t>& dst_mapper,
+                  pyg::sampler::Mapper<scalar_t, scalar_t>& dst_mapper,
                   std::vector<scalar_t>& out_global_dst_nodes) {
     const auto global_dst_node = col_[edge_id];
     const auto res = dst_mapper.insert(global_dst_node);
@@ -112,20 +112,21 @@ sample(const at::Tensor& rowptr,
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
-    pyg::random::RandintEngine<scalar_t> generator;
+    const auto* seed_data = seed.data_ptr<scalar_t>();
 
+    pyg::random::RandintEngine<scalar_t> generator;
+    std::vector<scalar_t> sampled_nodes;
     // TODO (matthias) Approximate number of sampled entries for mapper.
-    const auto num_nodes = rowptr.size(0) - 1;
-    auto mapper = pyg::sampler::Mapper<scalar_t>(num_nodes, seed.size(0));
-    mapper.fill(seed);
+    auto mapper = pyg::sampler::Mapper<scalar_t, scalar_t>(rowptr.size(0) - 1,
+                                                           seed.size(0));
+
+    for (size_t i = 0; i < seed.numel(); i++) {
+      mapper.insert(seed_data[i]);
+      sampled_nodes.push_back(seed_data[i]);
+    }
 
     auto sampler = NeighborSampler<scalar_t, replace, directed, return_edge_id>(
         rowptr.data_ptr<scalar_t>(), col.data_ptr<scalar_t>());
-
-    std::vector<scalar_t> sampled_nodes;
-    const auto* seed_data = seed.data_ptr<scalar_t>();
-    for (size_t i = 0; i < seed.numel(); i++)
-      sampled_nodes.push_back(seed_data[i]);
 
     size_t begin = 0, end = seed.size(0);
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
