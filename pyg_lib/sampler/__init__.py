@@ -72,7 +72,7 @@ def hetero_neighbor_sample(
 
     .. note ::
         Similar to :meth:`neighbor_sample`, but expects a dictionary of node
-        types (:obj:`str`) and  edge tpyes (:obj:`Tuple[str, str, str]`) for
+        types (:obj:`str`) and  edge types (:obj:`Tuple[str, str, str]`) for
         each non-boolean argument.
 
     Args:
