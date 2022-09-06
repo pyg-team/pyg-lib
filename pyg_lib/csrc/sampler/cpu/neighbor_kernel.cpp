@@ -11,7 +11,9 @@ namespace sampler {
 
 namespace {
 
-// `node_t` is either a scalar or a pair of scalars of (example_id, node_id):
+// Helper classes for bipartite neighbor sampling //////////////////////////////
+
+// `node_t` is either a scalar or a pair of scalars (example_id, node_id):
 template <typename node_t,
           typename scalar_t,
           bool replace,
@@ -191,6 +193,8 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_edge_ids_;
 };
 
+// Homogeneous neighbor sampling ///////////////////////////////////////////////
+
 template <bool replace, bool directed, bool disjoint, bool return_edge_id>
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 sample(const at::Tensor& rowptr,
@@ -312,11 +316,34 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
     return sample<false, false, false, false>(rowptr, col, seed, count, time);
 }
 
+// Heterogeneous neighbor sampling ////////////////////////////////////////////
+
+std::tuple<c10::Dict<rel_t, at::Tensor>,
+           c10::Dict<rel_t, at::Tensor>,
+           c10::Dict<node_t, at::Tensor>,
+           c10::optional<c10::Dict<rel_t, at::Tensor>>>
+hetero_neighbor_sample_kernel(
+    const std::vector<node_t>& node_types,
+    const std::vector<edge_t>& edge_types,
+    const c10::Dict<rel_t, at::Tensor>& rowptr_dict,
+    const c10::Dict<rel_t, at::Tensor>& col_dict,
+    const c10::Dict<node_t, at::Tensor>& seed_dict,
+    const c10::Dict<rel_t, std::vector<int64_t>>& num_neighbors_dict,
+    const c10::optional<c10::Dict<node_t, at::Tensor>>& time_dict,
+    bool replace,
+    bool directed,
+    bool disjoint,
+    bool return_edge_id) {
+  return std::make_tuple(col_dict, col_dict, col_dict, col_dict);
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::neighbor_sample"),
          TORCH_FN(neighbor_sample_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::hetero_neighbor_sample"),
+         TORCH_FN(hetero_neighbor_sample_kernel));
 }
 
 }  // namespace sampler
