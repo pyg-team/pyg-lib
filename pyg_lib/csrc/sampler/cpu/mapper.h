@@ -12,7 +12,7 @@ namespace sampler {
 template <typename node_t, typename scalar_t>
 class Mapper {
  public:
-  Mapper(size_t num_nodes, size_t num_entries = -1)
+  Mapper(const size_t num_nodes, const size_t num_entries = -1)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // We use some simple heuristic to determine whether we can use a vector
     // to perform the mapping instead of relying on the more memory-friendly,
@@ -27,7 +27,7 @@ class Mapper {
     }
 
     if (use_vec) {
-      to_local_vec = std::vector<scalar_t>(num_nodes, -1);
+      to_local_vec.resize(num_nodes, -1);
     }
   }
 
@@ -78,7 +78,7 @@ class Mapper {
   }
 
  private:
-  size_t num_nodes, num_entries;
+  const size_t num_nodes, num_entries;
   scalar_t curr = 0;
 
   bool use_vec;

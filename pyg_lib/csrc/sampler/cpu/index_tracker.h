@@ -8,41 +8,43 @@ namespace pyg {
 namespace sampler {
 
 template <typename scalar_t>
-class IndicesTracker {
+class IndexTracker {
  public:
-  IndicesTracker(const scalar_t& size) : size(size) {
+  IndexTracker(const size_t size) : size(size) {
     // TODO: add better switching threshold value mechanism?
     use_vec = (size < 100000);
+
     if (use_vec)
-      rnd_indices_vec.resize(size, 0);
+      vec.resize(size, 0);
   }
 
-  bool tryInsert(const scalar_t& index) {
+  bool try_insert(const scalar_t& index) {
     if (use_vec) {
-      if (rnd_indices_vec[index] == 0) {
-        rnd_indices_vec[index] = 1;
+      if (vec[index] == 0) {
+        vec[index] = 1;
         return true;
       } else {
         return false;
       }
     } else {
-      return rnd_indices_set.insert(index).second;
+      return set.insert(index).second;
     }
   }
 
   void insert(const scalar_t& index) {
     if (use_vec) {
-      rnd_indices_vec[index] = 1;
+      vec[index] = 1;
     } else {
-      rnd_indices_set.insert(index);
+      set.insert(index);
     }
   }
 
  private:
-  const scalar_t& size;
+  const size_t size;
+
   bool use_vec;
-  std::vector<char> rnd_indices_vec;
-  phmap::flat_hash_set<scalar_t> rnd_indices_set;
+  std::vector<char> vec;
+  phmap::flat_hash_set<scalar_t> set;
 };
 
 }  // namespace sampler

@@ -2,7 +2,7 @@
 #include <torch/library.h>
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
-#include "pyg_lib/csrc/sampler/cpu/indices_tracker.h"
+#include "pyg_lib/csrc/sampler/cpu/index_tracker.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
@@ -61,12 +61,12 @@ class NeighborSampler {
 
     // Case 3: Sample without replacement:
     else {
-      auto indicesTracker = pyg::sampler::IndicesTracker<scalar_t>(population);
+      auto index_tracker = IndexTracker<scalar_t>(population);
       for (size_t i = population - count; i < population; ++i) {
         auto rnd = generator(0, i + 1);
-        if (!indicesTracker.tryInsert(rnd)) {
+        if (!index_tracker.try_insert(rnd)) {
           rnd = i;
-          indicesTracker.insert(i);
+          index_tracker.insert(i);
         }
         const auto edge_id = row_start + rnd;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
