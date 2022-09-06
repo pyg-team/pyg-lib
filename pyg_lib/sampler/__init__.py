@@ -79,6 +79,9 @@ def hetero_neighbor_sample(
         col (torch.Tensor): Target node indices.
         kwargs: Arguments of :meth:`neighbor_sample`.
     """
+    src_node_types = {k[0] for k in rowptr_dict.keys()}
+    dst_node_types = {k[-1] for k in rowptr_dict.keys()}
+    node_types = list(src_node_types | dst_node_types)
     edge_types = list(rowptr_dict.keys())
 
     TO_REL_TYPE = {key: '__'.join(key) for key in edge_types}
@@ -92,6 +95,8 @@ def hetero_neighbor_sample(
     }
 
     out = torch.ops.pyg.hetero_neighbor_sample(
+        node_types,
+        edge_types,
         rowptr_dict,
         col_dict,
         seed_dict,
