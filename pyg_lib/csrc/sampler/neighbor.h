@@ -2,10 +2,7 @@
 
 #include <ATen/ATen.h>
 #include "pyg_lib/csrc/macros.h"
-
-typedef std::string node_t;
-typedef std::tuple<std::string, std::string, std::string> edge_t;
-typedef std::string rel_t;
+#include "pyg_lib/csrc/utils/types.h"
 
 namespace pyg {
 namespace sampler {

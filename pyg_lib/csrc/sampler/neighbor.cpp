@@ -63,11 +63,11 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "disjoint, bool return_edge_id) -> (Tensor, Tensor, Tensor, Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
-      "edge_types, Dict[str, Tensor] rowptr_dict, Dict[str, Tensor] col_dict, "
-      "Dict[str, Tensor] seed_dict, Dict[str, int[]] num_neighbors_dict, "
-      "Dict[str, Tensor]? time_dict, bool replace, bool directed, bool "
-      "disjoint, bool return_edge_id) -> (Dict[str, Tensor], Dict[str, "
-      "Tensor], Dict[str, Tensor], Dict[str, Tensor]?)"));
+      "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
+      "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
+      "Dict(str, Tensor)? time_dict, bool replace, bool directed, bool "
+      "disjoint, bool return_edge_id) -> (Dict(str, Tensor), Dict(str, "
+      "Tensor), Dict(str, Tensor), Dict(str, Tensor)?)"));
 }
 
 }  // namespace sampler

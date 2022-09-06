@@ -5,6 +5,7 @@
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
+#include "pyg_lib/csrc/utils/types.h"
 
 namespace pyg {
 namespace sampler {
@@ -334,6 +335,7 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     bool return_edge_id) {
+  std::cout << "hetero_neighbor_sample_kernel" << std::endl;
   return std::make_tuple(col_dict, col_dict, col_dict, col_dict);
 }
 
