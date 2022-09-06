@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "pyg_lib/csrc/sampler/neighbor.h"
+#include "pyg_lib/csrc/utils/types.h"
 #include "test/csrc/graph.h"
 
 TEST(NeighborTest, BasicAssertions) {
@@ -25,7 +26,7 @@ TEST(NeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
-TEST(NeighborDisjointTest, BasicAssertions) {
+TEST(DisjointNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
@@ -47,4 +48,25 @@ TEST(NeighborDisjointTest, BasicAssertions) {
   auto expected_edges =
       at::tensor({4, 5, 6, 7, 2, 3, 6, 7, 4, 5, 8, 9}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
+TEST(HeteroNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  std::vector<node_t> node_types = {"paper"};
+  std::vector<edge_t> edge_types = {{"paper", "to", "paper"}};
+  c10::Dict<rel_t, at::Tensor> rowptr_dict;
+  rowptr_dict.insert("paper__to__paper", std::get<0>(graph));
+  c10::Dict<rel_t, at::Tensor> col_dict;
+  col_dict.insert("paper__to__paper", std::get<1>(graph));
+  c10::Dict<node_t, at::Tensor> seed_dict;
+  seed_dict.insert("paper", at::arange(2, 4, options));
+  std::vector<int64_t> num_neighbors = {2, 2};
+  c10::Dict<rel_t, std::vector<int64_t>> num_neighbors_dict;
+  num_neighbors_dict.insert("paper__to__paper", num_neighbors);
+
+  auto out = pyg::sampler::hetero_neighbor_sample(
+      node_types, edge_types, rowptr_dict, col_dict, seed_dict,
+      num_neighbors_dict);
 }
