@@ -55,6 +55,8 @@ if(BUILD_TEST)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
   endif()
   include(cmake/test.cmake)
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
