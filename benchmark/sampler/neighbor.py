@@ -47,7 +47,7 @@ def test_neighbor(dataset, **kwargs):
         for batch_size in args.batch_sizes:
             print(f'pyg-lib      (batch_size={batch_size}, '
                   f'num_neighbors={num_neighbors}):')
-            start = time.perf_counter()
+            t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)):
                 pyg_lib.sampler.neighbor_sample(
                     rowptr,
@@ -59,13 +59,12 @@ def test_neighbor(dataset, **kwargs):
                     disjoint=False,
                     return_edge_id=True,
                 )
-            stop = time.perf_counter()
-            print(f'time={stop-start:.3f} seconds')
+            print(f'time={time.perf_counter()-t:.3f} seconds')
             print('-------------------------')
 
             print(f'torch-sparse (batch_size={batch_size}, '
                   f'num_neighbors={num_neighbors}):')
-            start = time.perf_counter()
+            t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)):
                 torch.ops.torch_sparse.neighbor_sample(
                     rowptr,
@@ -75,8 +74,7 @@ def test_neighbor(dataset, **kwargs):
                     args.replace,
                     args.directed,
                 )
-            stop = time.perf_counter()
-            print(f'time={stop-start:.3f} seconds')
+            print(f'time={time.perf_counter()-t:.3f} seconds')
             print('-------------------------')
 
 
