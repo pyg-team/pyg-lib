@@ -4,6 +4,7 @@ import torch
 from torch import Tensor
 
 NodeType = str
+RelType = str
 EdgeType = Tuple[str, str, str]
 
 

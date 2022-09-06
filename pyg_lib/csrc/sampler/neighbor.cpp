@@ -49,7 +49,7 @@ hetero_neighbor_sample(
     bool return_edge_id) {
   // TODO (matthias) Add TensorArg definitions and type checks.
   static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::hetero_neighbor_sample", "")
+                       .findSchemaOrThrow("pyg::hetero_neighbor_sample_cpu", "")
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, time_dict, replace, directed, disjoint,

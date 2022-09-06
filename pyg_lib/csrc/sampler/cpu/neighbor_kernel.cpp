@@ -344,8 +344,12 @@ hetero_neighbor_sample_kernel(
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::neighbor_sample"),
          TORCH_FN(neighbor_sample_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::hetero_neighbor_sample"),
-         TORCH_FN(hetero_neighbor_sample_kernel));
+}
+
+TORCH_LIBRARY_FRAGMENT(pyg, m) {
+  // TODO (matthias) fix automatic dispatching
+  m.def(TORCH_SELECTIVE_NAME("pyg::hetero_neighbor_sample_cpu"),
+        TORCH_FN(hetero_neighbor_sample_kernel));
 }
 
 }  // namespace sampler
