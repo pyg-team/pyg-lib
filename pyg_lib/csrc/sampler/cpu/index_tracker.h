@@ -10,7 +10,7 @@ namespace sampler {
 template <typename scalar_t>
 class IndexTracker {
  public:
-  IndexTracker(const size_t size) : size(size) {
+  IndexTracker(const size_t& size) : size(size) {
     // TODO: add better switching threshold value mechanism?
     use_vec = (size < 100000);
 
@@ -40,7 +40,7 @@ class IndexTracker {
   }
 
  private:
-  const size_t size;
+  const size_t& size;
 
   bool use_vec;
   std::vector<char> vec;
