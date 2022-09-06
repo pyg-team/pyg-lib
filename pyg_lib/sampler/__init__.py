@@ -71,13 +71,11 @@ def hetero_neighbor_sample(
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
     .. note ::
-        Similar to :meth:`neighbor_sample`, but expects a dictionary of edge
-        tpyes (:obj:`Tuple[str, str, str]`) and node types (:obj:`str`) for
+        Similar to :meth:`neighbor_sample`, but expects a dictionary of node
+        types (:obj:`str`) and  edge tpyes (:obj:`Tuple[str, str, str]`) for
         each non-boolean argument.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
-        col (torch.Tensor): Target node indices.
         kwargs: Arguments of :meth:`neighbor_sample`.
     """
     src_node_types = {k[0] for k in rowptr_dict.keys()}
