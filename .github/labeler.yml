@@ -1,0 +1,17 @@
+documentation:
+  - docs/**/*
+
+benchmark:
+  - benchmark/**/*
+
+sampler:
+  - pyg_lib/csrc/random/**/*
+  - pyg_lib/csrc/sampler/**/*
+  - pyg_lib/sampler/**/*
+
+ops:
+  - pyg_lib/csrc/ops/**/*
+  - pyg_lib/ops/**/*
+
+utils:
+  - pyg_lib/csrc/utils/**/*
