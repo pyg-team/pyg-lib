@@ -31,11 +31,43 @@ neighbor_sample(const at::Tensor& rowptr,
                  disjoint, return_edge_id);
 }
 
+std::tuple<c10::Dict<rel_t, at::Tensor>,
+           c10::Dict<rel_t, at::Tensor>,
+           c10::Dict<node_t, at::Tensor>,
+           c10::optional<c10::Dict<rel_t, at::Tensor>>>
+hetero_neighbor_sample(
+    const std::vector<node_t>& node_types,
+    const std::vector<edge_t>& edge_types,
+    const c10::Dict<rel_t, at::Tensor>& rowptr_dict,
+    const c10::Dict<rel_t, at::Tensor>& col_dict,
+    const c10::Dict<node_t, at::Tensor>& seed_dict,
+    const c10::Dict<rel_t, std::vector<int64_t>>& num_neighbors_dict,
+    const c10::optional<c10::Dict<node_t, at::Tensor>>& time_dict,
+    bool replace,
+    bool directed,
+    bool disjoint,
+    bool return_edge_id) {
+  // TODO (matthias) Add TensorArg definitions and type checks.
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::hetero_neighbor_sample_cpu", "")
+                       .typed<decltype(hetero_neighbor_sample)>();
+  return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
+                 num_neighbors_dict, time_dict, replace, directed, disjoint,
+                 return_edge_id);
+}
+
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
       "num_neighbors, Tensor? time, bool replace, bool directed, bool "
       "disjoint, bool return_edge_id) -> (Tensor, Tensor, Tensor, Tensor?)"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
+      "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
+      "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
+      "Dict(str, Tensor)? time_dict, bool replace, bool directed, bool "
+      "disjoint, bool return_edge_id) -> (Dict(str, Tensor), Dict(str, "
+      "Tensor), Dict(str, Tensor), Dict(str, Tensor)?)"));
 }
 
 }  // namespace sampler
