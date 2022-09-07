@@ -2,17 +2,13 @@ import argparse
 import ast
 import time
 
+import dgl
 import torch
+import torch_sparse  # noqa
 from tqdm import tqdm
 
 import pyg_lib
 from pyg_lib.testing import withDataset, withSeed
-
-try:
-    import torch_sparse  # noqa
-    baseline_neighbor_sample = torch.ops.torch_sparse.neighbor_sample
-except ImportError:
-    baseline_neighbor_sample = None
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
@@ -37,6 +33,7 @@ args = argparser.parse_args()
 @withDataset('DIMACS10', 'citationCiteseer')
 def test_neighbor(dataset, **kwargs):
     (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
+    dgl_graph = dgl.graph(('csc', (rowptr, col, torch.arange(col.size(0)))))
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes)
@@ -45,8 +42,7 @@ def test_neighbor(dataset, **kwargs):
 
     for num_neighbors in args.num_neighbors:
         for batch_size in args.batch_sizes:
-            print(f'pyg-lib      (batch_size={batch_size}, '
-                  f'num_neighbors={num_neighbors}):')
+            print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
             t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)):
                 pyg_lib.sampler.neighbor_sample(
@@ -59,11 +55,8 @@ def test_neighbor(dataset, **kwargs):
                     disjoint=False,
                     return_edge_id=True,
                 )
-            print(f'time={time.perf_counter()-t:.3f} seconds')
-            print('-------------------------')
+            pyg_lib_duration = time.perf_counter() - t
 
-            print(f'torch-sparse (batch_size={batch_size}, '
-                  f'num_neighbors={num_neighbors}):')
             t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)):
                 torch.ops.torch_sparse.neighbor_sample(
@@ -74,8 +67,27 @@ def test_neighbor(dataset, **kwargs):
                     args.replace,
                     args.directed,
                 )
-            print(f'time={time.perf_counter()-t:.3f} seconds')
-            print('-------------------------')
+            torch_sparse_duration = time.perf_counter() - t
+
+            dgl_sampler = dgl.dataloading.NeighborSampler(
+                num_neighbors,
+                replace=args.replace,
+            )
+            dgl_loader = dgl.dataloading.DataLoader(
+                dgl_graph,
+                node_perm,
+                dgl_sampler,
+                batch_size=batch_size,
+            )
+            t = time.perf_counter()
+            for _ in tqdm(dgl_loader):
+                pass
+            dgl_duration = time.perf_counter() - t
+
+            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
+            print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
+            print(f'         dgl={dgl_duration:.3f} seconds')
+            print()
 
 
 if __name__ == '__main__':
