@@ -69,4 +69,14 @@ TEST(HeteroNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::hetero_neighbor_sample(
       node_types, edge_types, rowptr_dict, col_dict, seed_dict,
       num_neighbors_dict);
+
+  auto out_row_dict = std::get<0>(out);
+  auto out_col_dict = std::get<1>(out);
+  auto out_node_id_dict = std::get<2>(out);
+  auto out_edge_id_dict = std::get<3>(out).value();
+
+  std::cout << out_row_dict.at("paper__to__paper") << std::endl;
+  std::cout << out_col_dict.at("paper__to__paper") << std::endl;
+  std::cout << out_node_id_dict.at("paper") << std::endl;
+  std::cout << out_edge_id_dict.at("paper__to__paper") << std::endl;
 }
