@@ -16,7 +16,7 @@ def test_subgraph(dataset, **kwargs):
     t = time.perf_counter()
     for _ in range(10):
         pyg_lib.sampler.subgraph(rowptr, col, nodes)
-    print(time.perf_counter() - t)
+    print(f'time={time.perf_counter()-t:.6f} seconds')
 
     edge_index = to_edge_index(rowptr, col)
     from torch_geometric.utils import subgraph
@@ -24,7 +24,7 @@ def test_subgraph(dataset, **kwargs):
     t = time.perf_counter()
     for _ in range(10):
         subgraph(nodes, edge_index, num_nodes=num_nodes, relabel_nodes=True)
-    print(time.perf_counter() - t)
+    print(f'time={time.perf_counter()-t:.6f} seconds')
 
 
 if __name__ == '__main__':

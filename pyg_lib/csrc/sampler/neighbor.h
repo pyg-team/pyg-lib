@@ -2,11 +2,12 @@
 
 #include <ATen/ATen.h>
 #include "pyg_lib/csrc/macros.h"
+#include "pyg_lib/csrc/utils/types.h"
 
 namespace pyg {
 namespace sampler {
 
-// Recursively samples neighbors from all nodes indices in `seed`
+// Recursively samples neighbors from all node indices in `seed`
 // in the graph given by `(rowptr, col)`.
 // Returns: (row, col, node_id, edge_id)
 PYG_API
@@ -14,11 +15,34 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
-                const std::vector<int64_t> num_neighbors,
+                const std::vector<int64_t>& num_neighbors,
+                const c10::optional<at::Tensor>& time = c10::nullopt,
                 bool replace = false,
                 bool directed = true,
-                bool isolated = true,
+                bool disjoint = false,
                 bool return_edge_id = true);
+
+// Recursively samples neighbors from all node indices in `seed_dict`
+// in the heterogeneous graph given by `(rowptr_dict, col_dict)`.
+// Returns: (row_dict, col_dict, node_id_dict, edge_id_dict)
+PYG_API
+std::tuple<c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<node_type, at::Tensor>,
+           c10::optional<c10::Dict<rel_type, at::Tensor>>>
+hetero_neighbor_sample(
+    const std::vector<node_type>& node_types,
+    const std::vector<edge_type>& edge_types,
+    const c10::Dict<rel_type, at::Tensor>& rowptr_dict,
+    const c10::Dict<rel_type, at::Tensor>& col_dict,
+    const c10::Dict<node_type, at::Tensor>& seed_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict =
+        c10::nullopt,
+    bool replace = false,
+    bool directed = true,
+    bool disjoint = false,
+    bool return_edge_id = true);
 
 }  // namespace sampler
 }  // namespace pyg
