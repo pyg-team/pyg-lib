@@ -31,18 +31,18 @@ neighbor_sample(const at::Tensor& rowptr,
                  disjoint, return_edge_id);
 }
 
-std::tuple<c10::Dict<rel_t, at::Tensor>,
-           c10::Dict<rel_t, at::Tensor>,
-           c10::Dict<node_t, at::Tensor>,
-           c10::optional<c10::Dict<rel_t, at::Tensor>>>
+std::tuple<c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<node_type, at::Tensor>,
+           c10::optional<c10::Dict<rel_type, at::Tensor>>>
 hetero_neighbor_sample(
-    const std::vector<node_t>& node_types,
-    const std::vector<edge_t>& edge_types,
-    const c10::Dict<rel_t, at::Tensor>& rowptr_dict,
-    const c10::Dict<rel_t, at::Tensor>& col_dict,
-    const c10::Dict<node_t, at::Tensor>& seed_dict,
-    const c10::Dict<rel_t, std::vector<int64_t>>& num_neighbors_dict,
-    const c10::optional<c10::Dict<node_t, at::Tensor>>& time_dict,
+    const std::vector<node_type>& node_types,
+    const std::vector<edge_type>& edge_types,
+    const c10::Dict<rel_type, at::Tensor>& rowptr_dict,
+    const c10::Dict<rel_type, at::Tensor>& col_dict,
+    const c10::Dict<node_type, at::Tensor>& seed_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
     bool replace,
     bool directed,
     bool disjoint,

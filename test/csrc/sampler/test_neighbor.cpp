@@ -54,16 +54,16 @@ TEST(HeteroNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  std::vector<node_t> node_types = {"paper"};
-  std::vector<edge_t> edge_types = {{"paper", "to", "paper"}};
-  c10::Dict<rel_t, at::Tensor> rowptr_dict;
+  std::vector<node_type> node_types = {"paper"};
+  std::vector<edge_type> edge_types = {{"paper", "to", "paper"}};
+  c10::Dict<rel_type, at::Tensor> rowptr_dict;
   rowptr_dict.insert("paper__to__paper", std::get<0>(graph));
-  c10::Dict<rel_t, at::Tensor> col_dict;
+  c10::Dict<rel_type, at::Tensor> col_dict;
   col_dict.insert("paper__to__paper", std::get<1>(graph));
-  c10::Dict<node_t, at::Tensor> seed_dict;
+  c10::Dict<node_type, at::Tensor> seed_dict;
   seed_dict.insert("paper", at::arange(2, 4, options));
   std::vector<int64_t> num_neighbors = {2, 2};
-  c10::Dict<rel_t, std::vector<int64_t>> num_neighbors_dict;
+  c10::Dict<rel_type, std::vector<int64_t>> num_neighbors_dict;
   num_neighbors_dict.insert("paper__to__paper", num_neighbors);
 
   auto out = pyg::sampler::hetero_neighbor_sample(
