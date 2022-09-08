@@ -302,6 +302,7 @@ sample(const std::vector<node_type>& node_types,
   phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
   for (const auto& k : edge_types) {  // TODO: This is wrong for CSC?
     num_nodes_dict[std::get<0>(k)] = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
+    num_nodes_dict[std::get<0>(k)] = 20;
   }
 
   auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
@@ -321,6 +322,7 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& k : node_types) {
       sampled_nodes_dict[k];  // Initialize empty vector;
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
+      slice_dict[k] = {0, 0};
     }
     for (const auto& k : edge_types) {
       L = std::max(L, num_neighbors_dict.at(to_rel_type(k)).size());
@@ -352,7 +354,7 @@ sample(const std::vector<node_type>& node_types,
     for (size_t ell = 0; ell < L; ++ell) {
       for (const auto& k : edge_types) {
         const auto &src = std::get<0>(k), &dst = std::get<2>(k);
-        const auto& count = num_neighbors_dict.at(to_rel_type(k))[ell];
+        const auto count = num_neighbors_dict.at(to_rel_type(k))[ell];
         auto& src_sampled_nodes = sampled_nodes_dict.at(src);
         auto& dst_sampled_nodes = sampled_nodes_dict.at(dst);
         auto& dst_mapper = mapper_dict.at(dst);
