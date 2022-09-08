@@ -205,7 +205,8 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
-       const c10::optional<at::Tensor>& time) {
+       const c10::optional<at::Tensor>& time,
+       const bool csc) {
   TORCH_CHECK(!time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
@@ -262,12 +263,13 @@ sample(const at::Tensor& rowptr,
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
 
-    if (directed) {
+    if (directed && !csc) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
+    } else if (directed && csc) {
+      std::tie(out_col, out_row, out_edge_id) = sampler.get_sampled_edges();
     } else {
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
-      std::tie(out_row, out_col, out_edge_id) =
-          pyg::sampler::subgraph(rowptr, col, out_node_id, return_edge_id);
+      // TODO
     }
   });
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
@@ -286,7 +288,8 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<rel_type, at::Tensor>& col_dict,
        const c10::Dict<node_type, at::Tensor>& seed_dict,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
-       const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict) {
+       const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
+       const bool csc) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
@@ -300,9 +303,9 @@ sample(const std::vector<node_type>& node_types,
   }
 
   phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
-  for (const auto& k : edge_types) {  // TODO: This is wrong for CSC?
-    num_nodes_dict[std::get<0>(k)] = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
-    num_nodes_dict[std::get<0>(k)] = 20;
+  for (const auto& k : edge_types) {
+    const auto num_nodes = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
+    num_nodes_dict[!csc ? std::get<0>(k) : std::get<2>(k)] = num_nodes;
   }
 
   auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
@@ -353,7 +356,8 @@ sample(const std::vector<node_type>& node_types,
     size_t begin, end;
     for (size_t ell = 0; ell < L; ++ell) {
       for (const auto& k : edge_types) {
-        const auto &src = std::get<0>(k), &dst = std::get<2>(k);
+        const auto& src = !csc ? std::get<0>(k) : std::get<2>(k);
+        const auto& dst = !csc ? std::get<2>(k) : std::get<0>(k);
         const auto count = num_neighbors_dict.at(to_rel_type(k))[ell];
         auto& src_sampled_nodes = sampled_nodes_dict.at(src);
         auto& dst_sampled_nodes = sampled_nodes_dict.at(dst);
@@ -385,8 +389,13 @@ sample(const std::vector<node_type>& node_types,
     if (directed) {
       for (const auto& k : edge_types) {
         const auto edges = sampler_dict.at(k).get_sampled_edges();
-        out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
-        out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
+        if (!csc) {
+          out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
+          out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
+        } else {
+          out_col_dict.insert(to_rel_type(k), std::get<0>(edges));
+          out_row_dict.insert(to_rel_type(k), std::get<1>(edges));
+        }
         if (return_edge_id) {
           out_edge_id_dict.value().insert(to_rel_type(k),
                                           std::get<2>(edges).value());
@@ -399,7 +408,8 @@ sample(const std::vector<node_type>& node_types,
                          out_edge_id_dict);
 }
 
-// Dispatcher //////////////////////////////////////////////////////////////////
+// Dispatcher
+// //////////////////////////////////////////////////////////////////
 
 #define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, ...) \
   if (replace && directed && disjoint && return_edge_id)                  \
@@ -441,12 +451,13 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& seed,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
+                       bool csc,
                        bool replace,
                        bool directed,
                        bool disjoint,
                        bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
-                  seed, num_neighbors, time);
+                  seed, num_neighbors, time, csc);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -461,13 +472,14 @@ hetero_neighbor_sample_kernel(
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
+    bool csc,
     bool replace,
     bool directed,
     bool disjoint,
     bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict);
+                  num_neighbors_dict, time_dict, csc);
 }
 
 }  // namespace
