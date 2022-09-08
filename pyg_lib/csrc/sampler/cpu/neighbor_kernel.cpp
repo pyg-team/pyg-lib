@@ -98,8 +98,11 @@ class NeighborSampler {
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
       for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
-        if (time[col_[edge_id]] <= seed_time)
+        std::cout << "seed_time " << seed_time << " to " << time[col_[edge_id]]
+                  << std::endl;
+        if (time[col_[edge_id]] > seed_time)
           continue;
+        std::cout << "add" << std::endl;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
       }
@@ -113,7 +116,7 @@ class NeighborSampler {
         // `count` many random neighbors, and filter them based on temporal
         // constraints afterwards. Ideally, we only sample exactly `count`
         // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] <= seed_time)
+        if (time[col_[edge_id]] > seed_time)
           continue;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
@@ -134,7 +137,7 @@ class NeighborSampler {
         // `count` many random neighbors, and filter them based on temporal
         // constraints afterwards. Ideally, we only sample exactly `count`
         // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] <= seed_time)
+        if (time[col_[edge_id]] > seed_time)
           continue;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
@@ -268,6 +271,7 @@ sample(const at::Tensor& rowptr,
     } else if (directed && csc) {
       std::tie(out_col, out_row, out_edge_id) = sampler.get_sampled_edges();
     } else {
+      TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
       // TODO
     }
@@ -345,8 +349,8 @@ sample(const std::vector<node_type>& node_types,
         sampled_nodes_dict[kv.key()] = pyg::utils::to_vector<scalar_t>(seed);
         mapper_dict.at(kv.key()).fill(seed);
       } else {
-        auto sampled_nodes = sampled_nodes_dict.at(kv.key());
-        auto mapper = mapper_dict.at(kv.key());
+        auto& sampled_nodes = sampled_nodes_dict.at(kv.key());
+        auto& mapper = mapper_dict.at(kv.key());
         const auto seed_data = seed.data_ptr<scalar_t>();
         if (!time_dict.has_value()) {
           for (size_t j = 0; j < seed.numel(); j++) {
@@ -389,7 +393,9 @@ sample(const std::vector<node_type>& node_types,
           const at::Tensor& dst_time = time_dict.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<scalar_t>();
           for (size_t i = begin; i < end; ++i) {
+            std::cout << src << " " << dst << std::endl;
             const auto batch_idx = src_sampled_nodes[i].first;
+            std::cout << "batch " << batch_idx << std::endl;
             sampler.temporal_sample(/*global_src_node=*/src_sampled_nodes[i],
                                     /*local_src_node=*/i, count,
                                     seed_times[batch_idx], dst_time_data,
