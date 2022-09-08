@@ -322,6 +322,7 @@ sample(const std::vector<node_type>& node_types,
     phmap::flat_hash_map<node_type, Mapper<node_t, scalar_t>> mapper_dict;
     phmap::flat_hash_map<edge_type, NeighborSamplerImpl> sampler_dict;
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
+    std::vector<scalar_t> seed_times;
     for (const auto& k : node_types) {
       sampled_nodes_dict[k];  // Initialize empty vector;
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
@@ -335,6 +336,7 @@ sample(const std::vector<node_type>& node_types,
                   col_dict.at(to_rel_type(k)).data_ptr<scalar_t>())});
     }
 
+    scalar_t i = 0;
     for (const auto& kv : seed_dict) {
       const at::Tensor& seed = kv.value();
       slice_dict[kv.key()] = {0, seed.size(0)};
@@ -346,9 +348,21 @@ sample(const std::vector<node_type>& node_types,
         auto sampled_nodes = sampled_nodes_dict.at(kv.key());
         auto mapper = mapper_dict.at(kv.key());
         const auto seed_data = seed.data_ptr<scalar_t>();
-        for (size_t i = 0; i < seed.numel(); i++) {
-          sampled_nodes.push_back({i, seed_data[i]});
-          mapper.insert({i, seed_data[i]});
+        if (!time_dict.has_value()) {
+          for (size_t j = 0; j < seed.numel(); j++) {
+            sampled_nodes.push_back({i, seed_data[j]});
+            mapper.insert({i, seed_data[j]});
+            i++;
+          }
+        } else {
+          const at::Tensor& time = time_dict.value().at(kv.key());
+          const auto time_data = time.data_ptr<scalar_t>();
+          for (size_t j = 0; j < seed.numel(); j++) {
+            sampled_nodes.push_back({i, seed_data[j]});
+            mapper.insert({i, seed_data[j]});
+            seed_times.push_back(time_data[j]);
+            i++;
+          }
         }
       }
     }
@@ -365,13 +379,22 @@ sample(const std::vector<node_type>& node_types,
         auto& sampler = sampler_dict.at(k);
         std::tie(begin, end) = slice_dict.at(src);
 
-        if (!time_dict.has_value()) {
+        if (!time_dict.has_value() || !time_dict.value().contains(dst)) {
           for (size_t i = begin; i < end; ++i) {
             sampler.uniform_sample(/*global_src_node=*/src_sampled_nodes[i],
                                    /*local_src_node=*/i, count, dst_mapper,
                                    generator, dst_sampled_nodes);
           }
         } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
+          const at::Tensor& dst_time = time_dict.value().at(dst);
+          const auto dst_time_data = dst_time.data_ptr<scalar_t>();
+          for (size_t i = begin; i < end; ++i) {
+            const auto batch_idx = src_sampled_nodes[i].first;
+            sampler.temporal_sample(/*global_src_node=*/src_sampled_nodes[i],
+                                    /*local_src_node=*/i, count,
+                                    seed_times[batch_idx], dst_time_data,
+                                    dst_mapper, generator, dst_sampled_nodes);
+          }
         }
       }
       for (const auto& k : node_types) {
