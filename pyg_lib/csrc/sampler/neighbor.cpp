@@ -61,16 +61,16 @@ hetero_neighbor_sample(
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
-      "num_neighbors, Tensor? time, bool csc = False, bool replace = False, "
-      "bool directed = True, bool disjoint = False, bool return_edge_id = "
-      "True) -> (Tensor, Tensor, Tensor, Tensor?)"));
+      "num_neighbors, Tensor? time = None, bool csc = False, bool replace = "
+      "False, bool directed = True, bool disjoint = False, bool return_edge_id "
+      "= True) -> (Tensor, Tensor, Tensor, Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
       "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
-      "Dict(str, Tensor)? time_dict, bool csc = False, bool replace = False, "
-      "bool directed = True, bool disjoint = False, bool return_edge_id = "
-      "True) -> (Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor), "
+      "Dict(str, Tensor)? time_dict = None, bool csc = False, bool replace = "
+      "False, bool directed = True, bool disjoint = False, bool return_edge_id "
+      "= True) -> (Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor), "
       "Dict(str, Tensor)?)"));
 }
 

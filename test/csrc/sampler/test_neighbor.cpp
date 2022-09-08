@@ -36,7 +36,7 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
-      /*replace=*/false, /*directed=*/true, /*disjoint=*/true);
+      /*csc=*/false, /*replace=*/false, /*directed=*/true, /*disjoint=*/true);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
