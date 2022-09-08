@@ -143,7 +143,7 @@ class NeighborSampler {
   }
 
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
-  get_sampled_edges() {
+  get_sampled_edges(bool csc = false) {
     TORCH_CHECK(save_edges, "No edges have been stored")
     const auto row = pyg::utils::from_vector(sampled_rows_);
     const auto col = pyg::utils::from_vector(sampled_cols_);
@@ -151,7 +151,11 @@ class NeighborSampler {
     if (save_edge_ids) {
       edge_id = pyg::utils::from_vector(sampled_edge_ids_);
     }
-    return std::make_tuple(row, col, edge_id);
+    if (!csc) {
+      return std::make_tuple(row, col, edge_id);
+    } else {
+      return std::make_tuple(col, row, edge_id);
+    }
   }
 
  private:
@@ -263,10 +267,8 @@ sample(const at::Tensor& rowptr,
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
 
-    if (directed && !csc) {
-      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
-    } else if (directed && csc) {
-      std::tie(out_col, out_row, out_edge_id) = sampler.get_sampled_edges();
+    if (directed) {
+      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
     } else {
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
       // TODO
@@ -388,14 +390,9 @@ sample(const std::vector<node_type>& node_types,
     TORCH_CHECK(directed, "Undirected Heterogeneous graphs not yet supported");
     if (directed) {
       for (const auto& k : edge_types) {
-        const auto edges = sampler_dict.at(k).get_sampled_edges();
-        if (!csc) {
-          out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
-          out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
-        } else {
-          out_col_dict.insert(to_rel_type(k), std::get<0>(edges));
-          out_row_dict.insert(to_rel_type(k), std::get<1>(edges));
-        }
+        const auto edges = sampler_dict.at(k).get_sampled_edges(csc);
+        out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
+        out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
         if (return_edge_id) {
           out_edge_id_dict.value().insert(to_rel_type(k),
                                           std::get<2>(edges).value());
