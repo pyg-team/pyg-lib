@@ -98,11 +98,8 @@ class NeighborSampler {
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
       for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
-        std::cout << "seed_time " << seed_time << " to " << time[col_[edge_id]]
-                  << std::endl;
         if (time[col_[edge_id]] > seed_time)
           continue;
-        std::cout << "add" << std::endl;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
       }
@@ -266,14 +263,13 @@ sample(const at::Tensor& rowptr,
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
 
+    TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
     if (directed && !csc) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges();
     } else if (directed && csc) {
       std::tie(out_col, out_row, out_edge_id) = sampler.get_sampled_edges();
     } else {
-      TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
-      // TODO
     }
   });
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
@@ -393,9 +389,7 @@ sample(const std::vector<node_type>& node_types,
           const at::Tensor& dst_time = time_dict.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<scalar_t>();
           for (size_t i = begin; i < end; ++i) {
-            std::cout << src << " " << dst << std::endl;
             const auto batch_idx = src_sampled_nodes[i].first;
-            std::cout << "batch " << batch_idx << std::endl;
             sampler.temporal_sample(/*global_src_node=*/src_sampled_nodes[i],
                                     /*local_src_node=*/i, count,
                                     seed_times[batch_idx], dst_time_data,
@@ -414,7 +408,7 @@ sample(const std::vector<node_type>& node_types,
           k, pyg::utils::from_vector(sampled_nodes_dict.at(k)));
     }
 
-    TORCH_CHECK(directed, "Undirected Heterogeneous graphs not yet supported");
+    TORCH_CHECK(directed, "Undirected heterogeneous graphs not yet supported");
     if (directed) {
       for (const auto& k : edge_types) {
         const auto edges = sampler_dict.at(k).get_sampled_edges();
