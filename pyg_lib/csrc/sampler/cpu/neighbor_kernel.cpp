@@ -332,7 +332,7 @@ sample(const std::vector<node_type>& node_types,
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
     std::vector<scalar_t> seed_times;
     for (const auto& k : node_types) {
-      const size_t N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
+      const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes_dict[k];  // Initialize empty vector;
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
