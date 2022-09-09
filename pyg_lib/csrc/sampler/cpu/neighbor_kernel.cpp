@@ -304,7 +304,7 @@ sample(const std::vector<node_type>& node_types,
     out_edge_id_dict = c10::nullopt;
   }
 
-  auto scalar_type = seed_dict.begin()->value().scalar_type();
+  const auto scalar_type = seed_dict.begin()->value().scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
