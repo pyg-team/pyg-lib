@@ -335,7 +335,6 @@ sample(const std::vector<node_type>& node_types,
       }
       slice_dict[k] = {0, 0};
     }
-
     for (const auto& k : edge_types) {
       L = std::max(L, num_neighbors_dict.at(to_rel_type(k)).size());
       sampler_dict.insert(
