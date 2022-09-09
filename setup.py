@@ -41,6 +41,7 @@ class CMakeBuild(build_ext):
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
+            '-DBUILD_BENCHMARK=OFF',
             '-DUSE_PYTHON=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
