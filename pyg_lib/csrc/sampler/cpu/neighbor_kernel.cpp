@@ -309,8 +309,11 @@ sample(const std::vector<node_type>& node_types,
     const auto num_nodes = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
     num_nodes_dict[!csc ? std::get<0>(k) : std::get<2>(k)] = num_nodes;
   }
-
-  std::cout << "L313" << std::endl;
+  for (const auto& kv : seed_dict) {
+    if (num_nodes_dict.find(kv.key()) == num_nodes_dict.end()) {
+      num_nodes_dict[kv.key()] = kv.value().size(0);
+    }
+  }
 
   auto scalar_type = seed_dict.begin()->value().scalar_type();
   //auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
@@ -340,11 +343,6 @@ sample(const std::vector<node_type>& node_types,
       slice_dict[k] = {0, 0};
     }
 
-    std::cout << "num_neighbors_dict is " << std::endl;
-    for(const auto& kv : num_neighbors_dict) {
-      std::cout << kv.key() << std::endl;
-    }
-
     for (const auto& k : edge_types) {
       L = std::max(L, num_neighbors_dict.at(to_rel_type(k)).size());
       sampler_dict.insert(
@@ -352,7 +350,6 @@ sample(const std::vector<node_type>& node_types,
                   rowptr_dict.at(to_rel_type(k)).data_ptr<scalar_t>(),
                   col_dict.at(to_rel_type(k)).data_ptr<scalar_t>())});
     }
-    std::cout << "L is " << L << std::endl;
 
     scalar_t i = 0;
     for (const auto& kv : seed_dict) {
