@@ -316,7 +316,8 @@ sample(const std::vector<node_type>& node_types,
   }
 
   auto scalar_type = seed_dict.begin()->value().scalar_type();
-  //auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
+  // auto scalar_type =
+  // rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
