@@ -8,6 +8,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   wheel:
+    if: github.repository == 'pyg-team/pyg-lib'
     runs-on: ${{ matrix.os }}
 
     strategy:
