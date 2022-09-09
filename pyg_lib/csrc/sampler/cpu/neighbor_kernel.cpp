@@ -310,12 +310,17 @@ sample(const std::vector<node_type>& node_types,
     num_nodes_dict[!csc ? std::get<0>(k) : std::get<2>(k)] = num_nodes;
   }
 
-  auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
+  std::cout << "L313" << std::endl;
+
+  auto scalar_type = seed_dict.begin()->value().scalar_type();
+  //auto scalar_type = rowptr_dict.at(to_rel_type(edge_types[0])).scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
     typedef NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>
         NeighborSamplerImpl;
+
+    std::cout << "L322" << std::endl;
 
     pyg::random::RandintEngine<scalar_t> generator;
 
@@ -330,6 +335,12 @@ sample(const std::vector<node_type>& node_types,
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
       slice_dict[k] = {0, 0};
     }
+
+    std::cout << "num_neighbors_dict is " << std::endl;
+    for(const auto& kv : num_neighbors_dict) {
+      std::cout << kv.key() << std::endl;
+    }
+
     for (const auto& k : edge_types) {
       L = std::max(L, num_neighbors_dict.at(to_rel_type(k)).size());
       sampler_dict.insert(
@@ -337,6 +348,7 @@ sample(const std::vector<node_type>& node_types,
                   rowptr_dict.at(to_rel_type(k)).data_ptr<scalar_t>(),
                   col_dict.at(to_rel_type(k)).data_ptr<scalar_t>())});
     }
+    std::cout << "L is " << L << std::endl;
 
     scalar_t i = 0;
     for (const auto& kv : seed_dict) {
