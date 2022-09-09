@@ -327,9 +327,15 @@ sample(const std::vector<node_type>& node_types,
     std::vector<scalar_t> seed_times;
     for (const auto& k : node_types) {
       sampled_nodes_dict[k];  // Initialize empty vector;
-      mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
+      if (num_nodes_dict.find(k) != num_nodes_dict.end()) {
+        mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
+      }
+      else {
+        mapper_dict.insert({k, Mapper<node_t, scalar_t>(0)});
+      }
       slice_dict[k] = {0, 0};
     }
+
     for (const auto& k : edge_types) {
       L = std::max(L, num_neighbors_dict.at(to_rel_type(k)).size());
       sampler_dict.insert(
