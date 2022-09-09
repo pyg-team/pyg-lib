@@ -329,8 +329,7 @@ sample(const std::vector<node_type>& node_types,
       sampled_nodes_dict[k];  // Initialize empty vector;
       if (num_nodes_dict.find(k) != num_nodes_dict.end()) {
         mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
-      }
-      else {
+      } else {
         mapper_dict.insert({k, Mapper<node_t, scalar_t>(0)});
       }
       slice_dict[k] = {0, 0};
