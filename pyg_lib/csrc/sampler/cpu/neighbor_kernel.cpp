@@ -304,24 +304,26 @@ sample(const std::vector<node_type>& node_types,
     out_edge_id_dict = c10::nullopt;
   }
 
-  phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
-  for (const auto& k : edge_types) {
-    const auto num_nodes = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
-    num_nodes_dict[!csc ? std::get<0>(k) : std::get<2>(k)] = num_nodes;
-  }
-  for (const auto& kv : seed_dict) {
-    if (num_nodes_dict.find(kv.key()) == num_nodes_dict.end()) {
-      num_nodes_dict[kv.key()] = kv.value().size(0);
-    }
-  }
-
   auto scalar_type = seed_dict.begin()->value().scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
     typedef NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>
         NeighborSamplerImpl;
+
     pyg::random::RandintEngine<scalar_t> generator;
+
+    phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
+    for (const auto& k : edge_types) {
+      const auto num_nodes = rowptr_dict.at(to_rel_type(k)).size(0) - 1;
+      num_nodes_dict[!csc ? std::get<0>(k) : std::get<2>(k)] = num_nodes;
+    }
+    for (const auto& kv : seed_dict) {
+      const at::Tensor& seed = kv.value();
+      if (num_nodes_dict.count(kv.key()) == 0 && seed.numel() > 0) {
+        num_nodes_dict[kv.key()] = seed.max().data_ptr<scalar_t>()[0] + 1;
+      }
+    }
 
     size_t L = 0;  // num_layers.
     phmap::flat_hash_map<node_type, std::vector<node_t>> sampled_nodes_dict;
@@ -330,12 +332,9 @@ sample(const std::vector<node_type>& node_types,
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
     std::vector<scalar_t> seed_times;
     for (const auto& k : node_types) {
+      const size_t N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes_dict[k];  // Initialize empty vector;
-      if (num_nodes_dict.find(k) != num_nodes_dict.end()) {
-        mapper_dict.insert({k, Mapper<node_t, scalar_t>(num_nodes_dict.at(k))});
-      } else {
-        mapper_dict.insert({k, Mapper<node_t, scalar_t>(0)});
-      }
+      mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
     }
 
