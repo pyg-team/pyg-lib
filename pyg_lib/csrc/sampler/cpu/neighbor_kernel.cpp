@@ -214,6 +214,13 @@ sample(const at::Tensor& rowptr,
   TORCH_CHECK(!time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
+  TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr' vector");
+  TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col' vector");
+  TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed' vector");
+  if (time.has_value()) {
+    TORCH_CHECK(time.value().is_contiguous(), "Non-contiguous 'time' vector");
+  }
+
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
@@ -295,6 +302,25 @@ sample(const std::vector<node_type>& node_types,
   TORCH_CHECK(!time_dict.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
+  for (const auto& kv : rowptr_dict) {
+    const at::Tensor& rowptr = kv.value();
+    TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr' vector");
+  }
+  for (const auto& kv : col_dict) {
+    const at::Tensor& col = kv.value();
+    TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col' vector");
+  }
+  for (const auto& kv : seed_dict) {
+    const at::Tensor& seed = kv.value();
+    TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed' vector");
+  }
+  if (time_dict.has_value()) {
+    for (const auto& kv : time_dict.value()) {
+      const at::Tensor& time = kv.value();
+      TORCH_CHECK(time.is_contiguous(), "Non-contiguous 'time' vector");
+    }
+  }
+
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   c10::Dict<node_type, at::Tensor> out_node_id_dict;
   c10::optional<c10::Dict<node_type, at::Tensor>> out_edge_id_dict;
@@ -370,7 +396,7 @@ sample(const std::vector<node_type>& node_types,
           for (size_t j = 0; j < seed.numel(); j++) {
             sampled_nodes.push_back({i, seed_data[j]});
             mapper.insert({i, seed_data[j]});
-            seed_times.push_back(time_data[j]);
+            seed_times.push_back(time_data[seed_data[j]]);
             i++;
           }
         }
