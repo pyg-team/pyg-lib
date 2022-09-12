@@ -14,6 +14,7 @@ def neighbor_sample(
     seed: Tensor,
     num_neighbors: List[int],
     time: Optional[Tensor] = None,
+    csc: bool = False,
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
@@ -34,6 +35,8 @@ def neighbor_sample(
             guaranteed to fulfill temporal constraints, *i.e.* neighbors have
             an earlier timestamp than the seed node.
             Requires :obj:`disjoint=True`. (default: :obj:`None`)
+        csc (bool, optional): If set to :obj:`True`, assumes that the graph is
+            given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
             replacement. (default: :obj:`False`)
         directed (bool, optional): If set to :obj:`False`, will include all
@@ -51,8 +54,8 @@ def neighbor_sample(
         In addition, may return the indices of edges of the original graph.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         time, replace, directed, disjoint,
-                                         return_edge_id)
+                                         time, csc, replace, directed,
+                                         disjoint, return_edge_id)
 
 
 def hetero_neighbor_sample(
@@ -61,6 +64,7 @@ def hetero_neighbor_sample(
     seed_dict: Dict[NodeType, Tensor],
     num_neighbors_dict: Dict[EdgeType, List[int]],
     time_dict: Optional[Dict[NodeType, Tensor]] = None,
+    csc: bool = False,
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
@@ -101,6 +105,7 @@ def hetero_neighbor_sample(
         seed_dict,
         num_neighbors_dict,
         time_dict,
+        csc,
         replace,
         directed,
         disjoint,
