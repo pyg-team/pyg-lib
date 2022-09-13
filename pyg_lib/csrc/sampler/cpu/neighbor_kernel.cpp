@@ -98,7 +98,7 @@ class NeighborSampler {
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
       for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
-        if (time[col_[edge_id]] > seed_time)
+        if (time[col_[edge_id]] >= seed_time)
           continue;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
@@ -113,7 +113,7 @@ class NeighborSampler {
         // `count` many random neighbors, and filter them based on temporal
         // constraints afterwards. Ideally, we only sample exactly `count`
         // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] > seed_time)
+        if (time[col_[edge_id]] >= seed_time)
           continue;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
@@ -134,7 +134,7 @@ class NeighborSampler {
         // `count` many random neighbors, and filter them based on temporal
         // constraints afterwards. Ideally, we only sample exactly `count`
         // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] > seed_time)
+        if (time[col_[edge_id]] >= seed_time)
           continue;
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
