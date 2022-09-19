@@ -39,4 +39,5 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Optional return types in `pyg.subgraph()` ([#40](https://github.com/pyg-team/pyg-lib/pull/40))
 - Absolute headers ([#30](https://github.com/pyg-team/pyg-lib/pull/30))
 - Use `at::equal` rather than `at::all` in tests ([#37](https://github.com/pyg-team/pyg-lib/pull/37))
+- Build `*.so` extension on Mac instead of `*.dylib`([#107](https://github.com/pyg-team/pyg-lib/pull/107))
 ### Removed
