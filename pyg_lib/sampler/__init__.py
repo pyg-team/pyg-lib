@@ -97,7 +97,7 @@ def hetero_neighbor_sample(
         for k, v in num_neighbors_dict.items()
     }
 
-    out = torch.ops.pyg.hetero_neighbor_sample(
+    out = torch.ops.pyg.hetero_neighbor_sample_cpu(
         node_types,
         edge_types,
         rowptr_dict,
