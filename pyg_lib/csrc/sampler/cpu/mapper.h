@@ -21,6 +21,10 @@ class Mapper {
     // expected that we sample a large amount of nodes.
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
+    if (num_nodes <= 0) {  // == `num_nodes` is undefined:
+      use_vec = false;
+    }
+
     // We can only utilize vector mappings in case entries are scalar:
     if (!std::is_scalar<node_t>::value) {
       use_vec = false;
