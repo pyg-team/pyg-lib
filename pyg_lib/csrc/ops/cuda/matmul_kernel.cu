@@ -1,10 +1,10 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
-#include <torch/library.h>
-
 #include <cutlass/gemm/device/gemm_grouped.h>
 #include <cutlass/gemm/kernel/default_gemm_grouped.h>
 #include <cutlass/util/host_tensor.h>
+#include <torch/library.h>
+#include <torch/nn/functional/padding.h>
 
 #include "pyg_lib/csrc/utils/convert.h"
 
@@ -13,6 +13,26 @@ namespace ops {
 
 namespace {
 
+namespace F = torch::nn::functional;
+
+at::Tensor pad_dim(const at::Tensor& input, int dim) {
+  int pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
+  if (dim == -1) {
+    auto options = F::PadFuncOptions({0, pad, 0, 0}).mode(torch::kConstant);
+    return F::pad(input, options);
+  } else {
+    auto options = F::PadFuncOptions({0, 0, 0, pad}).mode(torch::kConstant);
+    return F::pad(input, options);
+  }
+}
+
+at::Tensor pad_both(const at::Tensor& input) {
+  int pad1 = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
+  int pad2 = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
+  auto options = F::PadFuncOptions({0, pad2, 0, pad1}).mode(torch::kConstant);
+  return F::pad(input, options);
+}
+
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
@@ -20,24 +40,17 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
 
   const auto num_matrices = input.size();
 
-  // TODO (matthias) Better handle non-contiguous memory layouts.
-  std::vector<at::Tensor> new_input, new_other;
-  for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    new_other.push_back(other[i].contiguous());
-  }
-
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity A
+      4,                                             // Granularity A
       float,                                         // Element B
       cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity B
+      4,                                             // Granularity B
       float,                                         // Element C&D
       cutlass::layout::RowMajor,                     // Layout C&D
       float,                                         // Element Accumulator
@@ -47,21 +60,40 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
       cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
       cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 1, float, float>,                   //
+          float, 4, float, float>,                   //
       cutlass::gemm::threadblock::                   // Swizzling Operator
       GemmIdentityThreadblockSwizzle<8>,             //
       3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
 
+  std::vector<at::Tensor> new_input, new_other, new_out;
+
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
   std::vector<float*> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
+    if (input[i].size(-1) % 4 != 0) {
+      new_input.push_back(pad_dim(input[i], -1).contiguous());
+    } else {
+      new_input.push_back(input[i].contiguous());
+    }
     ptr_A_host[i] = new_input[i].data_ptr<float>();
+
+    if (other[i].size(-1) % 4 != 0 || other[i].size(-2) % 4 != 0) {
+      new_other.push_back(pad_both(other[i]).contiguous());
+    } else {
+      new_other.push_back(other[i].contiguous());
+    }
     ptr_B_host[i] = new_other[i].data_ptr<float>();
-    ptr_C_host[i] = out[i].data_ptr<float>();
+
+    if (out[i].size(-1) % 4 != 0) {
+      new_out.push_back(pad_dim(out[i], -1).contiguous());
+    } else {
+      new_out.push_back(out[i].contiguous());
+    }
+    ptr_C_host[i] = new_out[i].data_ptr<float>();
   }
 
   cutlass::DeviceAllocation<float*> ptr_A;
@@ -80,10 +112,11 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_A_host(num_matrices);
   std::vector<int64_t> ld_B_host(num_matrices);
   std::vector<int64_t> ld_C_host(num_matrices);
-
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = input[i].size(0), k = input[i].size(1), n = out[i].size(1);
-    TORCH_CHECK(input[i].size(-1) == other[i].size(-2), "Shape mismatch");
+    auto m = new_input[i].size(0);
+    auto k = new_input[i].size(1);
+    auto n = new_out[i].size(1);
+    TORCH_CHECK(new_other[i].size(0) == k, "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
