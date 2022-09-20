@@ -12,28 +12,25 @@ namespace pyg {
 namespace ops {
 
 namespace {
+
 namespace F = torch::nn::functional;
 
 at::Tensor pad_dim(const at::Tensor& input, int dim) {
-  int to_pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
-  // int to_pad = ((input.size(dim) + 3 / 4) * 4) - input.size(dim);
+  int pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
   if (dim == -1) {
-    return F::pad(input,
-                  F::PadFuncOptions({0, to_pad, 0, 0}).mode(torch::kConstant));
+    auto options = F::PadFuncOptions({0, pad, 0, 0}).mode(torch::kConstant);
+    return F::pad(input, options);
   } else {
-    return F::pad(input,
-                  F::PadFuncOptions({0, 0, 0, to_pad}).mode(torch::kConstant));
+    auto options = F::PadFuncOptions({0, 0, 0, pad}).mode(torch::kConstant);
+    return F::pad(input, options);
   }
 }
 
 at::Tensor pad_both(const at::Tensor& input) {
-  int dim_0_pad = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
-  int dim_1_pad = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
-  // int dim_0_pad = (((input.size(-2) + 3) / 4) * 4) - input.size(-2);
-  // int dim_1_pad = (((input.size(-1) + 3) / 4) * 4) - input.size(-1);
-  return F::pad(
-      input,
-      F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
+  int pad1 = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
+  int pad2 = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
+  auto options = F::PadFuncOptions({0, pad2, 0, pad1}).mode(torch::kConstant);
+  return F::pad(input, options);
 }
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
@@ -42,7 +39,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Check tensor devices.
 
   const auto num_matrices = input.size();
-  std::vector<at::Tensor> new_input, new_other, new_out;
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
@@ -70,6 +66,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
+
+  std::vector<at::Tensor> new_input, new_other, new_out;
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
@@ -115,10 +113,10 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   std::vector<int64_t> ld_B_host(num_matrices);
   std::vector<int64_t> ld_C_host(num_matrices);
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = new_input[i].size(0), k = new_input[i].size(1),
-         n = new_out[i].size(1);
-    TORCH_CHECK(new_input[i].size(-1) == new_other[i].size(-2),
-                "Shape mismatch");
+    auto m = new_input[i].size(0);
+    auto k = new_input[i].size(1);
+    auto n = new_out[i].size(1);
+    TORCH_CHECK(new_other[i].size(0) == k, "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
