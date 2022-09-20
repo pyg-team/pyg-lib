@@ -47,12 +47,12 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                             // Element A
-      cutlass::layout::RowMajor,         // Layout A
-      cutlass::ComplexTransform::kNone,  //
-      4,                          // Granularity A (4 is the max for 32 bit)
-      float,                      // Element B
-      cutlass::layout::RowMajor,  // Layout B
+      float,                                         // Element A
+      cutlass::layout::RowMajor,                     // Layout A
+      cutlass::ComplexTransform::kNone,              //
+      4,                                             // Granularity A
+      float,                                         // Element B
+      cutlass::layout::RowMajor,                     // Layout B
       cutlass::ComplexTransform::kNone,              //
       4,                                             // Granularity B
       float,                                         // Element C&D
@@ -82,12 +82,14 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       new_input.push_back(input[i].contiguous());
     }
     ptr_A_host[i] = new_input[i].data_ptr<float>();
+
     if (other[i].size(-1) % 4 != 0 || other[i].size(-2) % 4 != 0) {
       new_other.push_back(pad_both(other[i]).contiguous());
     } else {
       new_other.push_back(other[i].contiguous());
     }
     ptr_B_host[i] = new_other[i].data_ptr<float>();
+
     if (out[i].size(-1) % 4 != 0) {
       new_out.push_back(pad_dim(out[i], -1).contiguous());
     } else {
