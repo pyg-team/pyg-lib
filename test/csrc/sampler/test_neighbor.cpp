@@ -50,6 +50,40 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
+TEST(TemporalNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto rowptr = std::get<0>(graph);
+  auto col = std::get<1>(graph);
+
+  // Sort the col by time.
+  col = col.reshape({col.size(0) / 2, 2});
+  col = std::get<0>(at::sort(col, /*dim=*/1));
+  col = col.flatten();
+
+  auto seed = at::arange(2, 4, options);
+
+  // Time is equal to node id.
+  auto time = at::arange(6, options);
+  std::vector<int64_t> num_neighbors = {2};
+
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/rowptr,
+      /*col=*/col, seed, num_neighbors, /*time=*/time,
+      /*csc=*/false, /*replace=*/false, /*directed=*/true, /*disjoint=*/true);
+
+  // Expect only the first neighbor to be sampled (< seed node time).
+  auto expected_row = at::tensor({0, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({0, 2, 1, 3, 0, 1, 1, 2}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({4, 2})));
+  auto expected_edges = at::tensor({4, 6}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
 TEST(HeteroNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
