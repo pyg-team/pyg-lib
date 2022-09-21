@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
 ### Changed
+- Refactored temporal sampling with sorted neighborhood ([#108](https://github.com/pyg-team/pyg-lib/pull/108))
 - Only sample neighbors with a strictly earlier timestamp than the seed node ([#104](https://github.com/pyg-team/pyg-lib/pull/104))
 - Prevent absolute paths in wheel ([#75](https://github.com/pyg-team/pyg-lib/pull/75))
 - Improved installation instructions ([#68](https://github.com/pyg-team/pyg-lib/pull/68))
