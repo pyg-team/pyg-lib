@@ -29,8 +29,6 @@ at::Tensor pad_dim(const at::Tensor& input, int dim) {
 at::Tensor pad_both(const at::Tensor& input) {
   int dim_0_pad = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
   int dim_1_pad = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
-  // int dim_0_pad = (((input.size(-2) + 3) / 4) * 4) - input.size(-2);
-  // int dim_1_pad = (((input.size(-1) + 3) / 4) * 4) - input.size(-1);
   return F::pad(
       input,
       F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
