@@ -34,26 +34,6 @@ at::Tensor pad_both(const at::Tensor& input) {
       F::PadFuncOptions({0, dim_1_pad, 0, dim_0_pad}).mode(torch::kConstant));
 }
 
-namespace F = torch::nn::functional;
-
-at::Tensor pad_dim(const at::Tensor& input, int dim) {
-  int pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
-  if (dim == -1) {
-    auto options = F::PadFuncOptions({0, pad, 0, 0}).mode(torch::kConstant);
-    return F::pad(input, options);
-  } else {
-    auto options = F::PadFuncOptions({0, 0, 0, pad}).mode(torch::kConstant);
-    return F::pad(input, options);
-  }
-}
-
-at::Tensor pad_both(const at::Tensor& input) {
-  int pad1 = (ceil(input.size(-2) / 4.0) * 4) - input.size(-2);
-  int pad2 = (ceil(input.size(-1) / 4.0) * 4) - input.size(-1);
-  auto options = F::PadFuncOptions({0, pad2, 0, pad1}).mode(torch::kConstant);
-  return F::pad(input, options);
-}
-
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
