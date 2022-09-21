@@ -69,8 +69,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
 
-  std::vector<at::Tensor> new_input, new_other, new_out;
-
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
   std::vector<float*> ptr_C_host(num_matrices);
