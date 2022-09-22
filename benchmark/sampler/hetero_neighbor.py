@@ -1,18 +1,13 @@
 import argparse
 import ast
-import os.path as osp
 import time
 
 import torch
-import torch_geometric.transforms as T
 import torch_sparse  # noqa
-from torch_geometric.datasets import OGB_MAG
-from torch_geometric.loader.utils import get_input_nodes
-from torch_geometric.sampler.utils import remap_keys, to_hetero_csc
 from tqdm import tqdm
 
 import pyg_lib
-from pyg_lib.testing import withSeed
+from pyg_lib.testing import remap_keys, withDataset, withSeed
 
 argparser = argparse.ArgumentParser('Hetero neighbor sample benchmark')
 argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
@@ -27,48 +22,29 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
     [15, 10, 5],
     [20, 15, 10],
 ])
-argparser.add_argument('--replace', action='store_true')
+# TODO(kgajdamo): Enable sampling with replacement
+# argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
-argparser.add_argument('--do_train', action='store_true')
 # TODO (kgajdamo): Support undirected hetero graphs
 # argparser.add_argument('--directed', action='store_true')
-# TODO (kgajdamo): Enable CSR
-# argparser.add_argument('--csc', action='store_true')
 
 args = argparser.parse_args()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-path = osp.join(osp.dirname(osp.realpath(__file__)), '../../data/OGB')
-transform = T.ToUndirected(merge=True)
-dataset = OGB_MAG(path, preprocess='metapath2vec', transform=transform)
-
-data = dataset[0].to(device, 'x', 'y')
-
-train_input_nodes = ('paper', data['paper'].train_mask)
-val_input_nodes = ('paper', data['paper'].val_mask)
-
-if args.do_train:
-    node_type, input_nodes = get_input_nodes(data, train_input_nodes)
-else:
-    node_type, input_nodes = get_input_nodes(data, val_input_nodes)
-
 
 @withSeed
-def test_hetero_neighbor():
-    node_types, edge_types = data.metadata()
-    colptr, row, _ = to_hetero_csc(data, device=device, share_memory=False,
-                                   is_sorted=False)
+@withDataset('ogbn', 'mag')
+def test_hetero_neighbor(dataset, **kwargs):
+    rowptr_dict, col_dict, num_nodes, node_types, edge_types = dataset
 
     # Conversions to/from C++ string type:
     to_rel_type = {key: '__'.join(key) for key in edge_types}
-    colptr_sparse = remap_keys(colptr, to_rel_type)
-    row_sparse = remap_keys(row, to_rel_type)
+    rowptr_sparse = remap_keys(rowptr_dict, to_rel_type)
+    col_sparse = remap_keys(col_dict, to_rel_type)
 
     if args.shuffle:
-        node_perm = input_nodes[torch.randperm(input_nodes.size()[0])]
+        node_perm = torch.randperm(num_nodes)
     else:
-        node_perm = input_nodes
+        node_perm = torch.arange(0, num_nodes)
 
     for num_neighbors in args.num_neighbors:
         num_hops = max([0] + [len(v) for v in [num_neighbors]])
@@ -80,13 +56,13 @@ def test_hetero_neighbor():
             for seed in tqdm(node_perm.split(batch_size)):
                 seed_dict = {'paper': seed}
                 pyg_lib.sampler.hetero_neighbor_sample(
-                    colptr,
-                    row,
+                    rowptr_dict,
+                    col_dict,
                     seed_dict,
                     num_neighbors_dict,
                     None,
-                    True,  # csc
-                    args.replace,
+                    False,  # csc
+                    False,
                     True,  # directed
                 )
             pyg_lib_duration = time.perf_counter() - t
@@ -98,12 +74,12 @@ def test_hetero_neighbor():
                 torch.ops.torch_sparse.hetero_neighbor_sample(
                     node_types,
                     edge_types,
-                    colptr_sparse,
-                    row_sparse,
+                    rowptr_sparse,
+                    col_sparse,
                     seed_dict,
                     num_neighbors_sparse,
                     num_hops,
-                    args.replace,
+                    False,
                     True,  # directed
                 )
             torch_sparse_duration = time.perf_counter() - t
