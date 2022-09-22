@@ -44,9 +44,39 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
   auto expected_nodes = at::tensor(
       {0, 2, 1, 3, 0, 1, 0, 3, 1, 2, 1, 4, 0, 0, 0, 4, 1, 1, 1, 5}, options);
-  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({10, 2})));
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({-1, 2})));
   auto expected_edges =
       at::tensor({4, 5, 6, 7, 2, 3, 6, 7, 4, 5, 8, 9}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
+TEST(TemporalNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto rowptr = std::get<0>(graph);
+  auto col = std::get<1>(graph);
+  auto seed = at::arange(2, 4, options);
+  std::vector<int64_t> num_neighbors = {2, 2};
+
+  // Time is equal to node ID ...
+  auto time = at::arange(6, options);
+  // ... so we need to sort the column vector by time/node ID:
+  col = std::get<0>(at::sort(col.view({-1, 2}), /*dim=*/1)).flatten();
+
+  auto out = pyg::sampler::neighbor_sample(
+      rowptr, col, seed, num_neighbors, /*time=*/time,
+      /*csc=*/false, /*replace=*/false, /*directed=*/true, /*disjoint=*/true);
+
+  // Expect only the earlier neighbors to be sampled:
+  auto expected_row = at::tensor({0, 1, 2, 3}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3, 4, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes =
+      at::tensor({0, 2, 1, 3, 0, 1, 1, 2, 0, 0, 1, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({-1, 2})));
+  auto expected_edges = at::tensor({4, 6, 2, 4}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
