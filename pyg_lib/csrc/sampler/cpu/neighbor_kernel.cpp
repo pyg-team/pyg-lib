@@ -34,11 +34,75 @@ class NeighborSampler {
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
                       std::vector<node_t>& out_global_dst_nodes) {
+    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+    _sample(global_src_node, local_src_node, row_start, row_end, count,
+            dst_mapper, generator, out_global_dst_nodes);
+  }
+
+  void temporal_sample(const node_t global_src_node,
+                       const scalar_t local_src_node,
+                       const size_t count,
+                       const scalar_t seed_time,
+                       const scalar_t* time,
+                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                       pyg::random::RandintEngine<scalar_t>& generator,
+                       std::vector<node_t>& out_global_dst_nodes) {
+    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+    // Find new `row_end` such that all neighbors fulfill temporal constraints:
+    auto it = std::lower_bound(
+        col_ + row_start, col_ + row_end, seed_time,
+        [&](const scalar_t& a, const scalar_t& b) { return time[a] < b; });
+    row_end = it - col_;
+
+    _sample(global_src_node, local_src_node, row_start, row_end, count,
+            dst_mapper, generator, out_global_dst_nodes);
+  }
+
+  std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+  get_sampled_edges(bool csc = false) {
+    TORCH_CHECK(save_edges, "No edges have been stored")
+    const auto row = pyg::utils::from_vector(sampled_rows_);
+    const auto col = pyg::utils::from_vector(sampled_cols_);
+    c10::optional<at::Tensor> edge_id = c10::nullopt;
+    if (save_edge_ids) {
+      edge_id = pyg::utils::from_vector(sampled_edge_ids_);
+    }
+    if (!csc) {
+      return std::make_tuple(row, col, edge_id);
+    } else {
+      return std::make_tuple(col, row, edge_id);
+    }
+  }
+
+ private:
+  inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
+  inline scalar_t to_scalar_t(const std::pair<scalar_t, scalar_t>& node) {
+    return std::get<1>(node);
+  }
+
+  inline scalar_t to_node_t(const scalar_t& node, const scalar_t& ref) {
+    return node;
+  }
+  inline std::pair<scalar_t, scalar_t> to_node_t(
+      const scalar_t& node,
+      const std::pair<scalar_t, scalar_t>& ref) {
+    return {std::get<0>(ref), node};
+  }
+
+  void _sample(const node_t global_src_node,
+               const scalar_t local_src_node,
+               const scalar_t row_start,
+               const scalar_t row_end,
+               const size_t count,
+               pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+               pyg::random::RandintEngine<scalar_t>& generator,
+               std::vector<node_t>& out_global_dst_nodes) {
     if (count == 0)
       return;
 
-    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
-    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     const auto population = row_end - row_start;
 
     if (population == 0)
@@ -75,102 +139,6 @@ class NeighborSampler {
             out_global_dst_nodes);
       }
     }
-  }
-
-  void temporal_sample(const node_t global_src_node,
-                       const scalar_t local_src_node,
-                       const size_t count,
-                       const scalar_t seed_time,
-                       const scalar_t* time,
-                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
-                       pyg::random::RandintEngine<scalar_t>& generator,
-                       std::vector<node_t>& out_global_dst_nodes) {
-    if (count == 0)
-      return;
-
-    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
-    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
-    const auto population = row_end - row_start;
-
-    if (population == 0)
-      return;
-
-    // Case 1: Sample the full neighborhood:
-    if (count < 0 || (!replace && count >= population)) {
-      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
-        if (time[col_[edge_id]] >= seed_time)
-          continue;
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
-      }
-    }
-
-    // Case 2: Sample with replacement:
-    else if (replace) {
-      for (size_t i = 0; i < count; ++i) {
-        const auto edge_id = generator(row_start, row_end);
-        // TODO (matthias) Improve temporal sampling logic. Currently, we sample
-        // `count` many random neighbors, and filter them based on temporal
-        // constraints afterwards. Ideally, we only sample exactly `count`
-        // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] >= seed_time)
-          continue;
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
-      }
-    }
-
-    // Case 3: Sample without replacement:
-    else {
-      std::unordered_set<scalar_t> rnd_indices;
-      for (size_t i = population - count; i < population; ++i) {
-        auto rnd = generator(0, i + 1);
-        if (!rnd_indices.insert(rnd).second) {
-          rnd = i;
-          rnd_indices.insert(i);
-        }
-        const auto edge_id = row_start + rnd;
-        // TODO (matthias) Improve temporal sampling logic. Currently, we sample
-        // `count` many random neighbors, and filter them based on temporal
-        // constraints afterwards. Ideally, we only sample exactly `count`
-        // neighbors which fullfill the time constraint.
-        if (time[col_[edge_id]] >= seed_time)
-          continue;
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
-      }
-    }
-  }
-
-  std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
-  get_sampled_edges(bool csc = false) {
-    TORCH_CHECK(save_edges, "No edges have been stored")
-    const auto row = pyg::utils::from_vector(sampled_rows_);
-    const auto col = pyg::utils::from_vector(sampled_cols_);
-    c10::optional<at::Tensor> edge_id = c10::nullopt;
-    if (save_edge_ids) {
-      edge_id = pyg::utils::from_vector(sampled_edge_ids_);
-    }
-    if (!csc) {
-      return std::make_tuple(row, col, edge_id);
-    } else {
-      return std::make_tuple(col, row, edge_id);
-    }
-  }
-
- private:
-  inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
-  inline scalar_t to_scalar_t(const std::pair<scalar_t, scalar_t>& node) {
-    return std::get<1>(node);
-  }
-
-  inline scalar_t to_node_t(const scalar_t& node, const scalar_t& ref) {
-    return node;
-  }
-  inline std::pair<scalar_t, scalar_t> to_node_t(
-      const scalar_t& node,
-      const std::pair<scalar_t, scalar_t>& ref) {
-    return {std::get<0>(ref), node};
   }
 
   inline void add(const scalar_t edge_id,
