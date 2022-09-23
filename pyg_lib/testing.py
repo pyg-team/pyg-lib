@@ -4,8 +4,6 @@ from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 import torch
 from torch import Tensor
-from torch_geometric.datasets import OGB_MAG
-from torch_sparse import SparseTensor
 
 from pyg_lib import get_home_dir
 
@@ -29,14 +27,11 @@ def withCUDA(func: Callable) -> Callable:
     return wrapper
 
 
-def withDataset(
-    group: str,
-    name: str,
-) -> Callable:
+def withDataset(group: str, name: str) -> Callable:
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
-            if group == 'ogbn' and name == 'mag':
-                dataset = get_hetero_sparse_matrix(
+            if group == 'ogb' and name == 'mag':
+                dataset = get_ogb_mag_hetero_sparse_matrix(
                     dtype=kwargs.get('dtype', torch.long),
                     device=kwargs.get('device', None),
                 )
@@ -100,13 +95,12 @@ def get_sparse_matrix(
     return rowptr, col
 
 
-def get_hetero_sparse_matrix(
+def get_ogb_mag_hetero_sparse_matrix(
     dtype: torch.dtype = torch.long,
     device: Optional[torch.device] = None,
 ) -> Tuple[Tensor, Tensor]:
-    r"""Returns a compressed
-    :obj:`(rowptr_dict, col_dict, num_nodes, node_types and edge_types)`
-    from the `ogbn-mag dataset <https://ogb.stanford.edu/>`_.
+    r"""Returns a heterogeneous graph :obj:`(colptr_dict, row_dict)`
+    from the `OGB <https://ogb.stanford.edu/>`_ benchmark suite.
 
     Args:
         dtype (torch.dtype, optional): The desired data type of returned
@@ -121,20 +115,20 @@ def get_hetero_sparse_matrix(
         node indices of the hetero sparse matrix, number of paper nodes,
         all node types and all edge types.
     """
-    path = osp.join(osp.dirname(osp.realpath(__file__)), '../data/OGB')
-    dataset = OGB_MAG(path, preprocess='metapath2vec')
+    import torch_geometric.transforms as T
+    from torch_geometric.datasets import OGB_MAG
 
-    data = dataset[0].to(device, dtype)
+    path = osp.join(get_home_dir(), 'ogb-mag')
+    transform = T.Compose([T.ToUndirected(), T.ToSparseTensor()])
+    data = OGB_MAG(path, pre_transform=transform)[0]
 
-    num_nodes = data.x_dict['paper'].size(0)
-    node_types, edge_types = data.metadata()
+    colptr_dict, row_dict = {}, {}
+    for edge_type in data.edge_types:
+        colptr, row, _ = data[edge_type].adj_t.csr()
+        colptr_dict[edge_type] = colptr.to(device, dtype)
+        row_dict[edge_type] = row.to(device, dtype)
 
-    adj_t_dict, rowptr_dict, col_dict = {}, {}, {}
-    for key, (r, c) in data.edge_index_dict.items():
-        adj_t_dict[key] = SparseTensor(row=r, col=c).to(device)
-        rowptr_dict[key], col_dict[key], _ = adj_t_dict[key].csr()
-
-    return rowptr_dict, col_dict, num_nodes, node_types, edge_types
+    return colptr_dict, row_dict
 
 
 def to_edge_index(rowptr: Tensor, col: Tensor) -> Tensor:
@@ -143,11 +137,5 @@ def to_edge_index(rowptr: Tensor, col: Tensor) -> Tensor:
     return torch.stack([row, col], dim=0)
 
 
-def remap_keys(
-    original: Dict,
-    mapping: Dict,
-    exclude: Optional[Set[Any]] = None,
-) -> Dict:
-    exclude = exclude or set()
-    return {(k if k in exclude else mapping[k]): v
-            for k, v in original.items()}
+def remap_keys(mapping: Dict[Tuple[str, str, str], Any]) -> Dict[str, Any]:
+    return {'__'.join(k): v for k, v in mapping.items()}
