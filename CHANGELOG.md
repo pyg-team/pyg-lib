@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `pyg::sampler::hetero_neighbor_sample` implementation ([#90](https://github.com/pyg-team/pyg-lib/pull/90), [#92](https://github.com/pyg-team/pyg-lib/pull/92), [#94](https://github.com/pyg-team/pyg-lib/pull/94), [#97](https://github.com/pyg-team/pyg-lib/pull/97), [#98](https://github.com/pyg-team/pyg-lib/pull/98), [#99](https://github.com/pyg-team/pyg-lib/pull/99), [#102](https://github.com/pyg-team/pyg-lib/pull/102))
 - Added `pyg::utils::to_vector` implementation ([#88](https://github.com/pyg-team/pyg-lib/pull/88))
 - Added support for PyTorch 1.12 ([#57](https://github.com/pyg-team/pyg-lib/pull/57), [#58](https://github.com/pyg-team/pyg-lib/pull/58))
-- Added `grouped_matmul` and `segment_matmul` CUDA implementations via `cutlass` ([#51](https://github.com/pyg-team/pyg-lib/pull/51), [#56](https://github.com/pyg-team/pyg-lib/pull/56), [#61](https://github.com/pyg-team/pyg-lib/pull/61), [#64](https://github.com/pyg-team/pyg-lib/pull/64), [#69](https://github.com/pyg-team/pyg-lib/pull/69))
+- Added `grouped_matmul` and `segment_matmul` CUDA implementations via `cutlass` ([#51](https://github.com/pyg-team/pyg-lib/pull/51), [#56](https://github.com/pyg-team/pyg-lib/pull/56), [#61](https://github.com/pyg-team/pyg-lib/pull/61), [#64](https://github.com/pyg-team/pyg-lib/pull/64), [#69](https://github.com/pyg-team/pyg-lib/pull/69), [#73](https://github.com/pyg-team/pyg-lib/pull/73))
 - Added `pyg::sampler::neighbor_sample` implementation ([#54](https://github.com/pyg-team/pyg-lib/pull/54), [#76](https://github.com/pyg-team/pyg-lib/pull/76), [#77](https://github.com/pyg-team/pyg-lib/pull/77), [#78](https://github.com/pyg-team/pyg-lib/pull/78), [#80](https://github.com/pyg-team/pyg-lib/pull/80), [#81](https://github.com/pyg-team/pyg-lib/pull/81)), [#85](https://github.com/pyg-team/pyg-lib/pull/85), [#86](https://github.com/pyg-team/pyg-lib/pull/86), [#87](https://github.com/pyg-team/pyg-lib/pull/87), [#89](https://github.com/pyg-team/pyg-lib/pull/89))
 - Added `pyg::sampler::Mapper` utility for mapping global to local node indices ([#45](https://github.com/pyg-team/pyg-lib/pull/45), [#83](https://github.com/pyg-team/pyg-lib/pull/83))
 - Added benchmark script ([#45](https://github.com/pyg-team/pyg-lib/pull/45), [#79](https://github.com/pyg-team/pyg-lib/pull/79), [#82](https://github.com/pyg-team/pyg-lib/pull/82), [#91](https://github.com/pyg-team/pyg-lib/pull/91), [#93](https://github.com/pyg-team/pyg-lib/pull/93), [#106](https://github.com/pyg-team/pyg-lib/pull/106))
@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
 ### Changed
+- Require sorted neighborhoods according to time in temporal sampling ([#108](https://github.com/pyg-team/pyg-lib/pull/108))
 - Only sample neighbors with a strictly earlier timestamp than the seed node ([#104](https://github.com/pyg-team/pyg-lib/pull/104))
 - Prevent absolute paths in wheel ([#75](https://github.com/pyg-team/pyg-lib/pull/75))
 - Improved installation instructions ([#68](https://github.com/pyg-team/pyg-lib/pull/68))
@@ -39,4 +40,5 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Optional return types in `pyg.subgraph()` ([#40](https://github.com/pyg-team/pyg-lib/pull/40))
 - Absolute headers ([#30](https://github.com/pyg-team/pyg-lib/pull/30))
 - Use `at::equal` rather than `at::all` in tests ([#37](https://github.com/pyg-team/pyg-lib/pull/37))
+- Build `*.so` extension on Mac instead of `*.dylib`([#107](https://github.com/pyg-team/pyg-lib/pull/107))
 ### Removed

@@ -23,6 +23,12 @@ def neighbor_sample(
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
 
+    .. note::
+
+        For temporal sampling, the :obj:`col` vector needs to be sorted
+        according to :obj:`time` within individual neighborhoods since we use
+        binary search to find neighbors that fulfill temporal constraints.
+
     Args:
         rowptr (torch.Tensor): Compressed source node indices.
         col (torch.Tensor): Target node indices.
@@ -34,7 +40,9 @@ def neighbor_sample(
             If set, temporal sampling will be used such that neighbors are
             guaranteed to fulfill temporal constraints, *i.e.* neighbors have
             an earlier timestamp than the seed node.
-            Requires :obj:`disjoint=True`. (default: :obj:`None`)
+            If used, the :obj:`col` vector needs to be sorted according to time
+            within individual neighborhoods. Requires :obj:`disjoint=True`.
+            (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
