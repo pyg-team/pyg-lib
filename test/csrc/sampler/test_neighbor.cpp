@@ -5,12 +5,12 @@
 #include "pyg_lib/csrc/utils/types.h"
 #include "test/csrc/graph.h"
 
-TEST(NeighborTest, BasicAssertions) {
+TEST(FullNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
   auto seed = at::arange(2, 4, options);
-  std::vector<int64_t> num_neighbors = {2, 2};
+  std::vector<int64_t> num_neighbors = {-1, -1};
 
   auto out = pyg::sampler::neighbor_sample(/*rowptr=*/std::get<0>(graph),
                                            /*col=*/std::get<1>(graph), seed,
@@ -23,6 +23,52 @@ TEST(NeighborTest, BasicAssertions) {
   auto expected_nodes = at::tensor({2, 3, 1, 4, 0, 5}, options);
   EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
   auto expected_edges = at::tensor({4, 5, 6, 7, 2, 3, 8, 9}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
+TEST(WithoutReplacementNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto seed = at::arange(2, 4, options);
+  std::vector<int64_t> num_neighbors = {1, 1};
+
+  at::manual_seed(123456);
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/std::get<0>(graph),
+      /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
+      /*csc=*/false, /*replace=*/false);
+
+  auto expected_row = at::tensor({0, 1, 2, 3}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3, 0, 4}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({2, 3, 1, 4, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::tensor({4, 7, 3, 9}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
+TEST(WithReplacementNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto seed = at::arange(2, 4, options);
+  std::vector<int64_t> num_neighbors = {1, 1};
+
+  at::manual_seed(123456);
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/std::get<0>(graph),
+      /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
+      /*csc=*/false, /*replace=*/true);
+
+  auto expected_row = at::tensor({0, 1, 2, 3}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3, 0, 4}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({2, 3, 1, 4, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::tensor({4, 7, 3, 9}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
