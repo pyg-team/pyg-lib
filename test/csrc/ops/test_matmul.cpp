@@ -1,11 +1,14 @@
 #include <ATen/ATen.h>
+#include <c10/core/DeviceType.h>
 #include <gtest/gtest.h>
 
 #include "pyg_lib/csrc/ops/matmul.h"
 
-#ifdef WITH_CUDA
-TEST(GroupedMatmulTest, BasicAssertions) {
-  auto options = at::TensorOptions().device(at::kCUDA);
+class MatmulTest : public testing::TestWithParam<c10::DeviceType> {};
+
+TEST_P(MatmulTest, GroupedMatmulForward) {
+  const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
+  auto options = at::TensorOptions().device(param);
 
   std::vector<at::Tensor> input{at::randn({5, 8}, options),
                                 at::randn({3, 12}, options)};
@@ -22,11 +25,10 @@ TEST(GroupedMatmulTest, BasicAssertions) {
   auto expected_out1 = at::matmul(input[1], other[1]);
   EXPECT_TRUE(at::allclose(out[1], expected_out1, 0.1, 0.1));
 }
-#endif
 
-#ifdef WITH_CUDA
-TEST(SegmentMatmulTest, BasicAssertions) {
-  auto options = at::TensorOptions().device(at::kCUDA);
+TEST_P(MatmulTest, SegmentMatmulForward) {
+  const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
+  auto options = at::TensorOptions().device(param);
 
   auto input = at::randn({8, 12}, options);
   auto ptr = at::tensor({0, 5, 8}, options.dtype(at::kLong));
@@ -40,14 +42,13 @@ TEST(SegmentMatmulTest, BasicAssertions) {
   auto expected_out1 = at::matmul(input.narrow(0, 5, 3), other[1]);
   EXPECT_TRUE(at::allclose(out.narrow(0, 5, 3), expected_out1, 0.1, 0.1));
 }
-#endif
 
 // TODO (matthias) add a grouped matmul backward test.
 
-#ifdef WITH_CUDA
-TEST(SegmentMatmulBackwardTest, BasicAssertions) {
+TEST_P(MatmulTest, SegmentMatmulBackward) {
   return;  // TODO (matthias) uncomment this.
-  auto options = at::TensorOptions().device(at::kCUDA);
+  const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
+  auto options = at::TensorOptions().device(param);
 
   auto input = at::randn({8, 12}, options).requires_grad_();
   auto ptr = at::tensor({0, 5, 8}, options.dtype(at::kLong));
@@ -58,4 +59,11 @@ TEST(SegmentMatmulBackwardTest, BasicAssertions) {
   EXPECT_TRUE(input.grad().numel() == input.numel());
   EXPECT_TRUE(other.grad().numel() == other.numel());
 }
+
+INSTANTIATE_TEST_SUITE_P(OpsTest,
+                         MatmulTest,
+#ifdef WITH_CUDA
+                         testing::Values(at::kCUDA, at::kCPU));
+#else
+                         testing::Values(at::kCPU));
 #endif

@@ -5,6 +5,7 @@
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 
+#include "pyg_lib/csrc/utils/check.h"
 #include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
@@ -15,9 +16,22 @@ namespace {
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
                                const std::vector<at::Tensor>& out) {
-  // TODO (matthias) Check tensor devices.
-
+  TORCH_CHECK(input.size() == other.size() && other.size() == out.size(),
+              "Size of all input tensors should be equal.");
   const auto num_matrices = input.size();
+  std::vector<at::TensorArg> input_args;
+  std::vector<at::TensorArg> other_args;
+  std::vector<at::TensorArg> out_args;
+  pyg::utils::fill_tensor_args(input_args, input, "input", 0);
+  pyg::utils::fill_tensor_args(other_args, other, "other", 1);
+  pyg::utils::fill_tensor_args(out_args, out, "out", 2);
+  at::CheckedFrom c{"grouped_matmul_out_kernel"};
+
+  at::checkAllSameGPU(c, input_args);
+  at::checkAllSameGPU(c, other_args);
+  at::checkAllSameGPU(c, out_args);
+  at::checkAllSameGPU(c, {input_args[0], other_args[0], out_args[0]});
+
   std::vector<at::Tensor> new_input, new_other, new_out;
 
   // TODO (matthias) Allow for other types than `float`.
@@ -81,8 +95,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   for (size_t i = 0; i < num_matrices; ++i) {
     auto m = new_input[i].size(0), k = new_input[i].size(1),
          n = new_out[i].size(1);
-    TORCH_CHECK(new_input[i].size(-1) == new_other[i].size(-2),
-                "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
@@ -151,17 +163,10 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY(pyg, m) {
-  m.def("pyg::cuda_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
-  m.def(
-      "pyg::cuda_segment_matmul(Tensor input, Tensor ptr, Tensor other) -> "
-      "Tensor");
-}
-
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_grouped_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_segment_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
 }
 
