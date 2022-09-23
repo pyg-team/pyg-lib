@@ -47,7 +47,7 @@ def test_hetero_neighbor(dataset, **kwargs):
         for batch_size in args.batch_sizes:
             print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
             t = time.perf_counter()
-            for seed in tqdm(node_perm.split(batch_size)):
+            for seed in tqdm(node_perm.split(batch_size)[:20]):
                 seed_dict = {'paper': seed}
                 pyg_lib.sampler.hetero_neighbor_sample(
                     colptr_dict,
@@ -62,7 +62,7 @@ def test_hetero_neighbor(dataset, **kwargs):
             pyg_lib_duration = time.perf_counter() - t
 
             t = time.perf_counter()
-            for seed in tqdm(node_perm.split(batch_size)):
+            for seed in tqdm(node_perm.split(batch_size)[:20]):
                 node_types = list(num_nodes_dict.keys())
                 edge_types = list(colptr_dict.keys())
                 colptr_dict_sparse = remap_keys(colptr_dict)
