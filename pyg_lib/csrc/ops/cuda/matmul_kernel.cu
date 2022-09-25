@@ -13,9 +13,9 @@ namespace ops {
 
 namespace {
 
-void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
-                               const std::vector<at::Tensor>& other,
-                               const std::vector<at::Tensor>& out) {
+void grouped_matmul_out_kernel(const at::TensorList input,
+                               const at::TensorList other,
+                               const at::TensorList out) {
   TORCH_CHECK(input.size() == other.size() && other.size() == out.size(),
               "Size of all input tensors should be equal.");
   const auto num_matrices = input.size();
@@ -133,9 +133,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
 }
 
-std::vector<at::Tensor> grouped_matmul_kernel(
-    const std::vector<at::Tensor>& input,
-    const std::vector<at::Tensor>& other) {
+std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
+                                              const at::TensorList other) {
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});

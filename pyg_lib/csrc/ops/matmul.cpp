@@ -12,8 +12,8 @@ namespace ops {
 
 namespace {
 
-std::vector<at::Tensor> _grouped_matmul(const std::vector<at::Tensor>& input,
-                                        const std::vector<at::Tensor>& other) {
+std::vector<at::Tensor> _grouped_matmul(const at::TensorList input,
+                                        const at::TensorList other) {
   TORCH_CHECK(
       input.size() == other.size(),
       "Number of 'input' tensors must match number of 'other' tensors.");
@@ -162,8 +162,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 }  // namespace
 
 // Performs matrix multiplication across list of elements.
-std::vector<at::Tensor> grouped_matmul(const std::vector<at::Tensor>& input,
-                                       const std::vector<at::Tensor>& other) {
+std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
+                                       const at::TensorList other) {
   // TODO (matthias) Add autograd support.
   /* return GroupedMatmul::apply(input, other)[0]; */
   return _grouped_matmul(input, other);
