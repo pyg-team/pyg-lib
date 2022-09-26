@@ -15,8 +15,8 @@ class BenchmarkMapperCreationAndInsertion : public benchmark::Fixture {
 
  protected:
   void SetUp(const benchmark::State& state) override {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
+    // deterministic draw, default seed is 5489u
+    std::mt19937 gen;
     // fill nodes with whole range two times and shuffle it
     // this will allow some indices to occur more than once
     const auto num_nodes = state.range(0);
