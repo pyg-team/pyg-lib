@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added benchmarking tool (Google Benchmark) along with `pyg::sampler::Mapper` benchmark example ([#101](https://github.com/pyg-team/pyg-lib/pull/101))
 - Added CSC mode to `pyg::sampler::neighbor_sample` and `pyg::sampler::hetero_neighbor_sample` ([#95](https://github.com/pyg-team/pyg-lib/pull/95), [#96](https://github.com/pyg-team/pyg-lib/pull/96))
 - Speed up `pyg::sampler::neighbor_sample` via `IndexTracker` implementation ([#84](https://github.com/pyg-team/pyg-lib/pull/84))
 - Added `pyg::sampler::hetero_neighbor_sample` implementation ([#90](https://github.com/pyg-team/pyg-lib/pull/90), [#92](https://github.com/pyg-team/pyg-lib/pull/92), [#94](https://github.com/pyg-team/pyg-lib/pull/94), [#97](https://github.com/pyg-team/pyg-lib/pull/97), [#98](https://github.com/pyg-team/pyg-lib/pull/98), [#99](https://github.com/pyg-team/pyg-lib/pull/99), [#102](https://github.com/pyg-team/pyg-lib/pull/102), [#110](https://github.com/pyg-team/pyg-lib/pull/110))

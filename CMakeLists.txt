@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(PYG_VERSION 0.1.0)
 
 option(BUILD_TEST "Enable testing" OFF)
+option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
 option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
@@ -55,6 +56,12 @@ if(BUILD_TEST)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
   endif()
   include(cmake/test.cmake)
+endif()
+
+if(BUILD_BENCHMARK)
+  set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE INTERNAL "Disable benchmarking tool tests")
+  set(COMPILE_HAVE_GNU_POSIX_REGEX OFF CACHE INTERNAL "Disable GNU POSIX regex compilation check")
+  include(cmake/benchmark.cmake)
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
