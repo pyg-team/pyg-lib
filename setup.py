@@ -26,7 +26,8 @@ class CMakeBuild(build_ext):
         return '.'.join(ext_filename_parts)
 
     def check_env_flag(self, name: str, default: str = "") -> bool:
-        return os.getenv(name, default).upper() in ["1", "ON", "YES", "TRUE", "Y"]
+        return os.getenv(name,
+                         default).upper() in ["1", "ON", "YES", "TRUE", "Y"]
 
     def build_extension(self, ext):
         import torch
