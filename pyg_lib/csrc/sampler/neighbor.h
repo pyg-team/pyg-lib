@@ -21,6 +21,7 @@ neighbor_sample(const at::Tensor& rowptr,
                 bool replace = false,
                 bool directed = true,
                 bool disjoint = false,
+                std::string strategy = "uniform",
                 bool return_edge_id = true);
 
 // Recursively samples neighbors from all node indices in `seed_dict`
@@ -44,6 +45,7 @@ hetero_neighbor_sample(
     bool replace = false,
     bool directed = true,
     bool disjoint = false,
+    std::string strategy = "uniform",
     bool return_edge_id = true);
 
 }  // namespace sampler

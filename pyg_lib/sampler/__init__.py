@@ -18,6 +18,7 @@ def neighbor_sample(
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
+    temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
 ) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
@@ -51,6 +52,9 @@ def neighbor_sample(
             edges between all sampled nodes. (default: :obj:`True`)
         disjoint (bool, optional): If set to :obj:`True` , will create disjoint
             subgraphs for every seed node. (default: :obj:`False`)
+        temporal_strategy (string, optional): The sampling strategy when using
+            temporal sampling (:obj:`"uniform"`, :obj:`"last"`).
+            (default: :obj:`"uniform"`)
         return_edge_id (bool, optional): If set to :obj:`False`, will not
             return the indices of edges of the original graph.
             (default: :obj: `True`)
@@ -63,7 +67,8 @@ def neighbor_sample(
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
                                          time, csc, replace, directed,
-                                         disjoint, return_edge_id)
+                                         disjoint, temporal_strategy,
+                                         return_edge_id)
 
 
 def hetero_neighbor_sample(
@@ -76,6 +81,7 @@ def hetero_neighbor_sample(
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
+    temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
 ) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
         NodeType, Tensor], Optional[Dict[EdgeType, Tensor]]]:
@@ -117,6 +123,7 @@ def hetero_neighbor_sample(
         replace,
         directed,
         disjoint,
+        temporal_strategy,
         return_edge_id,
     )
 
