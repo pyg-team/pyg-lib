@@ -25,13 +25,20 @@ class CMakeBuild(build_ext):
         ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
         return '.'.join(ext_filename_parts)
 
+    def check_env_flag(self, name: str, default: str = "") -> bool:
+        return os.getenv(name,
+                         default).upper() in ["1", "ON", "YES", "TRUE", "Y"]
+
     def build_extension(self, ext):
         import torch
 
         extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
-
+        self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
-            self.debug = bool(int(os.environ.get('DEBUG', 0)))
+            if self.check_env_flag("DEBUG"):
+                self.build_type = "DEBUG"
+            elif self.check_env_flag("REL_WITH_DEB_INFO"):
+                self.build_type = "RELWITHDEBINFO"
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -45,7 +52,7 @@ class CMakeBuild(build_ext):
             '-DUSE_PYTHON=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
-            f'-DCMAKE_BUILD_TYPE={"DEBUG" if self.debug else "RELEASE"}',
+            f'-DCMAKE_BUILD_TYPE={self.build_type}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
