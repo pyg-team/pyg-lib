@@ -53,8 +53,8 @@ class NeighborSampler {
                        pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                        pyg::random::RandintEngine<scalar_t>& generator,
                        std::vector<node_t>& out_global_dst_nodes) {
-    const row_start = rowptr_[to_scalar_t(global_src_node)];
-    auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+    scalar_t row_start = rowptr_[to_scalar_t(global_src_node)];
+    scalar_t row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::lower_bound(
@@ -63,7 +63,7 @@ class NeighborSampler {
     row_end = it - col_;
 
     if (temporal_strategy_ == "last") {
-      row_start = std::max(row_start, row_end - count);
+      row_start = std::max(row_start, (scalar_t)(row_end - count));
     }
 
     _sample(global_src_node, local_src_node, row_start, row_end, count,
