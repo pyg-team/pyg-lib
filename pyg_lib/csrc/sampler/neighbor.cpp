@@ -64,7 +64,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
       "num_neighbors, Tensor? time = None, bool csc = False, bool replace = "
-      "False, bool directed = True, bool disjoint = False, string "
+      "False, bool directed = True, bool disjoint = False, str "
       "temporal_strategy = 'uniform', bool return_edge_id = True) -> (Tensor, "
       "Tensor, Tensor, Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
@@ -72,7 +72,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
       "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
       "Dict(str, Tensor)? time_dict = None, bool csc = False, bool replace = "
-      "False, bool directed = True, bool disjoint = False, string "
+      "False, bool directed = True, bool disjoint = False, str "
       "temporal_strategy = 'uniform', bool return_edge_id = True) -> "
       "(Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor), Dict(str, "
       "Tensor)?)"));
