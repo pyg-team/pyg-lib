@@ -25,8 +25,13 @@ template <typename node_t,
           bool save_edge_ids>
 class NeighborSampler {
  public:
-  NeighborSampler(const scalar_t* rowptr, const scalar_t* col)
-      : rowptr_(rowptr), col_(col) {}
+  NeighborSampler(const scalar_t* rowptr,
+                  const scalar_t* col,
+                  const std::string temporal_strategy)
+      : rowptr_(rowptr), col_(col), temporal_strategy_(temporal_strategy) {
+    TORCH_CHECK(temporal_strategy == "uniform" || temporal_strategy == "last",
+                "No valid temporal strategy found");
+  }
 
   void uniform_sample(const node_t global_src_node,
                       const scalar_t local_src_node,
@@ -48,7 +53,7 @@ class NeighborSampler {
                        pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                        pyg::random::RandintEngine<scalar_t>& generator,
                        std::vector<node_t>& out_global_dst_nodes) {
-    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
@@ -56,6 +61,10 @@ class NeighborSampler {
         col_ + row_start, col_ + row_end, seed_time,
         [&](const scalar_t& a, const scalar_t& b) { return time[a] < b; });
     row_end = it - col_;
+
+    if (temporal_strategy_ == "last") {
+      row_start = std::max(row_start, (scalar_t)(row_end - count));
+    }
 
     _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
@@ -164,6 +173,7 @@ class NeighborSampler {
 
   const scalar_t* rowptr_;
   const scalar_t* col_;
+  const std::string temporal_strategy_;
   std::vector<scalar_t> sampled_rows_;
   std::vector<scalar_t> sampled_cols_;
   std::vector<scalar_t> sampled_edge_ids_;
@@ -178,7 +188,8 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
        const c10::optional<at::Tensor>& time,
-       const bool csc) {
+       const bool csc,
+       const std::string temporal_strategy) {
   TORCH_CHECK(!time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
@@ -202,8 +213,9 @@ sample(const at::Tensor& rowptr,
 
     std::vector<node_t> sampled_nodes;
     auto mapper = Mapper<node_t, scalar_t>(/*num_nodes=*/rowptr.size(0) - 1);
-    auto sampler = NeighborSamplerImpl(rowptr.data_ptr<scalar_t>(),
-                                       col.data_ptr<scalar_t>());
+    auto sampler =
+        NeighborSamplerImpl(rowptr.data_ptr<scalar_t>(),
+                            col.data_ptr<scalar_t>(), temporal_strategy);
 
     const auto seed_data = seed.data_ptr<scalar_t>();
     if constexpr (!disjoint) {
@@ -266,7 +278,8 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<node_type, at::Tensor>& seed_dict,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
-       const bool csc) {
+       const bool csc,
+       const std::string temporal_strategy) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
@@ -337,7 +350,8 @@ sample(const std::vector<node_type>& node_types,
       sampler_dict.insert(
           {k, NeighborSamplerImpl(
                   rowptr_dict.at(to_rel_type(k)).data_ptr<scalar_t>(),
-                  col_dict.at(to_rel_type(k)).data_ptr<scalar_t>())});
+                  col_dict.at(to_rel_type(k)).data_ptr<scalar_t>(),
+                  temporal_strategy)});
     }
 
     scalar_t i = 0;
@@ -476,9 +490,10 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        bool replace,
                        bool directed,
                        bool disjoint,
+                       std::string temporal_strategy,
                        bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
-                  seed, num_neighbors, time, csc);
+                  seed, num_neighbors, time, csc, temporal_strategy);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -497,10 +512,11 @@ hetero_neighbor_sample_kernel(
     bool replace,
     bool directed,
     bool disjoint,
+    std::string temporal_strategy,
     bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict, csc);
+                  num_neighbors_dict, time_dict, csc, temporal_strategy);
 }
 
 }  // namespace

@@ -16,6 +16,7 @@ neighbor_sample(const at::Tensor& rowptr,
                 bool replace,
                 bool directed,
                 bool disjoint,
+                std::string temporal_strategy,
                 bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
@@ -29,7 +30,7 @@ neighbor_sample(const at::Tensor& rowptr,
                        .findSchemaOrThrow("pyg::neighbor_sample", "")
                        .typed<decltype(neighbor_sample)>();
   return op.call(rowptr, col, seed, num_neighbors, time, csc, replace, directed,
-                 disjoint, return_edge_id);
+                 disjoint, temporal_strategy, return_edge_id);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -48,6 +49,7 @@ hetero_neighbor_sample(
     bool replace,
     bool directed,
     bool disjoint,
+    std::string temporal_strategy,
     bool return_edge_id) {
   // TODO (matthias) Add TensorArg definitions and type checks.
   static auto op = c10::Dispatcher::singleton()
@@ -55,23 +57,25 @@ hetero_neighbor_sample(
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, time_dict, csc, replace, directed,
-                 disjoint, return_edge_id);
+                 disjoint, temporal_strategy, return_edge_id);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
       "num_neighbors, Tensor? time = None, bool csc = False, bool replace = "
-      "False, bool directed = True, bool disjoint = False, bool return_edge_id "
-      "= True) -> (Tensor, Tensor, Tensor, Tensor?)"));
+      "False, bool directed = True, bool disjoint = False, str "
+      "temporal_strategy = 'uniform', bool return_edge_id = True) -> (Tensor, "
+      "Tensor, Tensor, Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
       "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
       "Dict(str, Tensor)? time_dict = None, bool csc = False, bool replace = "
-      "False, bool directed = True, bool disjoint = False, bool return_edge_id "
-      "= True) -> (Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor), "
-      "Dict(str, Tensor)?)"));
+      "False, bool directed = True, bool disjoint = False, str "
+      "temporal_strategy = 'uniform', bool return_edge_id = True) -> "
+      "(Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor), Dict(str, "
+      "Tensor)?)"));
 }
 
 }  // namespace sampler
