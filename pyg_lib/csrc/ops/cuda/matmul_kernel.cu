@@ -11,7 +11,6 @@ namespace pyg {
 namespace ops {
 
 namespace {
-namespace F = torch::nn::functional;
 
 void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
                                const std::vector<at::Tensor>& other,
