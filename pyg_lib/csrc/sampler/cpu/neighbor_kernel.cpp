@@ -67,7 +67,7 @@ class NeighborSampler {
     }
 
     if (row_end - row_start > 1) {
-      TORCH_CHECK(time[col_[row_start]] < time[col_[row_end - 1]],
+      TORCH_CHECK(time[col_[row_start]] <= time[col_[row_end - 1]],
                   "Found invalid non-sorted temporal neighborhood");
     }
 
