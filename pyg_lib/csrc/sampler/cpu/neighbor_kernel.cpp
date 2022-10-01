@@ -66,12 +66,8 @@ class NeighborSampler {
       row_start = std::max(row_start, (scalar_t)(row_end - count));
     }
 
-    if (row_end > row_start) {
-      TORCH_CHECK(time[col_[row_start]] < seed_time,
-                  "Found invalid non-sorted temporal neighborhood");
-    }
     if (row_end - row_start > 1) {
-      TORCH_CHECK(time[col_[row_end - 1]] < seed_time,
+      TORCH_CHECK(time[col_[row_start]] < time[col_[row_end - 1]],
                   "Found invalid non-sorted temporal neighborhood");
     }
 
