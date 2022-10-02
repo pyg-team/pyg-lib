@@ -18,14 +18,11 @@ argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
     4096,
     8192,
 ])
-argparser.add_argument(
-    '--num_neighbors',
-    type=ast.literal_eval,
-    default=[
-        # [-1],
-        [15, 10, 5],
-        [20, 15, 10],
-    ])
+argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
+    [-1],
+    [15, 10, 5],
+    [20, 15, 10],
+])
 argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--directed', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
@@ -61,15 +58,15 @@ def test_neighbor(dataset, **kwargs):
             pyg_lib_duration = time.perf_counter() - t
 
             t = time.perf_counter()
-            # for seed in tqdm(node_perm.split(batch_size)):
-            #     torch.ops.torch_sparse.neighbor_sample(
-            #         rowptr,
-            #         col,
-            #         seed,
-            #         num_neighbors,
-            #         args.replace,
-            #         args.directed,
-            #     )
+            for seed in tqdm(node_perm.split(batch_size)):
+                torch.ops.torch_sparse.neighbor_sample(
+                    rowptr,
+                    col,
+                    seed,
+                    num_neighbors,
+                    args.replace,
+                    args.directed,
+                )
             torch_sparse_duration = time.perf_counter() - t
 
             dgl_sampler = dgl.dataloading.NeighborSampler(
