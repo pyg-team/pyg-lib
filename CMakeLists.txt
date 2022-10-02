@@ -51,12 +51,18 @@ if (USE_PYTHON)
   target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
 endif()
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+
 if(BUILD_TEST)
   if(WITH_COV)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
   endif()
   include(cmake/test.cmake)
 endif()
+
+message("-- CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+message("-- CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_RELEASE}")
+message("-- CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_DEBUG}")
 
 if(BUILD_BENCHMARK)
   set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE INTERNAL "Disable benchmarking tool tests")

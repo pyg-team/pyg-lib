@@ -26,8 +26,8 @@ class CMakeBuild(build_ext):
         return '.'.join(ext_filename_parts)
 
     def check_env_flag(self, name: str, default: str = "") -> bool:
-        return os.getenv(name,
-                         default).upper() in ["1", "ON", "YES", "TRUE", "Y"]
+        value = os.getenv(name, default).upper()
+        return value in ["1", "ON", "YES", "TRUE", "Y"]
 
     def build_extension(self, ext):
         import torch
@@ -39,6 +39,7 @@ class CMakeBuild(build_ext):
                 self.build_type = "DEBUG"
             elif self.check_env_flag("REL_WITH_DEB_INFO"):
                 self.build_type = "RELWITHDEBINFO"
+        print(f"-- Build type: {self.build_type}")
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
