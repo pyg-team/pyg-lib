@@ -39,7 +39,6 @@ class CMakeBuild(build_ext):
                 self.build_type = "DEBUG"
             elif self.check_env_flag("REL_WITH_DEB_INFO"):
                 self.build_type = "RELWITHDEBINFO"
-        print(f"-- Build type: {self.build_type}")
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
