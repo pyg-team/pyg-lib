@@ -193,16 +193,21 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
        const c10::optional<at::Tensor>& time,
+       const c10::optional<at::Tensor>& seed_time,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
 
-  TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr' vector");
-  TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col' vector");
-  TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed' vector");
+  TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr'");
+  TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col'");
+  TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
   if (time.has_value()) {
-    TORCH_CHECK(time.value().is_contiguous(), "Non-contiguous 'time' vector");
+    TORCH_CHECK(time.value().is_contiguous(), "Non-contiguous 'time'");
+  }
+  if (seed_time.has_value()) {
+    TORCH_CHECK(seed_time.value().is_contiguous(),
+                "Non-contiguous 'seed_time'");
   }
 
   at::Tensor out_row, out_col, out_node_id;
@@ -221,15 +226,27 @@ sample(const at::Tensor& rowptr,
     auto sampler =
         NeighborSamplerImpl(rowptr.data_ptr<scalar_t>(),
                             col.data_ptr<scalar_t>(), temporal_strategy);
+    std::vector<scalar_t> seed_times;
 
     const auto seed_data = seed.data_ptr<scalar_t>();
     if constexpr (!disjoint) {
       sampled_nodes = pyg::utils::to_vector<scalar_t>(seed);
       mapper.fill(seed);
     } else {
-      for (size_t i = 0; i < seed.numel(); i++) {
+      for (size_t i = 0; i < seed.numel(); ++i) {
         sampled_nodes.push_back({i, seed_data[i]});
         mapper.insert({i, seed_data[i]});
+      }
+      if (seed_time.has_value()) {
+        const auto seed_time_data = seed_time.value().data_ptr<scalar_t>();
+        for (size_t i = 0; i < seed.numel(); ++i) {
+          seed_times.push_back(seed_time_data[i]);
+        }
+      } else if (time.has_value()) {
+        const auto time_data = time.value().data_ptr<scalar_t>();
+        for (size_t i = 0; i < seed.numel(); ++i) {
+          seed_times.push_back(time_data[seed_data[i]]);
+        }
       }
     }
 
@@ -246,11 +263,11 @@ sample(const at::Tensor& rowptr,
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
         const auto time_data = time.value().data_ptr<scalar_t>();
         for (size_t i = begin; i < end; ++i) {
-          const auto seed_node = seed_data[std::get<0>(sampled_nodes[i])];
-          const auto seed_time = time_data[seed_node];
+          const auto batch_idx = seed_data[std::get<0>(sampled_nodes[i])];
           sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
-                                  /*local_src_node=*/i, count, seed_time,
-                                  time_data, mapper, generator,
+                                  /*local_src_node=*/i, count,
+                                  seed_times[batch_idx], time_data, mapper,
+                                  generator,
                                   /*out_global_dst_nodes=*/sampled_nodes);
         }
       }
@@ -283,6 +300,7 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<node_type, at::Tensor>& seed_dict,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
+       const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
@@ -290,20 +308,26 @@ sample(const std::vector<node_type>& node_types,
 
   for (const auto& kv : rowptr_dict) {
     const at::Tensor& rowptr = kv.value();
-    TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr' vector");
+    TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr'");
   }
   for (const auto& kv : col_dict) {
     const at::Tensor& col = kv.value();
-    TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col' vector");
+    TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col'");
   }
   for (const auto& kv : seed_dict) {
     const at::Tensor& seed = kv.value();
-    TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed' vector");
+    TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
   }
   if (time_dict.has_value()) {
     for (const auto& kv : time_dict.value()) {
       const at::Tensor& time = kv.value();
-      TORCH_CHECK(time.is_contiguous(), "Non-contiguous 'time' vector");
+      TORCH_CHECK(time.is_contiguous(), "Non-contiguous 'time'");
+    }
+  }
+  if (seed_time_dict.has_value()) {
+    for (const auto& kv : seed_time_dict.value()) {
+      const at::Tensor& seed_time = kv.value();
+      TORCH_CHECK(seed_time.is_contiguous(), "Non-contiguous 'seed_time'");
     }
   }
 
@@ -343,9 +367,10 @@ sample(const std::vector<node_type>& node_types,
     phmap::flat_hash_map<edge_type, NeighborSamplerImpl> sampler_dict;
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
     std::vector<scalar_t> seed_times;
+
     for (const auto& k : node_types) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
-      sampled_nodes_dict[k];  // Initialize empty vector;
+      sampled_nodes_dict[k];  // Initialize empty vector.
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
     }
@@ -359,7 +384,7 @@ sample(const std::vector<node_type>& node_types,
                   temporal_strategy)});
     }
 
-    scalar_t i = 0;
+    scalar_t batch_idx = 0;
     for (const auto& kv : seed_dict) {
       const at::Tensor& seed = kv.value();
       slice_dict[kv.key()] = {0, seed.size(0)};
@@ -371,20 +396,22 @@ sample(const std::vector<node_type>& node_types,
         auto& sampled_nodes = sampled_nodes_dict.at(kv.key());
         auto& mapper = mapper_dict.at(kv.key());
         const auto seed_data = seed.data_ptr<scalar_t>();
-        if (!time_dict.has_value()) {
-          for (size_t j = 0; j < seed.numel(); j++) {
-            sampled_nodes.push_back({i, seed_data[j]});
-            mapper.insert({i, seed_data[j]});
-            i++;
+        for (size_t i = 0; i < seed.numel(); ++i) {
+          sampled_nodes.push_back({batch_idx, seed_data[i]});
+          mapper.insert({batch_idx, seed_data[i]});
+          batch_idx++;
+        }
+        if (seed_time_dict.has_value()) {
+          const at::Tensor& seed_time = seed_time_dict.value().at(kv.key());
+          const auto seed_time_data = seed_time.data_ptr<scalar_t>();
+          for (size_t i = 0; i < seed.numel(); ++i) {
+            seed_times.push_back(seed_time_data[i]);
           }
-        } else {
+        } else if (time_dict.has_value()) {
           const at::Tensor& time = time_dict.value().at(kv.key());
           const auto time_data = time.data_ptr<scalar_t>();
-          for (size_t j = 0; j < seed.numel(); j++) {
-            sampled_nodes.push_back({i, seed_data[j]});
-            mapper.insert({i, seed_data[j]});
-            seed_times.push_back(time_data[seed_data[j]]);
-            i++;
+          for (size_t i = 0; i < seed.numel(); ++i) {
+            seed_times.push_back(time_data[seed_data[i]]);
           }
         }
       }
@@ -412,7 +439,7 @@ sample(const std::vector<node_type>& node_types,
           const at::Tensor& dst_time = time_dict.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<scalar_t>();
           for (size_t i = begin; i < end; ++i) {
-            const auto batch_idx = src_sampled_nodes[i].first;
+            batch_idx = src_sampled_nodes[i].first;
             sampler.temporal_sample(/*global_src_node=*/src_sampled_nodes[i],
                                     /*local_src_node=*/i, count,
                                     seed_times[batch_idx], dst_time_data,
@@ -491,6 +518,7 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& seed,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
+                       const c10::optional<at::Tensor>& seed_time,
                        bool csc,
                        bool replace,
                        bool directed,
@@ -498,7 +526,7 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        std::string temporal_strategy,
                        bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
-                  seed, num_neighbors, time, csc, temporal_strategy);
+                  seed, num_neighbors, time, seed_time, csc, temporal_strategy);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -513,6 +541,7 @@ hetero_neighbor_sample_kernel(
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
     bool csc,
     bool replace,
     bool directed,
@@ -521,7 +550,8 @@ hetero_neighbor_sample_kernel(
     bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict, csc, temporal_strategy);
+                  num_neighbors_dict, time_dict, seed_time_dict, csc,
+                  temporal_strategy);
 }
 
 }  // namespace
