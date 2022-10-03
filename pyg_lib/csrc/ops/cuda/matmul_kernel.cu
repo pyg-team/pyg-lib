@@ -12,11 +12,9 @@ namespace ops {
 
 namespace {
 
-void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
-                               const std::vector<at::Tensor>& other,
-                               const std::vector<at::Tensor>& out) {
-  // TODO (matthias) Check tensor devices.
-
+void grouped_matmul_out_kernel(const at::TensorList input,
+                               const at::TensorList other,
+                               const at::TensorList out) {
   const auto num_matrices = input.size();
   std::vector<at::Tensor> new_input, new_other, new_out;
 
@@ -81,8 +79,6 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   for (size_t i = 0; i < num_matrices; ++i) {
     auto m = new_input[i].size(0), k = new_input[i].size(1),
          n = new_out[i].size(1);
-    TORCH_CHECK(new_input[i].size(-1) == new_other[i].size(-2),
-                "Shape mismatch");
     all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
     ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
     ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
@@ -121,9 +117,8 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor>& input,
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
 }
 
-std::vector<at::Tensor> grouped_matmul_kernel(
-    const std::vector<at::Tensor>& input,
-    const std::vector<at::Tensor>& other) {
+std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
+                                              const at::TensorList other) {
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
@@ -151,17 +146,10 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY(pyg, m) {
-  m.def("pyg::cuda_grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
-  m.def(
-      "pyg::cuda_segment_matmul(Tensor input, Tensor ptr, Tensor other) -> "
-      "Tensor");
-}
-
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_grouped_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::cuda_segment_matmul"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
 }
 
