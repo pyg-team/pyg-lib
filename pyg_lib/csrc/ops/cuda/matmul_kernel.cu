@@ -5,7 +5,6 @@
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 
-#include "pyg_lib/csrc/utils/check.h"
 #include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
@@ -16,22 +15,7 @@ namespace {
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
-  TORCH_CHECK(input.size() == other.size() && other.size() == out.size(),
-              "Size of all input tensors should be equal.");
   const auto num_matrices = input.size();
-  std::vector<at::TensorArg> input_args;
-  std::vector<at::TensorArg> other_args;
-  std::vector<at::TensorArg> out_args;
-  pyg::utils::fill_tensor_args(input_args, input, "input", 0);
-  pyg::utils::fill_tensor_args(other_args, other, "other", 1);
-  pyg::utils::fill_tensor_args(out_args, out, "out", 2);
-  at::CheckedFrom c{"grouped_matmul_out_kernel"};
-
-  at::checkAllSameGPU(c, input_args);
-  at::checkAllSameGPU(c, other_args);
-  at::checkAllSameGPU(c, out_args);
-  at::checkAllSameGPU(c, {input_args[0], other_args[0], out_args[0]});
-
   std::vector<at::Tensor> new_input, new_other, new_out;
 
   // TODO (matthias) Allow for other types than `float`.

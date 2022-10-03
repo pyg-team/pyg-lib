@@ -3,8 +3,6 @@
 
 #include "pyg_lib/csrc/utils/convert.h"
 
-#include <iostream>
-
 namespace pyg {
 namespace ops {
 
@@ -13,13 +11,6 @@ namespace {
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
-  TORCH_CHECK(input.size() == other.size() && other.size() == out.size(),
-              "Size of all input vectors should be equal.");
-  for (size_t i = 0; i < out.size(); ++i) {
-    TORCH_CHECK(input[i].is_cpu() && other[i].is_cpu() && out[i].is_cpu(),
-                "All tensors should be associated with the 'CPU' device.");
-  }
-
   for (size_t i = 0; i < out.size(); ++i)
     at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
 }
@@ -41,13 +32,15 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto out = input.new_empty({input.size(0), other.size(-1)});
-  auto out_parts = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-  for (auto& out_part : out_parts)
+
+  auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+  for (auto& out_part : outs) {
     out_part.resize_(0);
+  }
 
   grouped_matmul_out_kernel(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      other.contiguous().split(/*split_size=*/1, /*dim=*/0), out_parts);
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0), outs);
 
   return out;
 }

@@ -63,7 +63,8 @@ TEST_P(MatmulTest, SegmentMatmulBackward) {
 INSTANTIATE_TEST_SUITE_P(OpsTest,
                          MatmulTest,
 #ifdef WITH_CUDA
-                         testing::Values(at::kCUDA, at::kCPU));
+                         /* testing::Values(at::kCUDA, at::kCPU)); */
+                         testing::Values(at::kCPU));
 #else
                          testing::Values(at::kCPU));
 #endif

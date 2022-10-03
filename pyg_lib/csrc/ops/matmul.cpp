@@ -14,9 +14,8 @@ namespace {
 
 std::vector<at::Tensor> _grouped_matmul(const at::TensorList input,
                                         const at::TensorList other) {
-  TORCH_CHECK(
-      input.size() == other.size(),
-      "Number of 'input' tensors must match number of 'other' tensors.");
+  TORCH_CHECK(input.size() == other.size(),
+              "Number of 'input' tensors must match number of 'other' tensors");
   const auto n_tensors = input.size();
   std::vector<at::TensorArg> input_args;
   std::vector<at::TensorArg> other_args;
