@@ -45,9 +45,9 @@ def neighbor_sample(
             If used, the :obj:`col` vector needs to be sorted according to time
             within individual neighborhoods. Requires :obj:`disjoint=True`.
             (default: :obj:`None`)
-        seed_time (torch.Tensor, optional): Optional timestamps to override the
-            timestamp for seed nodes. If not set, will use :obj:`time` as
-            default seed timestamps. (default: :obj:`None`)
+        seed_time (torch.Tensor, optional): Optional values to override the
+            timestamp for seed nodes. If not set, will use timestamps in
+            :obj:`time` as default for seed nodes. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
