@@ -4,7 +4,7 @@ import torch
 import pyg_lib
 
 #DEVICE_STRS = ['cpu'] # cpu has enormous errors or segfaults, see Issue 119
-DEVICE_STRS = [] 
+DEVICE_STRS = []
 if torch.cuda.is_available():
     DEVICE_STRS.append('cuda:0')
 

@@ -97,7 +97,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
     if (torch::autograd::any_variable_requires_grad(other)) {
-      for (size_t i = 0; i < input.size(); ++i){
+      for (size_t i = 0; i < input.size(); ++i) {
         other[i] = other[i].transpose(-2, -1);
         other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
       }
@@ -153,7 +153,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
       variable_list others_grad;
       for (size_t i = 0; i < split_input_t.size(); ++i)
-        others_grad.push_back(torch::matmul(split_input_t[i], grad_out_split[i]));
+        others_grad.push_back(
+            torch::matmul(split_input_t[i], grad_out_split[i]));
       other_grad = at::stack(others_grad);
     }
 
@@ -165,25 +166,26 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul_autograd(const variable_list input,
-                                       const variable_list other) {
+                                                const variable_list other) {
   return GroupedMatmul::apply(input, other);
   // return _grouped_matmul(input, other);
 }
 
 // Performs matrix multiplication according to segments.
 at::Tensor segment_matmul_autograd(const Variable input,
-                          const at::Tensor& ptr,
-                          const Variable other) {
+                                   const at::Tensor& ptr,
+                                   const Variable other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
   // return _segment_matmul(input, ptr, other);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::grouped_matmul_autograd(Tensor[] input, Tensor[] other) -> Tensor[]"));
   m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul_autograd(Tensor input, Tensor ptr, "
-                             "Tensor other) -> Tensor"));
+      TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul_autograd(Tensor[] input, "
+                             "Tensor[] other) -> Tensor[]"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::segment_matmul_autograd(Tensor input, Tensor ptr, "
+      "Tensor other) -> Tensor"));
 }
 
 }  // namespace ops

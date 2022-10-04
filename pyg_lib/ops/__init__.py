@@ -3,7 +3,6 @@ from typing import List
 import torch
 from torch import Tensor
 
-
 # class SegmentMatmul(torch.autograd.Function):
 #     @staticmethod
 #     def forward(ctx, inputs, ptr, other):
@@ -32,7 +31,6 @@ from torch import Tensor
 #             other_grad = torch.stack(others_grad, dim=0)
 
 #         return input_grad, None, other_grad
-
 
 # class GroupedMatmul(torch.autograd.Function):
 #     @staticmethod
@@ -93,7 +91,8 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     """
     outs = torch.ops.pyg.grouped_matmul_autograd(inputs, others)
     for i in range(len(outs)):
-        outs[i].requires_grad = inputs[i].requires_grad or others[i].requires_grad
+        outs[i].requires_grad = inputs[i].requires_grad or others[
+            i].requires_grad
     return outs
     #return GroupedMatmul.apply(inputs, others)
 
