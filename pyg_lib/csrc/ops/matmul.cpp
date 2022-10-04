@@ -97,9 +97,10 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     // For Simplicity:
     // We assume entire input variable list either requires grad or does not
     if (torch::autograd::any_variable_requires_grad(other)) {
-      for (size_t i = 0; i < input.size(); ++i)
+      for (size_t i = 0; i < input.size(); ++i){
         other[i] = other[i].transpose(-2, -1);
         other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
+      }
     } else {
       for (size_t i = 0; i < other.size(); ++i)
         other_grad.push_back(Variable());
@@ -151,7 +152,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       variable_list grad_out_split =
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
       variable_list others_grad;
-      for (size_t i = 0; i < input.size(); ++i)
+      for (size_t i = 0; i < split_input_t.size(); ++i)
         others_grad.push_back(torch::matmul(split_input_t[i], grad_out_split[i]));
       other_grad = at::stack(others_grad);
     }
@@ -179,9 +180,9 @@ at::Tensor segment_matmul(const at::Tensor& input,
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+      "pyg::grouped_matmul_autograd(Tensor[] input, Tensor[] other) -> Tensor[]"));
   m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
+      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul_autograd(Tensor input, Tensor ptr, "
                              "Tensor other) -> Tensor"));
 }
 
