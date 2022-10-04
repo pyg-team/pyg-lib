@@ -128,7 +128,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     """
     out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
     out.requires_grad = inputs.requires_grad or other.requires_grad
-    return 
+    return out
     #return SegmentMatmul.apply(inputs, ptr, other)
 
 
