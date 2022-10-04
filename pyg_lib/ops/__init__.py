@@ -91,7 +91,10 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    return torch.ops.pyg.grouped_matmul(inputs, others)
+    outs = torch.ops.pyg.grouped_matmul(inputs, others)
+    for i in range(len(outs)):
+        outs[i].requires_grad = True
+    return outs
     #return GroupedMatmul.apply(inputs, others)
 
 
