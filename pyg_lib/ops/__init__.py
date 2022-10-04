@@ -91,7 +91,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    return torch.ops.pyg.grouped_matmul_autograd(inputs, others)
+    return torch.ops.pyg.grouped_matmul(inputs, others)
     #return GroupedMatmul.apply(inputs, others)
 
 
@@ -123,7 +123,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    return torch.ops.pyg.segment_matmul_autograd(inputs, ptr, other)
+    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
     #return SegmentMatmul.apply(inputs, ptr, other)
 
 
