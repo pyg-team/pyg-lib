@@ -4,7 +4,7 @@ import torch
 import pyg_lib
 
 DEVICE_STRS = ['cpu']
-if pyg_lib.cuda_version() != -1:
+if torch.cuda.is_available():
     DEVICE_STRS.append('cuda:0')
 
 
