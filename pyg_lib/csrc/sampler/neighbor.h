@@ -17,6 +17,7 @@ neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& seed,
                 const std::vector<int64_t>& num_neighbors,
                 const c10::optional<at::Tensor>& time = c10::nullopt,
+                const c10::optional<at::Tensor>& seed_time = c10::nullopt,
                 bool csc = false,
                 bool replace = false,
                 bool directed = true,
@@ -40,6 +41,8 @@ hetero_neighbor_sample(
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict =
+        c10::nullopt,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict =
         c10::nullopt,
     bool csc = false,
     bool replace = false,

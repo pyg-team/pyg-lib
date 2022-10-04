@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Allow overriding `time` for seed nodes via `seed_time` in `neighbor_sample` ([#118](https://github.com/pyg-team/pyg-lib/pull/118))
 - Added `[segment|grouped]_matmul` CPU implementation ([#111](https://github.com/pyg-team/pyg-lib/pull/111))
 - Added `temporal_strategy` option to `neighbor_sample` ([#114](https://github.com/pyg-team/pyg-lib/pull/114))
 - Added benchmarking tool (Google Benchmark) along with `pyg::sampler::Mapper` benchmark example ([#101](https://github.com/pyg-team/pyg-lib/pull/101))
