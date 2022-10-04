@@ -99,7 +99,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     if (torch::autograd::any_variable_requires_grad(other)) {
       for (size_t i = 0; i < input.size(); ++i)
         other[i] = other[i].transpose(-2, -1);
-        other_grad.push_back(torch::matmul(grad_outs, other));
+        other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
     } else {
       for (size_t i = 0; i < other.size(); ++i)
         other_grad.push_back(Variable());
@@ -150,7 +150,9 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
       variable_list grad_out_split =
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+      variable_list others_grad;
+      for (size_t i = 0; i < input.size(); ++i)
+        others_grad.push_back(torch::matmul(split_input_t[i], grad_out_split[i]));
       other_grad = at::stack(others_grad);
     }
 
