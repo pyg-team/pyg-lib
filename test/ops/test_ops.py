@@ -55,5 +55,5 @@ def test_grouped_matmul_autograd(device_str):
 
 if __name__ == '__main__':
     for device_str in DEVICE_STRS:
-        # test_segment_matmul_autograd(device_str)
+        test_segment_matmul_autograd(device_str)
         test_grouped_matmul_autograd(device_str)
