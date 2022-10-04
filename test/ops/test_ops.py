@@ -18,7 +18,7 @@ def assert_close_enough(x, y, tol=6e-3):
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
 def test_segment_matmul_autograd(device_str):
     inputs = torch.randn((8, 16), requires_grad=True, device=device_str)
-    ptr = torch.tensor([0, 5, 8]).to(torch.device(device_str))
+    ptr = torch.tensor([0, 5, 8], requires_grad=True).to(torch.device(device_str))
     other = torch.randn((2, 16, 32), requires_grad=True, device=device_str)
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
     assert out.size() == (8, 32)
