@@ -123,7 +123,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
                                Variable input,
-                               Variable ptr,
+                               at::Tensor ptr,
                                Variable other) {
     Variable out = _segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
