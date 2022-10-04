@@ -99,7 +99,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     if (torch::autograd::any_variable_requires_grad(other)) {
       for (size_t i = 0; i < input.size(); ++i)
         other[i] = other[i].transpose(-2, -1);
-      other_grad = _grouped_matmul(grad_outs, other);
+        other_grad.push_back(torch::matmul(grad_outs, other));
     } else {
       for (size_t i = 0; i < other.size(); ++i)
         other_grad.push_back(Variable());
@@ -163,18 +163,16 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
                                        const at::TensorList other) {
-  // TODO (matthias) Add autograd support.
-  /* return GroupedMatmul::apply(input, other)[0]; */
-  return _grouped_matmul(input, other);
+  return GroupedMatmul::apply(input, other);
+  // return _grouped_matmul(input, other);
 }
 
 // Performs matrix multiplication according to segments.
 at::Tensor segment_matmul(const at::Tensor& input,
                           const at::Tensor& ptr,
                           const at::Tensor& other) {
-  // TODO (matthias) Add autograd support.
-  /* return SegmentMatmul::apply(input, ptr, other)[0]; */
-  return _segment_matmul(input, ptr, other);
+  return SegmentMatmul::apply(input, ptr, other)[0];
+  // return _segment_matmul(input, ptr, other);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
