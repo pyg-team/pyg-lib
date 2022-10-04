@@ -263,7 +263,7 @@ sample(const at::Tensor& rowptr,
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
         const auto time_data = time.value().data_ptr<scalar_t>();
         for (size_t i = begin; i < end; ++i) {
-          const auto batch_idx = seed_data[std::get<0>(sampled_nodes[i])];
+          const auto batch_idx = sampled_nodes[i].first;
           sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
                                   /*local_src_node=*/i, count,
                                   seed_times[batch_idx], time_data, mapper,
