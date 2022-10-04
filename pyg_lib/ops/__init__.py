@@ -1,7 +1,7 @@
-# from typing import List
+from typing import List
 
-# import torch
-# from torch import Tensor
+import torch
+from torch import Tensor
 
 
 # class SegmentMatmul(torch.autograd.Function):
