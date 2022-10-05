@@ -47,11 +47,6 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 }  // namespace
 
-TORCH_LIBRARY(pyg, m) {
-  m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]", grouped_matmul);
-  m.def("pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor", segment_matmul);
-}
-
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
