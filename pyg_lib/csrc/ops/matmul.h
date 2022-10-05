@@ -8,12 +8,12 @@ namespace ops {
 
 // Performs matrix multiplication across list of elements.
 // TODO (matthias) Support `out` argument.
-PYG_API std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
+PYG_API std::vector<at::Tensor> grouped_matmul_autograd(const at::TensorList input,
                                                const at::TensorList other);
 
 // Performs matrix multiplication according to segments.
 // TODO (matthias) Support `out` argument.
-PYG_API at::Tensor segment_matmul(const at::Tensor& input,
+PYG_API at::Tensor segment_matmul_autograd(const at::Tensor& input,
                                   const at::Tensor& ptr,
                                   const at::Tensor& other);
 
