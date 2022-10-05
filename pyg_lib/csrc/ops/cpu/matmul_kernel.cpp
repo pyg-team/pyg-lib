@@ -56,7 +56,7 @@ TORCH_LIBRARY(pyg, m) {
       "Tensor other) -> Tensor"));
 }
 
-TORCH_LIBRARY_IMPL(pyg, CPU, m) {
+TORCH_LIBRARY_FRAGMENT(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
          TORCH_FN(grouped_matmul_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
