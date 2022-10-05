@@ -195,8 +195,9 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
          TORCH_FN(segment_matmul_autograd));
 }
 
-static auto registry = torch::RegisterOperators()
-                           .op("pyg::grouped_matmul_autograd", &grouped_matmul_autograd)
-                           .op("pyg::segment_matmul_autograd", &segment_matmul_autograd);
+static auto registry =
+    torch::RegisterOperators()
+        .op("pyg::grouped_matmul_autograd", &grouped_matmul_autograd)
+        .op("pyg::segment_matmul_autograd", &segment_matmul_autograd);
 }  // namespace ops
 }  // namespace pyg
