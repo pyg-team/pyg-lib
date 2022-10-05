@@ -51,9 +51,9 @@ TORCH_LIBRARY(pyg, m) {
   m.def(
       TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul(Tensor[] input, "
                              "Tensor[] other) -> Tensor[]"));
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::segment_matmul(Tensor input, Tensor ptr, "
-      "Tensor other) -> Tensor"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
+                             "Tensor other) -> Tensor"));
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, CPU, m) {
