@@ -179,7 +179,7 @@ at::Tensor segment_matmul_autograd(const Variable input,
   // return _segment_matmul(input, ptr, other);
 }
 
-TORCH_LIBRARY(pyg, Autograd, m) {
+TORCH_LIBRARY(pyg, m) {
   m.def(
       TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul_autograd(Tensor[] input, "
                              "Tensor[] other) -> Tensor[]"));
