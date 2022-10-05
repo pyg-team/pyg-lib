@@ -167,6 +167,8 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 // Performs matrix multiplication across list of elements.
 std::vector<at::Tensor> grouped_matmul_autograd(const at::TensorList input,
                                                 const at::TensorList other) {
+  variable_list input = (variable_list) input;
+  variable_list other = (variable_list) other;
   return GroupedMatmul::apply(input, other);
   // return _grouped_matmul(input, other);
 }
