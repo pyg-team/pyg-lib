@@ -35,7 +35,7 @@ def test_segment_matmul_autograd(device_str):
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
 def test_grouped_matmul_autograd(device_str):
     device = torch.device(device_str)
-    inputs = [torch.randn(5, 16).to(device), torch.randn(3, 32).to(device)]
+    inputs = [torch.randn((5, 16), requires_grad=True).to(device), torch.randn((3, 32), requires_grad=True).to(device)]
     others = [
         torch.randn((16, 32), requires_grad=True, device=device_str),
         torch.randn((32, 64), requires_grad=True, device=device_str)
@@ -55,5 +55,5 @@ def test_grouped_matmul_autograd(device_str):
 
 if __name__ == '__main__':
     for device_str in DEVICE_STRS:
-        test_segment_matmul_autograd(device_str)
+        #test_segment_matmul_autograd(device_str)
         test_grouped_matmul_autograd(device_str)
