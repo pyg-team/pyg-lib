@@ -3,6 +3,7 @@ from typing import List
 import torch
 from torch import Tensor
 
+
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
@@ -64,7 +65,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
 
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
-    """ 
+    """
     return torch.ops.pyg.segment_matmul_autograd(inputs, ptr, other)
     #return SegmentMatmul.apply(inputs, ptr, other)
 

@@ -180,10 +180,15 @@ at::Tensor segment_matmul_autograd(const Variable input,
 }
 
 TORCH_LIBRARY(pyg, m) {
-  m.def("pyg::grouped_matmul_autograd(Tensor[] input, Tensor[] other) -> Tensor[]");
-  m.def("pyg::segment_matmul_autograd(Tensor input, Tensor ptr, Tensor other) -> Tensor");
+  m.def(
+      "pyg::grouped_matmul_autograd(Tensor[] input, Tensor[] other) -> "
+      "Tensor[]");
+  m.def(
+      "pyg::segment_matmul_autograd(Tensor input, Tensor ptr, Tensor other) -> "
+      "Tensor");
   m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
-  m.def("pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
+  m.def(
+      "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
 }
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
@@ -192,7 +197,6 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_autograd"),
          TORCH_FN(segment_matmul_autograd));
 }
-
 
 }  // namespace ops
 }  // namespace pyg
