@@ -179,24 +179,20 @@ at::Tensor segment_matmul_autograd(const Variable input,
   // return _segment_matmul(input, ptr, other);
 }
 
-// TORCH_LIBRARY(pyg, m) {
-//   m.def(
-//       TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul_autograd(Tensor[] input, "
-//                              "Tensor[] other) -> Tensor[]"));
-//   m.def(TORCH_SELECTIVE_SCHEMA(
-//       "pyg::segment_matmul_autograd(Tensor input, Tensor ptr, "
-//       "Tensor other) -> Tensor"));
-// }
-
-TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_autograd"),
-         TORCH_FN(grouped_matmul_autograd));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_autograd"),
-         TORCH_FN(segment_matmul_autograd));
+TORCH_LIBRARY(pyg, m) {
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::grouped_matmul_autograd(Tensor[] input, "
+                             "Tensor[] other) -> Tensor[]"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::segment_matmul_autograd(Tensor input, Tensor ptr, "
+      "Tensor other) -> Tensor"));
 }
 
-static auto registry = torch::RegisterOperators()
-                           .op("pyg::grouped_matmul_autograd", &grouped_matmul_autograd)
-                           .op("pyg::segment_matmul_autograd", &segment_matmul_autograd);
+// TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
+//   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_autograd"),
+//          TORCH_FN(grouped_matmul_autograd));
+//   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_autograd"),
+//          TORCH_FN(segment_matmul_autograd));
+// }
 }  // namespace ops
 }  // namespace pyg
