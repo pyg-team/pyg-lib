@@ -165,18 +165,16 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 }  // namespace
 
 // Performs matrix multiplication across list of elements.
-std::vector<at::Tensor> grouped_matmul_autograd(const at::TensorList input,
-                                                const at::TensorList other) {
-  variable_list cast_input = (variable_list) input;
-  variable_list cast_other = (variable_list) other;
-  return GroupedMatmul::apply(cast_input, cast_other);
+std::vector<at::Tensor> grouped_matmul_autograd(const variable_list input,
+                                                const variable_list other) {
+  return GroupedMatmul::apply(input, other);
   // return _grouped_matmul(input, other);
 }
 
 // Performs matrix multiplication according to segments.
-at::Tensor segment_matmul_autograd(const at::Tensor& input,
+at::Tensor segment_matmul_autograd(const Variable input,
                                    const at::Tensor& ptr,
-                                   const at::Tensor& other) {
+                                   const Variable other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
   // return _segment_matmul(input, ptr, other);
 }
