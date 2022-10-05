@@ -184,13 +184,6 @@ TORCH_LIBRARY(pyg, m) {
   m.def("pyg::segment_matmul_autograd(Tensor input, Tensor ptr, Tensor other) -> Tensor", segment_matmul_autograd);
 }
 
-TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_autograd"),
-         TORCH_FN(grouped_matmul_autograd));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_autograd"),
-         TORCH_FN(segment_matmul_autograd));
-}
-
 
 }  // namespace ops
 }  // namespace pyg
