@@ -8,14 +8,14 @@ namespace ops {
 
 // Performs matrix multiplication across list of elements.
 // TODO (matthias) Support `out` argument.
-PYG_API std::vector<at::Tensor> grouped_matmul_autograd(const at::TensorList input,
-                                               const at::TensorList other);
+PYG_API std::vector<at::Tensor> grouped_matmul_autograd(const variable_list  input,
+                                               const variable_list other);
 
 // Performs matrix multiplication according to segments.
 // TODO (matthias) Support `out` argument.
-PYG_API at::Tensor segment_matmul_autograd(const at::Tensor& input,
+PYG_API at::Tensor segment_matmul_autograd(const Variable input,
                                   const at::Tensor& ptr,
-                                  const at::Tensor& other);
+                                  const Variable other);
 
 }  // namespace ops
 }  // namespace pyg
