@@ -192,8 +192,10 @@ TORCH_LIBRARY(pyg, m) {
 }
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl("pyg::grouped_matmul_autograd", grouped_matmul_autograd);
-  m.impl("pyg::segment_matmul_autograd", segment_matmul_autograd);
+  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul_autograd"),
+         TORCH_FN(grouped_matmul_autograd));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul_autograd"),
+         TORCH_FN(segment_matmul_autograd));
 }
 
 }  // namespace ops
