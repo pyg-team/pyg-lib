@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include "pyg_lib/csrc/macros.h"
 #include <torch/script.h>
+#include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
 namespace ops {
