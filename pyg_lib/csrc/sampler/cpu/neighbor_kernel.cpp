@@ -59,7 +59,7 @@ class NeighborSampler {
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::lower_bound(
         col_ + row_start, col_ + row_end, seed_time,
-        [&](const scalar_t& a, const scalar_t& b) { return time[a] < b; });
+        [&](const scalar_t& a, const scalar_t& b) { return time[a] <= b; });
     row_end = it - col_;
 
     if (temporal_strategy_ == "last") {
