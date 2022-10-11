@@ -1,7 +1,11 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
-#include <cutlass/gemm/device/gemm_grouped.h>
-#include <cutlass/gemm/kernel/default_gemm_grouped.h>
+#include "cutlass/cutlass.h"
+#include "cutlass/gemm/gemm.h"
+#include "cutlass/gemm/kernel/gemm_grouped.h"
+#include "cutlass/gemm/kernel/default_gemm_grouped.h"
+#include "cutlass/gemm/device/gemm_grouped.h"
+#include "cutlass/gemm/device/gemm_universal.h"
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 
@@ -12,6 +16,29 @@ namespace ops {
 
 namespace {
 
+// Returns the amount of shared memory required per threadblock in `GroupedGemmKernel`
+template <typename GroupedGemmKernel>
+int shared_memory_for_kernel() {
+  return int(sizeof(typename GroupedGemmKernel::SharedStorage));
+}
+
+// Returns the bytes of shared memory available per SM on the GPU, or -1 on error.
+int shared_memory_per_sm() {
+  cudaDeviceProp properties;
+  int device_idx;
+  cudaError_t result = cudaGetDevice(&device_idx);
+  if (result != cudaSuccess) {
+    return -1;
+  }
+
+  result = cudaGetDeviceProperties(&properties, device_idx);
+  if (result != cudaSuccess) {
+    return -1;
+  }
+
+  return properties.sharedMemPerMultiprocessor;
+}
+
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
@@ -20,7 +47,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
-  using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+  using DefaultGemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
       float,                                         // Element A
       cutlass::layout::RowMajor,                     // Layout A
       cutlass::ComplexTransform::kNone,              //
@@ -44,6 +71,40 @@ void grouped_matmul_out_kernel(const at::TensorList input,
       3,                                             // Stages
       cutlass::arch::OpMultiplyAdd                   // Operation
       >::GemmKernel;
+
+  // TODO (matthias) Allow for other types than `float`.
+  // TODO (matthias) Are these attributes correctly set?
+  int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
+  int shared_mem_per_sm = shared_memory_per_sm();
+  if (grouped_shared_mem < shared_mem_per_sm) {
+      using GemmKernel = DefaultGemmKernel;
+  } else {
+      using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+        float,                                         // Element A
+        cutlass::layout::RowMajor,                     // Layout A
+        cutlass::ComplexTransform::kNone,              //
+        1,                                             // Granularity A
+        float,                                         // Element B
+        cutlass::layout::RowMajor,                     // Layout B
+        cutlass::ComplexTransform::kNone,              //
+        1,                                             // Granularity B
+        float,                                         // Element C&D
+        cutlass::layout::RowMajor,                     // Layout C&D
+        float,                                         // Element Accumulator
+        cutlass::arch::OpClassTensorOp,                // Operator Class Tag
+        cutlass::arch::Sm80,                           // Architecture
+        cutlass::gemm::GemmShape<128, 64, 32>,         // Threadblock-level Tile
+        cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
+        cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
+        cutlass::epilogue::thread::LinearCombination<  // Epilogue
+            float, 1, float, float>,                   //
+        cutlass::gemm::threadblock::                   // Swizzling Operator
+        GemmIdentityThreadblockSwizzle<8>,             //
+        3,                                             // Stages
+        cutlass::arch::OpMultiplyAdd                   // Operation
+        >::GemmKernel;
+  }
+
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
