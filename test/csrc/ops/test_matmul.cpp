@@ -46,7 +46,6 @@ TEST_P(MatmulTest, SegmentMatmulForward) {
 // TODO (matthias) add a grouped matmul backward test.
 
 TEST_P(MatmulTest, SegmentMatmulBackward) {
-  return;  // TODO (matthias) uncomment this.
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
   auto options = at::TensorOptions().device(param);
 

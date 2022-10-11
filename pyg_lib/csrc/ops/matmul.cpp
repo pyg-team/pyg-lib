@@ -82,24 +82,24 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
     ctx->save_for_backward(input_and_other);
-    ctx->saved_data["input_len"] = (int)input.size();
     return out;
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
-    int input_len = ctx->saved_data["input_len"].toInt();
+    int input_len = input_and_other.size() / 2;
     variable_list input(input_and_other.begin(),
                         input_and_other.begin() + input_len);
     variable_list other(input_and_other.begin() + input_len,
                         input_and_other.end());
+
+    // We assume entire input variable list either requires grad or does not:
     variable_list other_grad;
-    // For Simplicity:
-    // We assume entire input variable list either requires grad or does not
     if (torch::autograd::any_variable_requires_grad(other)) {
-      for (size_t i = 0; i < input.size(); ++i)
+      for (size_t i = 0; i < input.size(); ++i) {
         other[i] = other[i].transpose(-2, -1);
-      other_grad = _grouped_matmul(grad_outs, other);
+        other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
+      }
     } else {
       for (size_t i = 0; i < other.size(); ++i)
         other_grad.push_back(Variable());
@@ -122,7 +122,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(AutogradContext* ctx,
                                Variable input,
-                               Variable ptr,
+                               at::Tensor ptr,
                                Variable other) {
     Variable out = _segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
@@ -150,7 +150,10 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
           input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
       variable_list grad_out_split =
           grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-      auto others_grad = _grouped_matmul(split_input_t, grad_out_split);
+      variable_list others_grad;
+      for (size_t i = 0; i < split_input_t.size(); ++i)
+        others_grad.push_back(
+            torch::matmul(split_input_t[i], grad_out_split[i]));
       other_grad = at::stack(others_grad);
     }
 
@@ -161,28 +164,22 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
 }  // namespace
 
 // Performs matrix multiplication across list of elements.
-std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
-                                       const at::TensorList other) {
-  // TODO (matthias) Add autograd support.
-  /* return GroupedMatmul::apply(input, other)[0]; */
-  return _grouped_matmul(input, other);
+std::vector<at::Tensor> grouped_matmul(const variable_list input,
+                                       const variable_list other) {
+  return GroupedMatmul::apply(input, other);
 }
 
 // Performs matrix multiplication according to segments.
-at::Tensor segment_matmul(const at::Tensor& input,
+at::Tensor segment_matmul(const Variable input,
                           const at::Tensor& ptr,
-                          const at::Tensor& other) {
-  // TODO (matthias) Add autograd support.
-  /* return SegmentMatmul::apply(input, ptr, other)[0]; */
-  return _segment_matmul(input, ptr, other);
+                          const Variable other) {
+  return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
-TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]"));
+TORCH_LIBRARY(pyg, m) {
+  m.def("pyg::grouped_matmul(Tensor[] input, Tensor[] other) -> Tensor[]");
   m.def(
-      TORCH_SELECTIVE_SCHEMA("pyg::segment_matmul(Tensor input, Tensor ptr, "
-                             "Tensor other) -> Tensor"));
+      "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor");
 }
 
 }  // namespace ops
