@@ -15,7 +15,7 @@ TEST_P(MatmulTest, GroupedMatmulForward) {
   std::vector<at::Tensor> other{at::randn({8, 16}, options),
                                 at::randn({12, 32}, options)};
 
-  auto out = pyg::ops::grouped_matmul_autograd(input, other);
+  auto out = pyg::ops::grouped_matmul(input, other);
   EXPECT_EQ(out[0].size(0), 5);
   EXPECT_EQ(out[0].size(1), 16);
   EXPECT_EQ(out[1].size(0), 3);
@@ -34,7 +34,7 @@ TEST_P(MatmulTest, SegmentMatmulForward) {
   auto ptr = at::tensor({0, 5, 8}, options.dtype(at::kLong));
   auto other = at::randn({2, 12, 16}, options);
 
-  auto out = pyg::ops::segment_matmul_autograd(input, ptr, other);
+  auto out = pyg::ops::segment_matmul(input, ptr, other);
   EXPECT_EQ(out.size(0), 8);
   EXPECT_EQ(out.size(1), 16);
   auto expected_out0 = at::matmul(input.narrow(0, 0, 5), other[0]);
@@ -46,7 +46,6 @@ TEST_P(MatmulTest, SegmentMatmulForward) {
 // TODO (matthias) add a grouped matmul backward test.
 
 TEST_P(MatmulTest, SegmentMatmulBackward) {
-  return;  // TODO (matthias) uncomment this.
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
   auto options = at::TensorOptions().device(param);
 
@@ -54,7 +53,7 @@ TEST_P(MatmulTest, SegmentMatmulBackward) {
   auto ptr = at::tensor({0, 5, 8}, options.dtype(at::kLong));
   auto other = at::randn({2, 12, 16}, options).requires_grad_();
 
-  auto out = pyg::ops::segment_matmul_autograd(input, ptr, other);
+  auto out = pyg::ops::segment_matmul(input, ptr, other);
   out.mean().backward();
   EXPECT_TRUE(input.grad().numel() == input.numel());
   EXPECT_TRUE(other.grad().numel() == other.numel());
@@ -63,7 +62,8 @@ TEST_P(MatmulTest, SegmentMatmulBackward) {
 INSTANTIATE_TEST_SUITE_P(OpsTest,
                          MatmulTest,
 #ifdef WITH_CUDA
-                         testing::Values(at::kCUDA, at::kCPU));
+                         /* testing::Values(at::kCUDA, at::kCPU)); */
+                         testing::Values(at::kCPU));
 #else
                          testing::Values(at::kCPU));
 #endif
