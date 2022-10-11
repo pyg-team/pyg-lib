@@ -1,13 +1,13 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
-#include "cutlass/cutlass.h"
-#include "cutlass/gemm/gemm.h"
-#include "cutlass/gemm/kernel/gemm_grouped.h"
-#include "cutlass/gemm/kernel/default_gemm_grouped.h"
-#include "cutlass/gemm/device/gemm_grouped.h"
-#include "cutlass/gemm/device/gemm_universal.h"
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
+#include "cutlass/cutlass.h"
+#include "cutlass/gemm/device/gemm_grouped.h"
+#include "cutlass/gemm/device/gemm_universal.h"
+#include "cutlass/gemm/gemm.h"
+#include "cutlass/gemm/kernel/default_gemm_grouped.h"
+#include "cutlass/gemm/kernel/gemm_grouped.h"
 
 #include "pyg_lib/csrc/utils/convert.h"
 
@@ -16,13 +16,15 @@ namespace ops {
 
 namespace {
 
-// Returns the amount of shared memory required per threadblock in `GroupedGemmKernel`
+// Returns the amount of shared memory required per threadblock in
+// `GroupedGemmKernel`
 template <typename GroupedGemmKernel>
 int shared_memory_for_kernel() {
   return int(sizeof(typename GroupedGemmKernel::SharedStorage));
 }
 
-// Returns the bytes of shared memory available per SM on the GPU, or -1 on error.
+// Returns the bytes of shared memory available per SM on the GPU, or -1 on
+// error.
 int shared_memory_per_sm() {
   cudaDeviceProp properties;
   int device_idx;
@@ -77,9 +79,9 @@ void grouped_matmul_out_kernel(const at::TensorList input,
   int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
   int shared_mem_per_sm = shared_memory_per_sm();
   if (grouped_shared_mem < shared_mem_per_sm) {
-      using GemmKernel = DefaultGemmKernel;
+    using GemmKernel = DefaultGemmKernel;
   } else {
-      using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+    using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
         float,                                         // Element A
         cutlass::layout::RowMajor,                     // Layout A
         cutlass::ComplexTransform::kNone,              //
@@ -104,7 +106,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         cutlass::arch::OpMultiplyAdd                   // Operation
         >::GemmKernel;
   }
-
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
