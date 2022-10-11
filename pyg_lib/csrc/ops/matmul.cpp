@@ -82,20 +82,19 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     auto out = _grouped_matmul(input, other);
     variable_list input_and_other = concat(input, other);
     ctx->save_for_backward(input_and_other);
-    ctx->saved_data["input_len"] = (int)input.size();
     return out;
   }
 
   static variable_list backward(AutogradContext* ctx, variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
-    int input_len = ctx->saved_data["input_len"].toInt();
+    int input_len = input_and_other.size() / 2;
     variable_list input(input_and_other.begin(),
                         input_and_other.begin() + input_len);
     variable_list other(input_and_other.begin() + input_len,
                         input_and_other.end());
+
+    // We assume entire input variable list either requires grad or does not:
     variable_list other_grad;
-    // For Simplicity:
-    // We assume entire input variable list either requires grad or does not
     if (torch::autograd::any_variable_requires_grad(other)) {
       for (size_t i = 0; i < input.size(); ++i) {
         other[i] = other[i].transpose(-2, -1);
