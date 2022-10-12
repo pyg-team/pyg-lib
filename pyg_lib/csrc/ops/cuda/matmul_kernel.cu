@@ -47,62 +47,37 @@ void grouped_matmul_out_kernel(const at::TensorList input,
 
   // TODO (matthias) Allow for other types than `float`.
   // TODO (matthias) Are these attributes correctly set?
-  using DefaultGemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                                         // Element A
-      cutlass::layout::RowMajor,                     // Layout A
-      cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity A
-      float,                                         // Element B
-      cutlass::layout::RowMajor,                     // Layout B
-      cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity B
-      float,                                         // Element C&D
-      cutlass::layout::RowMajor,                     // Layout C&D
-      float,                                         // Element Accumulator
-      cutlass::arch::OpClassTensorOp,                // Operator Class Tag
-      cutlass::arch::Sm80,                           // Architecture
-      cutlass::gemm::GemmShape<256, 128, 32>,        // Threadblock-level Tile
-      cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
-      cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
-      cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 1, float, float>,                   //
-      cutlass::gemm::threadblock::                   // Swizzling Operator
-      GemmIdentityThreadblockSwizzle<8>,             //
-      3,                                             // Stages
-      cutlass::arch::OpMultiplyAdd                   // Operation
-      >::GemmKernel;
-
-  // TODO (matthias) Allow for other types than `float`.
-  // TODO (matthias) Are these attributes correctly set?
   int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
   int shared_mem_per_sm = shared_memory_per_sm();
   if (grouped_shared_mem < shared_mem_per_sm) {
-      using GemmKernel = DefaultGemmKernel;
+      auto ThreadBlockShape = cutlass::gemm::GemmShape<256, 128, 32>;
   } else {
-      using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-        float,                                         // Element A
-        cutlass::layout::RowMajor,                     // Layout A
-        cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity A
-        float,                                         // Element B
-        cutlass::layout::RowMajor,                     // Layout B
-        cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity B
-        float,                                         // Element C&D
-        cutlass::layout::RowMajor,                     // Layout C&D
-        float,                                         // Element Accumulator
-        cutlass::arch::OpClassTensorOp,                // Operator Class Tag
-        cutlass::arch::Sm80,                           // Architecture
-        cutlass::gemm::GemmShape<128, 64, 32>,         // Threadblock-level Tile
-        cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
-        cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
-        cutlass::epilogue::thread::LinearCombination<  // Epilogue
-            float, 1, float, float>,                   //
-        cutlass::gemm::threadblock::                   // Swizzling Operator
-        GemmIdentityThreadblockSwizzle<8>,             //
-        3,                                             // Stages
-        cutlass::arch::OpMultiplyAdd                   // Operation
-        >::GemmKernel;
+      auto ThreadBlockShape = cutlass::gemm::GemmShape<256, 128, 32>;
+  }
+  using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+    float,                                         // Element A
+    cutlass::layout::RowMajor,                     // Layout A
+    cutlass::ComplexTransform::kNone,              //
+    1,                                             // Granularity A
+    float,                                         // Element B
+    cutlass::layout::RowMajor,                     // Layout B
+    cutlass::ComplexTransform::kNone,              //
+    1,                                             // Granularity B
+    float,                                         // Element C&D
+    cutlass::layout::RowMajor,                     // Layout C&D
+    float,                                         // Element Accumulator
+    cutlass::arch::OpClassTensorOp,                // Operator Class Tag
+    cutlass::arch::Sm80,                           // Architecture
+    ThreadBlockShape,                              // Threadblock-level Tile
+    cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
+    cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
+    cutlass::epilogue::thread::LinearCombination<  // Epilogue
+        float, 1, float, float>,                   //
+    cutlass::gemm::threadblock::                   // Swizzling Operator
+    GemmIdentityThreadblockSwizzle<8>,             //
+    3,                                             // Stages
+    cutlass::arch::OpMultiplyAdd                   // Operation
+    >::GemmKernel;
   }
 
 
