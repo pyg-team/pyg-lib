@@ -1,13 +1,13 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
-#include "cutlass/cutlass.h"
-#include "cutlass/gemm/gemm.h"
-#include "cutlass/gemm/kernel/gemm_grouped.h"
-#include "cutlass/gemm/kernel/default_gemm_grouped.h"
-#include "cutlass/gemm/device/gemm_grouped.h"
-#include "cutlass/gemm/device/gemm_universal.h"
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
+#include "cutlass/cutlass.h"
+#include "cutlass/gemm/device/gemm_grouped.h"
+#include "cutlass/gemm/device/gemm_universal.h"
+#include "cutlass/gemm/gemm.h"
+#include "cutlass/gemm/kernel/default_gemm_grouped.h"
+#include "cutlass/gemm/kernel/gemm_grouped.h"
 
 #include "pyg_lib/csrc/utils/convert.h"
 
@@ -16,13 +16,15 @@ namespace ops {
 
 namespace {
 
-// Returns the amount of shared memory required per threadblock in `GroupedGemmKernel`
+// Returns the amount of shared memory required per threadblock in
+// `GroupedGemmKernel`
 template <typename GroupedGemmKernel>
 int shared_memory_for_kernel() {
   return int(sizeof(typename GroupedGemmKernel::SharedStorage));
 }
 
-// Returns the bytes of shared memory available per SM on the GPU, or -1 on error.
+// Returns the bytes of shared memory available per SM on the GPU, or -1 on
+// error.
 int shared_memory_per_sm() {
   cudaDeviceProp properties;
   int device_idx;
@@ -78,8 +80,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     3,                                             // Stages
     cutlass::arch::OpMultiplyAdd                   // Operation
     >::GemmKernel;
-  }
-
 
   std::vector<float*> ptr_A_host(num_matrices);
   std::vector<float*> ptr_B_host(num_matrices);
