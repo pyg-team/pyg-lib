@@ -14,6 +14,8 @@
 namespace pyg {
 namespace sampler {
 
+namespace {
+
 // Helper classes for bipartite neighbor sampling //////////////////////////////
 
 // `node_t` is either a scalar or a pair of scalars (example_id, node_id):
@@ -510,6 +512,8 @@ sample(const std::vector<node_type>& node_types,
     return sample<false, false, false, true>(__VA_ARGS__);                \
   if (!replace && !directed && !disjoint && !return_edge_id)              \
     return sample<false, false, false, false>(__VA_ARGS__);
+
+} // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
