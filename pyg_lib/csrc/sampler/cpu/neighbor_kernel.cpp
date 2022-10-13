@@ -6,10 +6,10 @@
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/index_tracker.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
+#include "pyg_lib/csrc/sampler/cpu/neighbor_kernel.h"
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
-#include "pyg_lib/csrc/sampler/cpu/neighbor_kernel.h"
 
 namespace pyg {
 namespace sampler {
