@@ -9,11 +9,10 @@
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
+#include "pyg_lib/csrc/sampler/cpu/neighbor_kernel.h"
 
 namespace pyg {
 namespace sampler {
-
-namespace {
 
 // Helper classes for bipartite neighbor sampling //////////////////////////////
 
@@ -553,8 +552,6 @@ hetero_neighbor_sample_kernel(
                   num_neighbors_dict, time_dict, seed_time_dict, csc,
                   temporal_strategy);
 }
-
-}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::neighbor_sample"),
