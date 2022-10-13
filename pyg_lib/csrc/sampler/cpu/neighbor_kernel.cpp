@@ -513,7 +513,7 @@ sample(const std::vector<node_type>& node_types,
   if (!replace && !directed && !disjoint && !return_edge_id)              \
     return sample<false, false, false, false>(__VA_ARGS__);
 
-} // namespace
+}  // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
