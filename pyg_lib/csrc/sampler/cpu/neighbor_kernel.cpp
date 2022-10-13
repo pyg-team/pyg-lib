@@ -6,6 +6,7 @@
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/index_tracker.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
+#include "pyg_lib/csrc/sampler/cpu/neighbor_kernel.h"
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
@@ -512,6 +513,8 @@ sample(const std::vector<node_type>& node_types,
   if (!replace && !directed && !disjoint && !return_edge_id)              \
     return sample<false, false, false, false>(__VA_ARGS__);
 
+}  // namespace
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
@@ -553,8 +556,6 @@ hetero_neighbor_sample_kernel(
                   num_neighbors_dict, time_dict, seed_time_dict, csc,
                   temporal_strategy);
 }
-
-}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::neighbor_sample"),
