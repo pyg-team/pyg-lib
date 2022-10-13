@@ -79,7 +79,6 @@ hetero_neighbor_sample(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::hetero_neighbor_sample", "")
                        .typed<decltype(hetero_neighbor_sample)>();
-  std::cout << "------------------" << std::endl;
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, time_dict, seed_time_dict, csc, replace,
                  directed, disjoint, temporal_strategy, return_edge_id);
