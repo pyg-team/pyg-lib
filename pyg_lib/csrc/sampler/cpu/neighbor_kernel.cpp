@@ -561,6 +561,9 @@ TORCH_LIBRARY_IMPL(pyg, CPU, m) {
          TORCH_FN(neighbor_sample_kernel));
 }
 
+// We use `BackendSelect` as a fallback to the dispatcher logic as automatic
+// dispatching of dictionaries is not yet supported by PyTorch.
+// See: pytorch/aten/src/ATen/templates/RegisterBackendSelect.cpp.
 TORCH_LIBRARY_IMPL(pyg, BackendSelect, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::hetero_neighbor_sample"),
          TORCH_FN(hetero_neighbor_sample_kernel));
