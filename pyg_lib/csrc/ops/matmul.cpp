@@ -13,7 +13,7 @@ std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
                                        const at::TensorList other) {
   TORCH_CHECK(input.size() == other.size(),
               "Number of 'input' tensors must match number of 'other' tensors");
-  const auto n_tensors = input.size();
+
   std::vector<at::TensorArg> input_args;
   std::vector<at::TensorArg> other_args;
   pyg::utils::fill_tensor_args(input_args, input, "input", 0);
@@ -25,7 +25,7 @@ std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
   at::checkAllSameType(c, input_args);
   at::checkAllSameType(c, other_args);
   at::checkSameType(c, input_args[0], other_args[0]);
-  for (size_t i = 0; i < n_tensors; ++i) {
+  for (size_t i = 0; i < input.size(); ++i) {
     at::checkDim(c, input_args[i], 2);
     at::checkDim(c, other_args[i], 2);
     at::checkSize(c, other_args[i], 0, input_args[i]->size(-1));

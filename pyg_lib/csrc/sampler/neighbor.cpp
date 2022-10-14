@@ -3,6 +3,8 @@
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
 
+#include "pyg_lib/csrc/utils/check.h"
+
 namespace pyg {
 namespace sampler {
 
@@ -54,9 +56,28 @@ hetero_neighbor_sample(
     bool disjoint,
     std::string temporal_strategy,
     bool return_edge_id) {
-  // TODO (matthias) Add TensorArg definitions and type checks.
+  TORCH_CHECK(rowptr_dict.size() == col_dict.size(),
+              "Number of edge types in 'rowptr_dict' and 'col_dict' must match")
+
+  std::vector<at::TensorArg> rowptr_dict_args;
+  std::vector<at::TensorArg> col_dict_args;
+  std::vector<at::TensorArg> seed_dict_args;
+  pyg::utils::fill_tensor_args(rowptr_dict_args, rowptr_dict, "rowptr_dict", 0);
+  pyg::utils::fill_tensor_args(col_dict_args, col_dict, "col_dict", 0);
+  pyg::utils::fill_tensor_args(seed_dict_args, seed_dict, "seed_dict", 0);
+  at::CheckedFrom c{"hetero_neighbor_sample"};
+
+  at::checkAllDefined(c, rowptr_dict_args);
+  at::checkAllDefined(c, col_dict_args);
+  at::checkAllDefined(c, seed_dict_args);
+  at::checkAllSameType(c, rowptr_dict_args);
+  at::checkAllSameType(c, col_dict_args);
+  at::checkAllSameType(c, seed_dict_args);
+  at::checkSameType(c, rowptr_dict_args[0], col_dict_args[0]);
+  at::checkSameType(c, rowptr_dict_args[0], seed_dict_args[0]);
+
   static auto op = c10::Dispatcher::singleton()
-                       .findSchemaOrThrow("pyg::hetero_neighbor_sample_cpu", "")
+                       .findSchemaOrThrow("pyg::hetero_neighbor_sample", "")
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, time_dict, seed_time_dict, csc, replace,
