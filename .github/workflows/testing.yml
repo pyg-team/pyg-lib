@@ -56,6 +56,9 @@ jobs:
           cd build
           ctest --verbose --output-on-failure
           cd ..
+      - name: Run Python Test
+        run: |
+          pytest --cov --cov-report=xml
 
       - name: Collect coverage
         run: |
