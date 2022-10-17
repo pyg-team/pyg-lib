@@ -51,12 +51,13 @@ jobs:
           cmake --build .
           cd ..
 
-      - name: Run tests
+      - name: Run CPP Tests
         run: |
           cd build
           ctest --verbose --output-on-failure
           cd ..
-      - name: Run Python Test
+
+      - name: Run Python Tests
         run: |
           pytest --cov --cov-report=xml
 
