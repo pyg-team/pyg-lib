@@ -51,10 +51,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
   // TODO (matthias) Are these attributes correctly set?
   int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
   int shared_mem_per_sm = shared_memory_per_sm();
+  auto ThreadBlockShape;
   if (grouped_shared_mem < shared_mem_per_sm) {
-    auto ThreadBlockShape = cutlass::gemm::GemmShape<256, 128, 32>;
+    using ThreadBlockShape = cutlass::gemm::GemmShape<256, 128, 32>;
   } else {
-    auto ThreadBlockShape = cutlass::gemm::GemmShape<256, 128, 32>;
+    using ThreadBlockShape = cutlass::gemm::GemmShape<128, 64, 32>;
   }
   using GemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
       float,                                         // Element A
