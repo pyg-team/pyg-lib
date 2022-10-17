@@ -59,6 +59,7 @@ jobs:
 
       - name: Run Python Tests
         run: |
+          pip3 install pytest
           pytest --cov --cov-report=xml
 
       - name: Collect coverage
