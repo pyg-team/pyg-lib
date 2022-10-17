@@ -150,7 +150,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
       >::GemmKernel;
   int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
   int shared_mem_per_sm = shared_memory_per_sm();
-  if (grouped_shared_mem >= shared_mem_per_sm) {
+  if (grouped_shared_mem < shared_mem_per_sm) {
     run_grouped_gemm<DefaultGemmKernel>(input, other, out);
   } else {
     using SmallGemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
