@@ -9,7 +9,6 @@ if torch.cuda.is_available():
 
 
 def assert_close_enough(x, y, tol=6e-3):
-    # TODO Rishi: Work w/ Cutlass to lower the high error (as large as ~5e-3)
     assert ((x - y).abs().max() <= tol), 'Max Abs Err: ' + str(
         (x - y).abs().max()) + ', Tolerace: ' + str(tol)
 
@@ -27,8 +26,6 @@ def test_segment_matmul_autograd(device_str):
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
-
-    print('test_segment_matmul_autograd passed!')
 
 
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
@@ -49,11 +46,3 @@ def test_grouped_matmul_autograd(device_str):
     (outs[0].sum() + outs[1].sum()).backward()
     assert outs[0].grad.size() == (5, 32)
     assert outs[1].grad.size() == (3, 64)
-    print('test_grouped_matmul_autograd passed!')
-
-
-if __name__ == '__main__':
-    for device_str in DEVICE_STRS:
-        print("Testing", device_str + ":")
-        test_segment_matmul_autograd(device_str)
-        test_grouped_matmul_autograd(device_str)
