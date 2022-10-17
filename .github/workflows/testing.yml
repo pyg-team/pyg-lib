@@ -60,6 +60,7 @@ jobs:
       - name: Run Python Tests
         run: |
           pip3 install pytest
+          pip3 install -e .
           py.test -s test/ops/test_ops.py -v
 
       - name: Collect coverage
