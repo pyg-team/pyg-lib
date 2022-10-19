@@ -277,6 +277,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
             cutlass::arch::OpMultiplyAdd                   // Operation
             >::GemmKernel;
         run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out);
+      }
     }
   }
 }
