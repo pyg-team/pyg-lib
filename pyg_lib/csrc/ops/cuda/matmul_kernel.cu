@@ -224,22 +224,22 @@ void grouped_matmul_out_kernel(const at::TensorList input,
       // TF32 is manually disabled
       using DefaultGemmKernel_FP32 =
           typename cutlass::gemm::kernel::DefaultGemmGrouped<
-              float,                                   // Element A
-              cutlass::layout::RowMajor,               // Layout A
-              cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity A
-              float,                                   // Element B
-              cutlass::layout::RowMajor,               // Layout B
-              cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity B
-              float,                                   // Element C&D
-              cutlass::layout::RowMajor,               // Layout C&D
-              float,                                   // Element Accumulator
-              cutlass::arch::OpClassSimt,              // Operator Class Tag
-              cutlass::arch::Sm80,                     // Architecture
+              float,                                 // Element A
+              cutlass::layout::RowMajor,             // Layout A
+              cutlass::ComplexTransform::kNone,      //
+              1,                                     // Granularity A
+              float,                                 // Element B
+              cutlass::layout::RowMajor,             // Layout B
+              cutlass::ComplexTransform::kNone,      //
+              1,                                     // Granularity B
+              float,                                 // Element C&D
+              cutlass::layout::RowMajor,             // Layout C&D
+              float,                                 // Element Accumulator
+              cutlass::arch::OpClassSimt,            // Operator Class Tag
+              cutlass::arch::Sm80,                   // Architecture
               cutlass::gemm::GemmShape<128, 64, 8>,  // Threadblock-level Tile
-              cutlass::gemm::GemmShape<64, 64, 8>,    // Warp-level Tile
-              cutlass::gemm::GemmShape<1, 1, 1>,       // Warp-level Tile
+              cutlass::gemm::GemmShape<64, 64, 8>,   // Warp-level Tile
+              cutlass::gemm::GemmShape<1, 1, 1>,     // Warp-level Tile
               cutlass::epilogue::thread::LinearCombination<  // Epilogue
                   float, 1, float, float>,                   //
               cutlass::gemm::threadblock::        // Swizzling Operator
@@ -257,23 +257,23 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         // Smaller GPU
         using SmallGemmKernel_FP32 =
             typename cutlass::gemm::kernel::DefaultGemmGrouped<
-                float,                                  // Element A
-                cutlass::layout::RowMajor,              // Layout A
-                cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity A
-                float,                                  // Element B
-                cutlass::layout::RowMajor,              // Layout B
-                cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity B
-                float,                                  // Element C&D
-                cutlass::layout::RowMajor,              // Layout C&D
-                float,                                  // Element Accumulator
-                cutlass::arch::OpClassSimt,             // Operator Class Tag
-                cutlass::arch::Sm80,                    // Architecture
+                float,                                 // Element A
+                cutlass::layout::RowMajor,             // Layout A
+                cutlass::ComplexTransform::kNone,      //
+                1,                                     // Granularity A
+                float,                                 // Element B
+                cutlass::layout::RowMajor,             // Layout B
+                cutlass::ComplexTransform::kNone,      //
+                1,                                     // Granularity B
+                float,                                 // Element C&D
+                cutlass::layout::RowMajor,             // Layout C&D
+                float,                                 // Element Accumulator
+                cutlass::arch::OpClassSimt,            // Operator Class Tag
+                cutlass::arch::Sm80,                   // Architecture
                 cutlass::gemm::GemmShape<128, 64, 8>,  // Threadblock-level
-                                                        // Tile
+                                                       // Tile
                 cutlass::gemm::GemmShape<64, 64, 8>,   // Warp-level Tile
-                cutlass::gemm::GemmShape<1, 1, 1>,      // Warp-level Tile
+                cutlass::gemm::GemmShape<1, 1, 1>,     // Warp-level Tile
                 cutlass::epilogue::thread::LinearCombination<  // Epilogue
                     float, 1, float, float>,                   //
                 cutlass::gemm::threadblock::        // Swizzling Operator
