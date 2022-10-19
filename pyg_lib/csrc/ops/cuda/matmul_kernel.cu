@@ -271,7 +271,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                 float,                                 // Element Accumulator
                 cutlass::arch::OpClassSimt,            // Operator Class Tag
                 cutlass::arch::Sm80,                   // Architecture
-                cutlass::gemm::GemmShape<128, 64, 8>,  // Threadblock-level
+                cutlass::gemm::GemmShape<64, 32, 8>,  // Threadblock-level
                                                        // Tile
                 cutlass::gemm::GemmShape<64, 64, 8>,   // Warp-level Tile
                 cutlass::gemm::GemmShape<1, 1, 1>,     // Warp-level Tile
