@@ -157,7 +157,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     run_grouped_gemm<GemmKernel_Volta>(input, other, out);
   } else {
     // Compute capability at or beyond that of Ampere. TF32 is available.
-    if (at::globalContext().allowTF32CuBLAS()) {
+    if (at::globalContext().float32MatmulPrecision() != at::Float32MatmulPrecision::HIGHEST) {
       // TF32 is enabled
       using DefaultGemmKernel_TF32 =
           typename cutlass::gemm::kernel::DefaultGemmGrouped<
