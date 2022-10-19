@@ -142,7 +142,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         float,                                         // Element C&D
         cutlass::layout::RowMajor,                     // Layout C&D
         float,                                         // Element Accumulator
-        cutlass::arch::OpClassTensorSimt,              // Operator Class Tag
+        cutlass::arch::OpClassSimt,                    // Operator Class Tag
         cutlass::arch::Sm70,                           // Architecture
         cutlass::gemm::GemmShape<128, 64, 32>,         // Threadblock-level Tile
         cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
@@ -230,7 +230,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
           float,                                         // Element C&D
           cutlass::layout::RowMajor,                     // Layout C&D
           float,                                         // Element Accumulator
-          cutlass::arch::OpClassTensorSimt,              // Operator Class Tag
+          cutlass::arch::OpClassSimt,                    // Operator Class Tag
           cutlass::arch::Sm80,                           // Architecture
           cutlass::gemm::GemmShape<256, 128, 32>,        // Threadblock-level Tile
           cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
@@ -261,7 +261,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
             float,                                         // Element C&D
             cutlass::layout::RowMajor,                     // Layout C&D
             float,                                         // Element Accumulator
-            cutlass::arch::OpClassTensorSimt,              // Operator Class Tag
+            cutlass::arch::OpClassSimt,                    // Operator Class Tag
             cutlass::arch::Sm80,                           // Architecture
             cutlass::gemm::GemmShape<128, 64, 32>,         // Threadblock-level Tile
             cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
