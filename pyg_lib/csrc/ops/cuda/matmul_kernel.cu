@@ -125,10 +125,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
   cudaDeviceProp props;
 
   cudaError_t error = cudaGetDeviceProperties(&props, 0);
-  if (error != cudaSuccess) {
-    std::cerr << "cudaGetDeviceProperties() returned an error: " << cudaGetErrorString(error) << std::endl;
-    return -1;
-  }
+  TORCH_CHECK(error != cudaSuccess, cudaGetErrorString(error));
 
   if (props.major < 8) {
     // Compute capability less than that of Ampere. No TF32 available.
@@ -245,7 +242,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
           3,                                             // Stages
           cutlass::arch::OpMultiplyAdd                   // Operation
           >::GemmKernel;
-      int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel_TF32>();
+      int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel_FP32>();
       int shared_mem_per_sm = shared_memory_per_sm();
       if (grouped_shared_mem < shared_mem_per_sm) {
         // full size GPU
