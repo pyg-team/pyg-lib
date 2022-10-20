@@ -122,38 +122,15 @@ int shared_memory_per_sm() {
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
-  // TODO (matthias) Allow for other types than `float`.
-  // TODO (matthias) Are these attributes correctly set?
-  using DefaultGemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-      float,                                         // Element A
-      cutlass::layout::RowMajor,                     // Layout A
-      cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity A
-      float,                                         // Element B
-      cutlass::layout::RowMajor,                     // Layout B
-      cutlass::ComplexTransform::kNone,              //
-      1,                                             // Granularity B
-      float,                                         // Element C&D
-      cutlass::layout::RowMajor,                     // Layout C&D
-      float,                                         // Element Accumulator
-      cutlass::arch::OpClassTensorOp,                // Operator Class Tag
-      cutlass::arch::Sm80,                           // Architecture
-      cutlass::gemm::GemmShape<256, 128, 32>,        // Threadblock-level Tile
-      cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
-      cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
-      cutlass::epilogue::thread::LinearCombination<  // Epilogue
-          float, 1, float, float>,                   //
-      cutlass::gemm::threadblock::                   // Swizzling Operator
-      GemmIdentityThreadblockSwizzle<8>,             //
-      3,                                             // Stages
-      cutlass::arch::OpMultiplyAdd                   // Operation
-      >::GemmKernel;
-  int grouped_shared_mem = shared_memory_for_kernel<DefaultGemmKernel>();
-  int shared_mem_per_sm = shared_memory_per_sm();
-  if (grouped_shared_mem < shared_mem_per_sm) {
-    run_grouped_gemm<DefaultGemmKernel>(input, other, out);
-  } else {
-    using SmallGemmKernel = typename cutlass::gemm::kernel::DefaultGemmGrouped<
+  cudaDeviceProp props;
+
+  cudaError_t error = cudaGetDeviceProperties(&props, 0);
+  TORCH_CHECK(error == cudaSuccess, cudaGetErrorString(error));
+
+  if (props.major < 8) {
+    // Compute capability less than that of Ampere. No TF32 available.
+    // note: we only support Volta and onwards
+    using GemmKernel_Volta = typename cutlass::gemm::kernel::DefaultGemmGrouped<
         float,                                         // Element A
         cutlass::layout::RowMajor,                     // Layout A
         cutlass::ComplexTransform::kNone,              //
@@ -165,19 +142,149 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         float,                                         // Element C&D
         cutlass::layout::RowMajor,                     // Layout C&D
         float,                                         // Element Accumulator
-        cutlass::arch::OpClassTensorOp,                // Operator Class Tag
-        cutlass::arch::Sm80,                           // Architecture
-        cutlass::gemm::GemmShape<128, 64, 32>,         // Threadblock-level Tile
-        cutlass::gemm::GemmShape<64, 64, 32>,          // Warp-level Tile
-        cutlass::gemm::GemmShape<16, 8, 8>,            // Warp-level Tile
+        cutlass::arch::OpClassSimt,                    // Operator Class Tag
+        cutlass::arch::Sm70,                           // Architecture
+        cutlass::gemm::GemmShape<128, 64, 8>,          // Threadblock-level Tile
+        cutlass::gemm::GemmShape<64, 64, 8>,           // Warp-level Tile
+        cutlass::gemm::GemmShape<1, 1, 1>,             // Warp-level Tile
         cutlass::epilogue::thread::LinearCombination<  // Epilogue
             float, 1, float, float>,                   //
         cutlass::gemm::threadblock::                   // Swizzling Operator
         GemmIdentityThreadblockSwizzle<8>,             //
-        3,                                             // Stages
+        2,                                             // Stages
         cutlass::arch::OpMultiplyAdd                   // Operation
         >::GemmKernel;
-    run_grouped_gemm<SmallGemmKernel>(input, other, out);
+    run_grouped_gemm<GemmKernel_Volta>(input, other, out);
+  } else {
+    // Compute capability at or beyond that of Ampere. TF32 is available.
+    if (at::globalContext().float32MatmulPrecision() !=
+        at::Float32MatmulPrecision::HIGHEST) {
+      // TF32 is enabled
+      using DefaultGemmKernel_TF32 =
+          typename cutlass::gemm::kernel::DefaultGemmGrouped<
+              float,                                   // Element A
+              cutlass::layout::RowMajor,               // Layout A
+              cutlass::ComplexTransform::kNone,        //
+              1,                                       // Granularity A
+              float,                                   // Element B
+              cutlass::layout::RowMajor,               // Layout B
+              cutlass::ComplexTransform::kNone,        //
+              1,                                       // Granularity B
+              float,                                   // Element C&D
+              cutlass::layout::RowMajor,               // Layout C&D
+              float,                                   // Element Accumulator
+              cutlass::arch::OpClassTensorOp,          // Operator Class Tag
+              cutlass::arch::Sm80,                     // Architecture
+              cutlass::gemm::GemmShape<256, 128, 32>,  // Threadblock-level Tile
+              cutlass::gemm::GemmShape<64, 64, 32>,    // Warp-level Tile
+              cutlass::gemm::GemmShape<16, 8, 8>,      // Warp-level Tile
+              cutlass::epilogue::thread::LinearCombination<  // Epilogue
+                  float, 1, float, float>,                   //
+              cutlass::gemm::threadblock::        // Swizzling Operator
+              GemmIdentityThreadblockSwizzle<8>,  //
+              3,                                  // Stages
+              cutlass::arch::OpMultiplyAdd        // Operation
+              >::GemmKernel;
+      int grouped_shared_mem =
+          shared_memory_for_kernel<DefaultGemmKernel_TF32>();
+      int shared_mem_per_sm = shared_memory_per_sm();
+      if (grouped_shared_mem < shared_mem_per_sm) {
+        // full size GPU
+        run_grouped_gemm<DefaultGemmKernel_TF32>(input, other, out);
+      } else {
+        // Smaller GPU
+        using SmallGemmKernel_TF32 =
+            typename cutlass::gemm::kernel::DefaultGemmGrouped<
+                float,                                  // Element A
+                cutlass::layout::RowMajor,              // Layout A
+                cutlass::ComplexTransform::kNone,       //
+                1,                                      // Granularity A
+                float,                                  // Element B
+                cutlass::layout::RowMajor,              // Layout B
+                cutlass::ComplexTransform::kNone,       //
+                1,                                      // Granularity B
+                float,                                  // Element C&D
+                cutlass::layout::RowMajor,              // Layout C&D
+                float,                                  // Element Accumulator
+                cutlass::arch::OpClassTensorOp,         // Operator Class Tag
+                cutlass::arch::Sm80,                    // Architecture
+                cutlass::gemm::GemmShape<128, 64, 32>,  // Threadblock-level
+                                                        // Tile
+                cutlass::gemm::GemmShape<64, 64, 32>,   // Warp-level Tile
+                cutlass::gemm::GemmShape<16, 8, 8>,     // Warp-level Tile
+                cutlass::epilogue::thread::LinearCombination<  // Epilogue
+                    float, 1, float, float>,                   //
+                cutlass::gemm::threadblock::        // Swizzling Operator
+                GemmIdentityThreadblockSwizzle<8>,  //
+                3,                                  // Stages
+                cutlass::arch::OpMultiplyAdd        // Operation
+                >::GemmKernel;
+        run_grouped_gemm<SmallGemmKernel_TF32>(input, other, out);
+      }
+    } else {
+      // TF32 is manually disabled
+      using DefaultGemmKernel_FP32 =
+          typename cutlass::gemm::kernel::DefaultGemmGrouped<
+              float,                                 // Element A
+              cutlass::layout::RowMajor,             // Layout A
+              cutlass::ComplexTransform::kNone,      //
+              1,                                     // Granularity A
+              float,                                 // Element B
+              cutlass::layout::RowMajor,             // Layout B
+              cutlass::ComplexTransform::kNone,      //
+              1,                                     // Granularity B
+              float,                                 // Element C&D
+              cutlass::layout::RowMajor,             // Layout C&D
+              float,                                 // Element Accumulator
+              cutlass::arch::OpClassSimt,            // Operator Class Tag
+              cutlass::arch::Sm80,                   // Architecture
+              cutlass::gemm::GemmShape<128, 64, 8>,  // Threadblock-level Tile
+              cutlass::gemm::GemmShape<64, 64, 8>,   // Warp-level Tile
+              cutlass::gemm::GemmShape<1, 1, 1>,     // Warp-level Tile
+              cutlass::epilogue::thread::LinearCombination<  // Epilogue
+                  float, 1, float, float>,                   //
+              cutlass::gemm::threadblock::        // Swizzling Operator
+              GemmIdentityThreadblockSwizzle<8>,  //
+              3,                                  // Stages
+              cutlass::arch::OpMultiplyAdd        // Operation
+              >::GemmKernel;
+      int grouped_shared_mem =
+          shared_memory_for_kernel<DefaultGemmKernel_FP32>();
+      int shared_mem_per_sm = shared_memory_per_sm();
+      if (grouped_shared_mem < shared_mem_per_sm) {
+        // full size GPU
+        run_grouped_gemm<DefaultGemmKernel_FP32>(input, other, out);
+      } else {
+        // Smaller GPU
+        using SmallGemmKernel_FP32 =
+            typename cutlass::gemm::kernel::DefaultGemmGrouped<
+                float,                                // Element A
+                cutlass::layout::RowMajor,            // Layout A
+                cutlass::ComplexTransform::kNone,     //
+                1,                                    // Granularity A
+                float,                                // Element B
+                cutlass::layout::RowMajor,            // Layout B
+                cutlass::ComplexTransform::kNone,     //
+                1,                                    // Granularity B
+                float,                                // Element C&D
+                cutlass::layout::RowMajor,            // Layout C&D
+                float,                                // Element Accumulator
+                cutlass::arch::OpClassSimt,           // Operator Class Tag
+                cutlass::arch::Sm80,                  // Architecture
+                cutlass::gemm::GemmShape<64, 64, 8>,  // Threadblock-level
+                                                      // Tile
+                cutlass::gemm::GemmShape<64, 64, 8>,  // Warp-level Tile
+                cutlass::gemm::GemmShape<1, 1, 1>,    // Warp-level Tile
+                cutlass::epilogue::thread::LinearCombination<  // Epilogue
+                    float, 1, float, float>,                   //
+                cutlass::gemm::threadblock::        // Swizzling Operator
+                GemmIdentityThreadblockSwizzle<8>,  //
+                3,                                  // Stages
+                cutlass::arch::OpMultiplyAdd        // Operation
+                >::GemmKernel;
+        run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out);
+      }
+    }
   }
 }
 
