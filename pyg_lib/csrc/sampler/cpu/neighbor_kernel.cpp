@@ -36,7 +36,7 @@ class NeighborSampler {
 
   void uniform_sample(const node_t global_src_node,
                       const scalar_t local_src_node,
-                      const size_t count,
+                      const int64_t count,
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
                       std::vector<node_t>& out_global_dst_nodes) {
@@ -48,7 +48,7 @@ class NeighborSampler {
 
   void temporal_sample(const node_t global_src_node,
                        const scalar_t local_src_node,
-                       const size_t count,
+                       const int64_t count,
                        const scalar_t seed_time,
                        const scalar_t* time,
                        pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
@@ -111,7 +111,7 @@ class NeighborSampler {
                const scalar_t local_src_node,
                const scalar_t row_start,
                const scalar_t row_end,
-               const size_t count,
+               const int64_t count,
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                pyg::random::RandintEngine<scalar_t>& generator,
                std::vector<node_t>& out_global_dst_nodes) {
