@@ -8,7 +8,7 @@
 #include "cutlass/gemm/gemm.h"
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
-
+#include <torch/torch.h>
 #include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
@@ -156,9 +156,15 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         >::GemmKernel;
     run_grouped_gemm<GemmKernel_Volta>(input, other, out);
   } else {
+    bool one_twelve_or_later = TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1;
     // Compute capability at or beyond that of Ampere. TF32 is available.
-    if (at::globalContext().float32MatmulPrecision() !=
-        at::Float32MatmulPrecision::HIGHEST) {
+    if (one_twelve_or_later) {
+      bool use_tf32 = at::globalContext().float32MatmulPrecision() !=
+        at::Float32MatmulPrecision::HIGHEST;
+    } else {
+      bool use_tf32 = at::globalContext().allowTF32CuBLAS();
+    }
+    if (use_tf32) {
       // TF32 is enabled
       using DefaultGemmKernel_TF32 =
           typename cutlass::gemm::kernel::DefaultGemmGrouped<
