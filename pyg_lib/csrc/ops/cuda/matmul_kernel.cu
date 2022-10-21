@@ -2,13 +2,13 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
+#include <torch/torch.h>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
 #include "cutlass/gemm/gemm.h"
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
-#include <torch/torch.h>
 #include "pyg_lib/csrc/utils/convert.h"
 
 namespace pyg {
@@ -159,8 +159,8 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     // Compute capability at or beyond that of Ampere. TF32 is available.
     bool use_tf32;
 #if TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1
-    use_tf32= at::globalContext().float32MatmulPrecision() !=
-      at::Float32MatmulPrecision::HIGHEST;
+    use_tf32 = at::globalContext().float32MatmulPrecision() !=
+               at::Float32MatmulPrecision::HIGHEST;
 #else
     use_tf32 = at::globalContext().allowTF32CuBLAS();
 #endif
