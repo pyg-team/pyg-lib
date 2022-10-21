@@ -159,12 +159,12 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     bool one_twelve_or_later = TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1;
     // Compute capability at or beyond that of Ampere. TF32 is available.
     bool use_tf32;
-    if (one_twelve_or_later) {
-      use_tf32= at::globalContext().float32MatmulPrecision() !=
-        at::Float32MatmulPrecision::HIGHEST;
-    } else {
-      use_tf32 = at::globalContext().allowTF32CuBLAS();
-    }
+#if TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1
+    use_tf32= at::globalContext().float32MatmulPrecision() !=
+      at::Float32MatmulPrecision::HIGHEST;
+#else
+    use_tf32 = at::globalContext().allowTF32CuBLAS();
+#endif
     if (use_tf32) {
       // TF32 is enabled
       using DefaultGemmKernel_TF32 =
