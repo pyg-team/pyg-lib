@@ -156,7 +156,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         >::GemmKernel;
     run_grouped_gemm<GemmKernel_Volta>(input, other, out);
   } else {
-    bool one_twelve_or_later = TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1;
     // Compute capability at or beyond that of Ampere. TF32 is available.
     bool use_tf32;
 #if TORCH_VERSION_MINOR >= 12 or TORCH_VERSION_MAJOR > 1
