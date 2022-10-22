@@ -56,7 +56,7 @@ jobs:
         run: |
           pip install ninja
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install --verbose .
+          pip install --verbose -e .
 
       - name: Test imports
         run: |
