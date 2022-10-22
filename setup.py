@@ -70,7 +70,9 @@ class CMakeBuild(build_ext):
                               cwd=self.build_temp)
 
 
-install_requires = []
+install_requires = [
+    'triton',
+]
 
 test_requires = [
     'pytest',
