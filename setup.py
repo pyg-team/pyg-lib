@@ -72,6 +72,11 @@ class CMakeBuild(build_ext):
 
 install_requires = []
 
+test_requires = [
+    'pytest',
+    'pytest-cov',
+]
+
 dev_requires = [
     'pre-commit',
 ]
@@ -101,6 +106,7 @@ setup(
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
+        'test': test_requires,
         'dev': dev_requires,
     },
     packages=find_packages(),
