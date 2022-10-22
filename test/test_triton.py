@@ -3,6 +3,8 @@ import triton
 import triton.language as tl
 from torch import Tensor
 
+from pyg_lib.testing import onlyCUDA
+
 
 @triton.jit
 def add_kernel(x_ptr, y_ptr, out_ptr, numel, **meta):
@@ -28,6 +30,7 @@ def add(x: Tensor, y: Tensor) -> Tensor:
     return out
 
 
+@onlyCUDA
 def test_triton():
     x = torch.rand(100, device='cuda')
     y = torch.rand(100, device='cuda')
