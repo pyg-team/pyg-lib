@@ -3,6 +3,8 @@ from typing import List
 import torch
 from torch import Tensor
 
+from .softmax import softmax
+
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
@@ -72,4 +74,5 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
+    'softmax',
 ]
