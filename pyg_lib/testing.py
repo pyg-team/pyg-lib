@@ -18,6 +18,14 @@ def withSeed(func: Callable) -> Callable:
     return wrapper
 
 
+def onlyCUDA(func: Callable) -> Callable:
+    import pytest
+    return pytest.mark.skipif(
+        not torch.cuda.is_available(),
+        reason="CUDA not available",
+    )(func)
+
+
 def withCUDA(func: Callable) -> Callable:
     def wrapper(*args, **kwargs):
         func(*args, device=torch.device('cpu'), **kwargs)
