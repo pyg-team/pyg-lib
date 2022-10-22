@@ -1,6 +1,7 @@
 import torch
 import triton
 import triton.language as tl
+from torch import Tensor
 
 
 @triton.jit
@@ -19,7 +20,7 @@ def add_kernel(x_ptr, y_ptr, out_ptr, numel, **meta):
     tl.store(out_ptr + offsets, output, mask=mask)
 
 
-def add(x: torch.Tensor, y: torch.Tensor):
+def add(x: Tensor, y: Tensor) -> Tensor:
     out = torch.empty_like(x)
     assert x.is_cuda and y.is_cuda and out.is_cuda
     grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']), )
