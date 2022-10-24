@@ -23,8 +23,6 @@ def softmax_kernel(x_ptr, ptr_ptr, out_ptr, M, N, num_segments, **meta):
     N_block_start = tl.program_id(axis=1) * meta['BLOCK_SIZE_N']
     N_offset = N_block_start + tl.arange(0, meta['BLOCK_SIZE_N'])
 
-    # M_mask = M_offset[None, :] < count[:, None]
-
     x_offset = (N * ptr1[:, None, None] + N * M_offset[None, :, None] +
                 N_offset[None, None, :])
     x_mask = ((ptr1[:, None, None] < M) &
@@ -55,12 +53,11 @@ def softmax(
     assert out.dim() == 2 and out.is_cuda and out.is_contiguous()
 
     (M, N), num_segments = inputs.size(), ptr.numel() - 1
-    print('M', M, 'N', N, 'num_segments', num_segments)
 
     grid = lambda meta: (
         triton.cdiv(num_segments, meta['SEGMENT_BLOCK_SIZE']),
         triton.cdiv(N, meta['BLOCK_SIZE_N']),
     )
     softmax_kernel[grid](inputs, ptr, out, M, N, num_segments,
-                         SEGMENT_BLOCK_SIZE=1, BLOCK_SIZE_N=1)
+                         SEGMENT_BLOCK_SIZE=8, BLOCK_SIZE_N=128)
     return out
