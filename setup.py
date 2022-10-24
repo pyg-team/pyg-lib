@@ -70,8 +70,10 @@ class CMakeBuild(build_ext):
                               cwd=self.build_temp)
 
 
-install_requires = [
-    'triton',
+install_requires = []
+
+triton_requires = [
+    'triton==1.1.1',
 ]
 
 test_requires = [
@@ -108,6 +110,7 @@ setup(
     python_requires='>=3.7',
     install_requires=install_requires,
     extras_require={
+        'triton': triton_requires,
         'test': test_requires,
         'dev': dev_requires,
     },

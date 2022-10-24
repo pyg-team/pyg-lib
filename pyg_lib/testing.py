@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
@@ -23,6 +24,15 @@ def onlyCUDA(func: Callable) -> Callable:
     return pytest.mark.skipif(
         not torch.cuda.is_available(),
         reason="CUDA not available",
+    )(func)
+
+
+def withTriton(func: Callable) -> Callable:
+    import pytest
+
+    return pytest.mark.skipif(
+        find_spec('triton') is None,
+        reason="'triton' not installed",
     )(func)
 
 
