@@ -12,8 +12,8 @@ def softmax_kernel(x_ptr, ptr_ptr, out_ptr, M, N, num_segments, **meta):
     ptr_offset = ptr_block_start + tl.arange(0, meta['SEGMENT_BLOCK_SIZE'])
     ptr_mask = ptr_offset < num_segments
 
-    ptr1 = tl.load(ptr_ptr + ptr_offset, mask=ptr_mask)
-    ptr2 = tl.load(ptr_ptr + ptr_offset + 1, mask=ptr_mask)
+    ptr1 = tl.load(ptr_ptr + ptr_offset, mask=ptr_mask, other=1000000)
+    ptr2 = tl.load(ptr_ptr + ptr_offset + 1, mask=ptr_mask, other=1000000)
     count = ptr2 - ptr1
     # max_count = tl.max(ptr2 - ptr1, axis=0)
     # max_count = tl.multiple_of(max_count, 8)
@@ -62,5 +62,5 @@ def softmax(
         triton.cdiv(N, meta['BLOCK_SIZE_N']),
     )
     softmax_kernel[grid](inputs, ptr, out, M, N, num_segments,
-                         SEGMENT_BLOCK_SIZE=2, BLOCK_SIZE_N=10)
+                         SEGMENT_BLOCK_SIZE=1, BLOCK_SIZE_N=1)
     return out
