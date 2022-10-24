@@ -42,7 +42,7 @@ jobs:
       - name: Install package
         run: |
           pip install ninja
-          pip install --verbose -e .[test]
+          pip install --verbose -e .[triton,test]
 
       - name: Run tests
         run: |
