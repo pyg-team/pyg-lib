@@ -1,11 +1,9 @@
 import os
 import os.path as osp
-from importlib import import_module
 from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
-from packaging.requirements import Requirement
 from torch import Tensor
 
 from pyg_lib import get_home_dir
@@ -29,28 +27,13 @@ def onlyCUDA(func: Callable) -> Callable:
     )(func)
 
 
-def withPackage(*args) -> Callable:
-    r"""A decorator to skip tests if certain packages are not installed.
-    Also supports version specification."""
-    def is_installed(package: str) -> bool:
-        req = Requirement(package)
-        if find_spec(req.name) is None:
-            return False
-        module = import_module(req.name)
-        if not hasattr(module, '__version__'):
-            return True
-        return module.__version__ in req.specifier
+def withTriton(func: Callable) -> Callable:
+    import pytest
 
-    na_packages = set(package for package in args if not is_installed(package))
-
-    def decorator(func: Callable) -> Callable:
-        import pytest
-        return pytest.mark.skipif(
-            len(na_packages) > 0,
-            reason=f"Package(s) {na_packages} are not installed",
-        )(func)
-
-    return decorator
+    return pytest.mark.skipif(
+        find_spec('triton') is None,
+        reason="'triton' not installed",
+    )(func)
 
 
 def withCUDA(func: Callable) -> Callable:
