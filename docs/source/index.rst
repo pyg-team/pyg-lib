@@ -10,6 +10,7 @@ pyg_lib Documentation
    modules/root
    modules/ops
    modules/sampler
+   modules/nn
 
 Indices and Tables
 ==================
