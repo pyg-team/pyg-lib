@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added `EmbeddingBag` implementation ([#136](https://github.com/pyg-team/pyg-lib/pull/136))
 - Added `triton` dependency ([#133](https://github.com/pyg-team/pyg-lib/pull/133), [#134](https://github.com/pyg-team/pyg-lib/pull/134))
 - Enable `pytest` testing ([#132](https://github.com/pyg-team/pyg-lib/pull/132))
 - Added C++-based autograd and TorchScript support for `segment_matmul` ([#120](https://github.com/pyg-team/pyg-lib/pull/120), [#122](https://github.com/pyg-team/pyg-lib/pull/122))
