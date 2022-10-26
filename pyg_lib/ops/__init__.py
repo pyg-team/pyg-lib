@@ -34,7 +34,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     assert int(major_vers) >= 2 or int(minor_vers) >= 14, (
         'grouped_matmul only available w/ torch >= 1.14.0')
     inputs = torch.nested.nested_tensor(inputs)
-    others = torch.nested.nested_tensor(others) 
+    others = torch.nested.nested_tensor(others)
     return torch.bmm(inputs, others)
 
 
