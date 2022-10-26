@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Tuple
 
 import torch
 from torch import Tensor
 
 
-def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
+def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> Tuple[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -27,7 +27,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
             shapes :obj:`[K_i, M_i]`.
 
     Returns:
-        List[torch.Tensor]: List of 2D output matrices of shapes
+        Tuple[torch.Tensor]: Tuple of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
@@ -35,7 +35,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         'grouped_matmul only available w/ torch >= 1.14.0')
     inputs = torch.nested.nested_tensor(inputs)
     others = torch.nested.nested_tensor(others)
-    return torch.bmm(inputs, others)
+    return torch.bmm(inputs, others).unbind()
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -72,7 +72,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
         inputs = torch.nested.nested_tensor(
             list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
         others = torch.nested.nested_tensor([x for x in other])
-        out = torch.cat(torch.bmm(inputs, others))
+        out = torch.cat(torch.bmm(inputs, others).unbind())
         return out
     else:
         return torch.ops.pyg.segment_matmul(inputs, ptr, other)
