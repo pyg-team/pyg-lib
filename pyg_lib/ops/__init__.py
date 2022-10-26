@@ -31,10 +31,15 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         :obj:`[N_i, M_i]`.
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-    assert int(major_vers) >= 2 or int(minor_vers) >= 14, 'grouped_matmul only available w/ torch >= 1.14.0'
+    assert int(major_vers) >= 2 or int(minor_vers) >= 14, (
+        'grouped_matmul only available w/ torch >= 1.14.0'
+    )
     inputs = torch.nested.nested_tensor(inputs)
     others = torch.nested.nested_tensor(others)
-    return list(torch.bmm(inputs, others).unbind())
+    outs = list(torch.bmm(inputs, others).unbind())
+    for i in range(len(outs)):
+        outs[i].requires_grad = inputs[i].requires_grad or others[i].requires_grad
+    return outs
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -67,9 +72,12 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
+        requires_grad = inputs.requires_grad or other.requires_grad
         inputs = torch.nested.nested_tensor(list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
         others = torch.nested.nested_tensor([x for x in other])
-        return torch.cat(torch.bmm(inputs, others).unbind())
+        out = torch.cat(torch.bmm(inputs, others).unbind())
+        out.requires_grad = requires_grad
+        return 
     else:
         return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
