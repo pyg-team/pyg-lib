@@ -6,25 +6,25 @@
 
 class MatmulTest : public testing::TestWithParam<c10::DeviceType> {};
 
-TEST_P(MatmulTest, GroupedMatmulForward) {
-  const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
-  auto options = at::TensorOptions().device(param);
+// TEST_P(MatmulTest, GroupedMatmulForward) {
+//   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
+//   auto options = at::TensorOptions().device(param);
 
-  std::vector<at::Tensor> input{at::randn({5, 8}, options),
-                                at::randn({3, 12}, options)};
-  std::vector<at::Tensor> other{at::randn({8, 16}, options),
-                                at::randn({12, 32}, options)};
+//   std::vector<at::Tensor> input{at::randn({5, 8}, options),
+//                                 at::randn({3, 12}, options)};
+//   std::vector<at::Tensor> other{at::randn({8, 16}, options),
+//                                 at::randn({12, 32}, options)};
 
-  auto out = pyg::ops::grouped_matmul(input, other);
-  EXPECT_EQ(out[0].size(0), 5);
-  EXPECT_EQ(out[0].size(1), 16);
-  EXPECT_EQ(out[1].size(0), 3);
-  EXPECT_EQ(out[1].size(1), 32);
-  auto expected_out0 = at::matmul(input[0], other[0]);
-  EXPECT_TRUE(at::allclose(out[0], expected_out0, 0.1, 0.1));
-  auto expected_out1 = at::matmul(input[1], other[1]);
-  EXPECT_TRUE(at::allclose(out[1], expected_out1, 0.1, 0.1));
-}
+//   auto out = pyg::ops::grouped_matmul(input, other);
+//   EXPECT_EQ(out[0].size(0), 5);
+//   EXPECT_EQ(out[0].size(1), 16);
+//   EXPECT_EQ(out[1].size(0), 3);
+//   EXPECT_EQ(out[1].size(1), 32);
+//   auto expected_out0 = at::matmul(input[0], other[0]);
+//   EXPECT_TRUE(at::allclose(out[0], expected_out0, 0.1, 0.1));
+//   auto expected_out1 = at::matmul(input[1], other[1]);
+//   EXPECT_TRUE(at::allclose(out[1], expected_out1, 0.1, 0.1));
+// }
 
 TEST_P(MatmulTest, SegmentMatmulForward) {
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
