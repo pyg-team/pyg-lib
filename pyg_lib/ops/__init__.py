@@ -30,12 +30,11 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    outs = torch.ops.pyg.grouped_matmul(inputs, others)
-
-    for src, other, out in zip(inputs, others, outs):
-        out.requires_grad = src.requires_grad or other.requires_grad
-
-    return outs
+    major_vers, minor_vers = str(torch.__version__).split('.')[]
+    assert major_vers >= 2 or minor_vers >= 14, 'grouped_matmul only available w/ torch >= 1.14.0'
+    inputs = torch.nested.nested_tensor(inputs)
+    others = torch.nested.nested_tensor(others)
+    return list(torch.bmm(inputs, others).unbind())
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -66,7 +65,13 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    major_vers, minor_vers = str(torch.__version__).split('.')[]
+    if major_vers >= 2 or minor_vers >= 14:
+        inputs = torch.nested.nested_tensor(inputs.split((ptr[1:] - ptr[:-1]).tolist()))
+        others = torch.nested.nested_tensor([x for x in other])
+        return torch.cat(torch.bmm(inputs, others).unbind())
+    else:
+        return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
 
 __all__ = [

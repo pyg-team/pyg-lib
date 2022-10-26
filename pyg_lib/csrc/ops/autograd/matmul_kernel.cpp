@@ -12,59 +12,59 @@ namespace {
 using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
-std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
-                               std::vector<at::Tensor> t2) {
-  for (size_t i = 0; i < t2.size(); ++i) {
-    t1.push_back(t2[i]);
-  }
-  return t1;
-}
+// std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
+//                                std::vector<at::Tensor> t2) {
+//   for (size_t i = 0; i < t2.size(); ++i) {
+//     t1.push_back(t2[i]);
+//   }
+//   return t1;
+// }
 
-class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
- public:
-  static variable_list forward(torch::autograd::AutogradContext* ctx,
-                               const variable_list input,
-                               const variable_list other) {
-    at::AutoDispatchBelowADInplaceOrView g;
-    auto out = grouped_matmul(input, other);
-    variable_list input_and_other = concat(input, other);
-    ctx->save_for_backward(input_and_other);
-    return out;
-  }
+// class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
+//  public:
+//   static variable_list forward(torch::autograd::AutogradContext* ctx,
+//                                const variable_list input,
+//                                const variable_list other) {
+//     at::AutoDispatchBelowADInplaceOrView g;
+//     auto out = grouped_matmul(input, other);
+//     variable_list input_and_other = concat(input, other);
+//     ctx->save_for_backward(input_and_other);
+//     return out;
+//   }
 
-  static variable_list backward(torch::autograd::AutogradContext* ctx,
-                                variable_list grad_outs) {
-    auto input_and_other = ctx->get_saved_variables();
-    int input_len = input_and_other.size() / 2;
-    variable_list input(input_and_other.begin(),
-                        input_and_other.begin() + input_len);
-    variable_list other(input_and_other.begin() + input_len,
-                        input_and_other.end());
+//   static variable_list backward(torch::autograd::AutogradContext* ctx,
+//                                 variable_list grad_outs) {
+//     auto input_and_other = ctx->get_saved_variables();
+//     int input_len = input_and_other.size() / 2;
+//     variable_list input(input_and_other.begin(),
+//                         input_and_other.begin() + input_len);
+//     variable_list other(input_and_other.begin() + input_len,
+//                         input_and_other.end());
 
-    // We assume entire input variable list either requires grad or does not:
-    variable_list other_grad;
-    if (torch::autograd::any_variable_requires_grad(other)) {
-      for (size_t i = 0; i < input.size(); ++i) {
-        other[i] = other[i].transpose(-2, -1);
-        other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
-      }
-    } else {
-      for (size_t i = 0; i < other.size(); ++i)
-        other_grad.push_back(Variable());
-    }
+//     // We assume entire input variable list either requires grad or does not:
+//     variable_list other_grad;
+//     if (torch::autograd::any_variable_requires_grad(other)) {
+//       for (size_t i = 0; i < input.size(); ++i) {
+//         other[i] = other[i].transpose(-2, -1);
+//         other_grad.push_back(torch::matmul(grad_outs[i], other[i]));
+//       }
+//     } else {
+//       for (size_t i = 0; i < other.size(); ++i)
+//         other_grad.push_back(Variable());
+//     }
 
-    variable_list input_grad;
-    if (torch::autograd::any_variable_requires_grad(input)) {
-      for (size_t i = 0; i < input.size(); ++i)
-        input[i] = input[i].transpose(-2, -1);
-      input_grad = grouped_matmul(input, grad_outs);
-    } else {
-      for (size_t i = 0; i < input.size(); ++i)
-        input_grad.push_back(Variable());
-    }
-    return concat(input_grad, other_grad);
-  }
-};
+//     variable_list input_grad;
+//     if (torch::autograd::any_variable_requires_grad(input)) {
+//       for (size_t i = 0; i < input.size(); ++i)
+//         input[i] = input[i].transpose(-2, -1);
+//       input_grad = grouped_matmul(input, grad_outs);
+//     } else {
+//       for (size_t i = 0; i < input.size(); ++i)
+//         input_grad.push_back(Variable());
+//     }
+//     return concat(input_grad, other_grad);
+//   }
+// };
 
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
