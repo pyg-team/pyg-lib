@@ -30,7 +30,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    major_vers, minor_vers = str(torch.__version__).split('.')[:1]
+    major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     assert major_vers >= 2 or minor_vers >= 14, 'grouped_matmul only available w/ torch >= 1.14.0'
     inputs = torch.nested.nested_tensor(inputs)
     others = torch.nested.nested_tensor(others)
@@ -65,7 +65,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    major_vers, minor_vers = str(torch.__version__).split('.')[:1]
+    major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     if major_vers >= 2 or minor_vers >= 14:
         inputs = torch.nested.nested_tensor(inputs.split((ptr[1:] - ptr[:-1]).tolist()))
         others = torch.nested.nested_tensor([x for x in other])
