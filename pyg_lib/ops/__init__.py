@@ -67,7 +67,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
-        inputs = torch.nested.nested_tensor(inputs.split((ptr[1:] - ptr[:-1]).tolist()))
+        inputs = torch.nested.nested_tensor(list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
         others = torch.nested.nested_tensor([x for x in other])
         return torch.cat(torch.bmm(inputs, others).unbind())
     else:
