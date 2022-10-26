@@ -77,7 +77,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
         others = torch.nested.nested_tensor([x for x in other])
         out = torch.cat(torch.bmm(inputs, others).unbind())
         out.requires_grad = requires_grad
-        return 
+        return out
     else:
         return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
