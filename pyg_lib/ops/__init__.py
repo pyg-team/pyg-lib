@@ -4,8 +4,7 @@ import torch
 from torch import Tensor
 
 
-def grouped_matmul(inputs: List[Tensor],
-                   others: List[Tensor]) -> List[Tensor]:
+def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
