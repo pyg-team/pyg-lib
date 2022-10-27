@@ -35,7 +35,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         'grouped_matmul only available w/ torch >= 1.14.0')
     inputs = torch.nested.as_nested_tensor(inputs)
     others = torch.nested.as_nested_tensor(others)
-    return list(torch.bmm(inputs, others).unbind())
+    return list(torch.bmm(inputs, others).contiguous().unbind())
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -72,8 +72,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
         inputs = torch.nested.as_nested_tensor(
             list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
         others = torch.nested.as_nested_tensor([x for x in other])
-        out = torch.bmm(inputs, others).contiguous()
-        out = torch.cat(out.unbind())
+        out = torch.cat(torch.bmm(inputs, others).contiguous().unbind())
         return out
     else:
         return torch.ops.pyg.segment_matmul(inputs, ptr, other)
