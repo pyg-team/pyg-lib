@@ -1,11 +1,11 @@
-from typing import List, Tuple
+from typing import List
 
 import torch
 from torch import Tensor
 
 
 def grouped_matmul(inputs: List[Tensor],
-                   others: List[Tensor]) -> Tuple[Tensor]:
+                   others: List[Tensor]) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -28,15 +28,15 @@ def grouped_matmul(inputs: List[Tensor],
             shapes :obj:`[K_i, M_i]`.
 
     Returns:
-        Tuple[torch.Tensor]: Tuple of 2D output matrices of shapes
+        List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     assert int(major_vers) >= 2 or int(minor_vers) >= 14, (
         'grouped_matmul only available w/ torch >= 1.14.0')
-    inputs = torch.nested.nested_tensor(inputs)
-    others = torch.nested.nested_tensor(others)
-    return torch.bmm(inputs, others).unbind()
+    inputs = torch.nested.as_nested_tensor(inputs)
+    others = torch.nested.as_nested_tensor(others)
+    return list(torch.bmm(inputs, others).unbind())
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -70,9 +70,9 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
         requires_grad = inputs.requires_grad or other.requires_grad
-        inputs = torch.nested.nested_tensor(
+        inputs = torch.nested.as_nested_tensor(
             list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
-        others = torch.nested.nested_tensor([x for x in other])
+        others = torch.nested.as_nested_tensor([x for x in other])
         out = torch.cat(torch.bmm(inputs, others).unbind())
         return out
     else:
