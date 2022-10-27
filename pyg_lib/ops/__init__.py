@@ -73,7 +73,8 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
         inputs = torch.nested.as_nested_tensor(
             list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
         others = torch.nested.as_nested_tensor([x for x in other])
-        out = torch.cat(torch.bmm(inputs, others).unbind())
+        out = torch.bmm(inputs, others).contiguous()
+        out = torch.cat(out.unbind())
         return out
     else:
         return torch.ops.pyg.segment_matmul(inputs, ptr, other)
