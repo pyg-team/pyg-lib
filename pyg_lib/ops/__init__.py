@@ -33,8 +33,8 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     assert int(major_vers) >= 2 or int(minor_vers) >= 14, (
         'grouped_matmul only available w/ torch >= 1.14.0')
-    inputs = torch.nested.as_nested_tensor(inputs)
-    others = torch.nested.as_nested_tensor(others)
+    inputs = torch.nested.as_nested_tensor(inputs).contiguous()
+    others = torch.nested.as_nested_tensor(others).contiguous()
     return list(torch.bmm(inputs, others).contiguous().unbind())
 
 
@@ -69,8 +69,8 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
         inputs = torch.nested.as_nested_tensor(
-            list(inputs.split((ptr[1:] - ptr[:-1]).tolist())))
-        others = torch.nested.as_nested_tensor([x for x in other])
+            list(inputs.split((ptr[1:] - ptr[:-1]).tolist()))).contiguous()
+        others = torch.nested.as_nested_tensor([x for x in other]).contiguous()
         out = torch.cat(torch.bmm(inputs, others).contiguous().unbind())
         return out
     else:
