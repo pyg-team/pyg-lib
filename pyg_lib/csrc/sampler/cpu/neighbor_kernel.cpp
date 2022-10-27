@@ -63,7 +63,7 @@ class NeighborSampler {
         [&](const scalar_t& a, const scalar_t& b) { return time[a] < b; });
     row_end = it - col_;
 
-    if (temporal_strategy_ == "last") {
+    if (temporal_strategy_ == "last" && count >= 0) {
       row_start = std::max(row_start, (scalar_t)(row_end - count));
     }
 
