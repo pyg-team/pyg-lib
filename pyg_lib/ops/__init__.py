@@ -66,15 +66,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-    if int(major_vers) >= 2 or int(minor_vers) >= 14:
-        split_input = torch.tensor_split(inputs, (ptr[1:-1]).cpu())
-        inputs = torch.nested.as_nested_tensor(list(split_input)).contiguous()
-        others = torch.nested.as_nested_tensor([x for x in other]).contiguous()
-        out = torch.cat(torch.bmm(inputs, others).contiguous().unbind())
-        return out
-    else:
-        return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
 
 __all__ = [
