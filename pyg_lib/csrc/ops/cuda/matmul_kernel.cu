@@ -2,7 +2,6 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
-#include <iostream>
 #include <torch/torch.h>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
@@ -313,7 +312,6 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
 
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
-  std::cout << "using bmm pathway!";
   auto input_nested =
       torch::nested::as_nested_tensor(
           input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0))
@@ -322,11 +320,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
                           other.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .contiguous();
   auto out = torch::cat(
-      torch::bmm(inputs_nested, other_nested).contiguous().unbind(), 0)
+      torch::bmm(input_nested, other_nested).contiguous().unbind(), 0)
 #else
-  std::cout << "using og pathway!";
-  std::cout << TORCH_VERSION_MINOR;
-  std::cout << TORCH_VERSION_MAJOR;
   const auto out = input.new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
