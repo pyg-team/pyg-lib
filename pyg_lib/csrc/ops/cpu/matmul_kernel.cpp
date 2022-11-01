@@ -15,16 +15,17 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
 }
 
-// std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
-//                                               const at::TensorList other) {
-//   std::vector<at::Tensor> out(input.size());
-//   for (size_t i = 0; i < input.size(); ++i)
-//     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
+// Deprecated for torch.bmm native implementation
+std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
+                                              const at::TensorList other) {
+  std::vector<at::Tensor> out(input.size());
+  for (size_t i = 0; i < input.size(); ++i)
+    out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
 
-//   grouped_matmul_out_kernel(input, other, out);
+  grouped_matmul_out_kernel(input, other, out);
 
-//   return out;
-// }
+  return out;
+}
 
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                  const at::Tensor& ptr,
@@ -48,8 +49,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
-  // m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
-  //        TORCH_FN(grouped_matmul_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
+         TORCH_FN(grouped_matmul_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_kernel));
 }
