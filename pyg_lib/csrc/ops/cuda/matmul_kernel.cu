@@ -334,7 +334,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
 #endif
 
-  return out;
+          return out;
 }
 
 }  // namespace
