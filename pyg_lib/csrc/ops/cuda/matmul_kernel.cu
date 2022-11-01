@@ -320,7 +320,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
                           other.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .contiguous();
   auto out = torch::cat(
-      torch::bmm_nested_cuda(input_nested, other_nested).contiguous().unbind(), 0);
+      torch::bmm_nested_cuda(input_nested, other_nested).contiguous().unbind(),
+      0);
 #else
   const auto out = input.new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.
