@@ -1,7 +1,6 @@
 #include <ATen/ATen.h>
 #include <ATen/NestedTensorImpl.h>
 #include <ATen/cuda/CUDAContext.h>
-#include <ATen/native/nested/NestedTensorUtils.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 #include <torch/torch.h>
