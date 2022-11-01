@@ -10,7 +10,7 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
-#include <ATen/NestedTensorImpl.h>
+#include <ATen/native/nested/NestedTensorUtils.h>
 #include <iostream>
 namespace pyg {
 namespace ops {
