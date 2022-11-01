@@ -313,9 +313,9 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
 
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
-  input_nested = torch::nested::as_nested_tensor(input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0)).contiguous();
-  other_nested = torch::nested::as_nested_tensor(other.contiguous().split(/*split_size=*/1, /*dim=*/0)).contiguous();
-  out = torch::cat(torch::bmm(inputs_nested, other_nested).contiguous().unbind())
+  auto input_nested = torch::nested::as_nested_tensor(input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0)).contiguous();
+  auto other_nested = torch::nested::as_nested_tensor(other.contiguous().split(/*split_size=*/1, /*dim=*/0)).contiguous();
+  auto out = torch::cat(torch::bmm(inputs_nested, other_nested).contiguous().unbind())
 #else
   const auto out = input.new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.
