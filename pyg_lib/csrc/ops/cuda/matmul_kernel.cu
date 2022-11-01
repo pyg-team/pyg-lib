@@ -320,8 +320,6 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   for (size_t i = 0; i < other_list.size(); ++i)
     other_list[i] = other_list[i].squeeze();
   auto other_nested = torch::nested::nested_tensor(other_list);
-  std::cout << at::native::get_nested_tensor_impl(input_nested)->dim();
-  std::cout << at::native::get_nested_tensor_impl(other_nested)->dim();
   auto out = torch::cat(at::native::bmm_nested_cuda(input_nested, other_nested)
                             .contiguous()
                             .unbind(),
