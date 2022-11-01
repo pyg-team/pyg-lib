@@ -3,7 +3,6 @@
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 #include <torch/torch.h>
-#include <iostream>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
