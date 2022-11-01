@@ -2,6 +2,7 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
+#include <iostream>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
@@ -9,7 +10,6 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
-#include <iostream>
 namespace pyg {
 namespace ops {
 
@@ -318,8 +318,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
           input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0))
           .contiguous();
   auto other_nested = torch::nested::as_nested_tensor(
-                     other.contiguous().split(/*split_size=*/1, /*dim=*/0))
-                     .contiguous();
+                          other.contiguous().split(/*split_size=*/1, /*dim=*/0))
+                          .contiguous();
   auto out =
       torch::cat(torch::bmm(inputs_nested, other_nested).contiguous().unbind())
 #else
