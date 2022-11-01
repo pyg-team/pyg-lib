@@ -318,7 +318,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
   auto other_list = other.contiguous().split(/*split_size=*/1, /*dim=*/0)
   for (size_t i = 0; i < other_list.size(); ++i)
-    other_list[i] = other_list[i].squeeze()
+    other_list[i] = other_list[i].squeeze();
   auto other_nested = torch::nested::nested_tensor(other_list);
   std::cout << at::native::get_nested_tensor_impl(input_nested)->dim();
   std::cout << at::native::get_nested_tensor_impl(other_nested)->dim();
