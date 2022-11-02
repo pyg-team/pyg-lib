@@ -314,7 +314,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   auto input_nested = torch::nested::nested_tensor(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
   auto other_nested = torch::nested::nested_tensor(
-                          input.contiguous().split(/*split_size=*/1, /*dim=*/0))
+                          other.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .squeeze(1);
   auto out_nested = at::native::bmm_nested_cuda(input_nested, other_nested);
   auto out = torch::cat(out_nested.contiguous().unbind(), 0);
