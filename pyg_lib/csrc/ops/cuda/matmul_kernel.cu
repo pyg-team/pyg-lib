@@ -311,12 +311,12 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-  input = input.contigious();
-  other = other.contigious();
+  input = input.contiguous();
+  other = other.contiguous();
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
   auto input_nested = torch::nested::nested_tensor(
       input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-  at:TensorList other_list;
+  at::TensorList other_list;
   for (size_t i = 0; i < other.sizes()[0]; ++i)
     other_list.push_back(other[i]);
   auto other_nested = torch::nested::nested_tensor(other_list);
