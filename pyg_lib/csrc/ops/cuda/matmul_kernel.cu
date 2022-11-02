@@ -310,22 +310,20 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-  auto cont_input = input.contiguous();
-  auto cont_other = other.contiguous();
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
   auto input_nested = torch::nested::nested_tensor(
-      cont_input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
   auto other_nested = torch::nested::nested_tensor(
-                          cont_other.split(/*split_size=*/1, /*dim=*/0))
+                          input.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .squeeze(1);
   auto out_nested = at::native::bmm_nested_cuda(input_nested, other_nested);
   auto out = torch::cat(out_nested.contiguous().unbind(), 0);
 #else
-  const auto out = cont_input.new_empty({input.size(0), other.size(-1)});
+  const auto out = input.contiguous().new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
-      cont_input.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      cont_other.split(/*split_size=*/1, /*dim=*/0),
+      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0),
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
 #endif
 
