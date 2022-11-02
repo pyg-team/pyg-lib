@@ -23,8 +23,8 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     index_offsets = offsets // num_feats
     index = tl.load(index_ptr + index_offsets, mask=mask)
 
-    # NOTE Triton does not support for-loops or lists as input yet.
-    # We cap the maximum number of fused operations to `4` and unroll the loop.
+    # NOTE Triton does not support for-loops. As such, we cap the maximum
+    # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
     reduce = meta['REDUCE_LIST'][0]
     if reduce != NONE:

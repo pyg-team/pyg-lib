@@ -295,7 +295,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
   }
 }
 
-// Deprecated for torch.bmm native implementation
 std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
                                               const at::TensorList other) {
   std::vector<at::Tensor> out(input.size());
@@ -321,10 +320,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   for (size_t i = 0; i < other.sizes()[0]; ++i)
     other_list.push_back(other[i]);
   auto other_nested = torch::nested::nested_tensor(other_list);
-  auto out = torch::cat(at::native::bmm_nested_cuda(input_nested, other_nested)
-                            .contiguous()
-                            .unbind(),
-                        0);
+  auto out_nested = at::native::bmm_nested_cuda(input_nested, other_nested);
+  auto out = torch::cat(out_nested.contiguous().unbind(), 0);
 #else
   const auto out = input.new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.

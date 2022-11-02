@@ -20,7 +20,6 @@ std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
   return t1;
 }
 
-// Deprecated for torch.bmm native implementation
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
  public:
   static variable_list forward(torch::autograd::AutogradContext* ctx,
