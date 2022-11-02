@@ -310,9 +310,9 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
-  auto input_nested = at::native::_nested_tensor(
+  auto input_nested = at::_nested_tensor_from_tensor_list(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-  auto other_nested = at::native::_nested_tensor(
+  auto other_nested = at::_nested_tensor_from_tensor_list(
                           other.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .squeeze(1);
   auto out_nested = at::native::bmm_nested_cuda(input_nested, other_nested);
