@@ -27,7 +27,7 @@ def onlyCUDA(func: Callable) -> Callable:
     )(func)
 
 
-def withTriton(func: Callable) -> Callable:
+def onlyTriton(func: Callable) -> Callable:
     import pytest
 
     return pytest.mark.skipif(
