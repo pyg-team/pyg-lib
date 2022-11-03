@@ -7,6 +7,7 @@ from pyg_lib._triton import tl, triton
 
 REDUCTIONS = {'sum', 'mean', 'min', 'max'}
 NUM_REDUCTIONS = len(REDUCTIONS)
+NONE = 'none'
 
 
 @triton.jit
@@ -26,7 +27,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # We cap the maximum number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
     reduce = meta['REDUCE_LIST'][0]
-    if reduce != 'none':
+    if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
     if reduce == 'sum':
@@ -39,7 +40,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = meta['REDUCE_LIST'][1]
-    if reduce != 'none':
+    if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
         out_offsets = out_offsets + (offsets % num_feats)
@@ -53,7 +54,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = meta['REDUCE_LIST'][2]
-    if reduce != 'none':
+    if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
@@ -67,7 +68,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = meta['REDUCE_LIST'][3]
-    if reduce != 'none':
+    if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
@@ -124,7 +125,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         out[:, reduce_slice_dict[reduce]] = fill_value
 
     # Fill `reduce_list` with dummy values.
-    reduce_list = reduce_list + ['none'] * (NUM_REDUCTIONS - len(reduce_list))
+    reduce_list = reduce_list + [NONE] * (NUM_REDUCTIONS - len(reduce_list))
 
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
