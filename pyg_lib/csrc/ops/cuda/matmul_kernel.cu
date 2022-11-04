@@ -1,8 +1,10 @@
 #include <ATen/ATen.h>
+#include <ATen/NestedTensorImpl.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
 #include <torch/torch.h>
+#include <iostream>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
@@ -10,8 +12,6 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
-#include <ATen/NestedTensorImpl.h>
-#include <iostream>
 namespace pyg {
 namespace ops {
 
@@ -317,7 +317,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   auto input_nested = torch::nested::nested_tensor(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
   auto other_nested = torch::nested::nested_tensor(
-                          other.contiguous().split(/*split_size=*/1, /*dim=*/0));
+      other.contiguous().split(/*split_size=*/1, /*dim=*/0));
   std::cout << get_nested_tensor_impl(input_nested)->dim();
   std::cout << get_nested_tensor_impl(other_nested)->dim();
   std::cout << get_nested_tensor_impl(input_nested);
