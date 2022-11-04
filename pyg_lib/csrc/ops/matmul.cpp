@@ -9,7 +9,6 @@ namespace pyg {
 namespace ops {
 
 // Performs matrix multiplication across list of elements.
-// Deprecated for torch.bmm native implementation
 std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
                                        const at::TensorList other) {
   TORCH_CHECK(input.size() == other.size(),

@@ -15,7 +15,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
 }
 
-// Deprecated for torch.bmm native implementation
 std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
                                               const at::TensorList other) {
   std::vector<at::Tensor> out(input.size());
