@@ -21,6 +21,7 @@ namespace {
 // `node_t` is either a scalar or a pair of scalars (example_id, node_id):
 template <typename node_t,
           typename scalar_t,
+          typename temporal_t,
           bool replace,
           bool save_edges,
           bool save_edge_ids>
@@ -49,8 +50,8 @@ class NeighborSampler {
   void temporal_sample(const node_t global_src_node,
                        const scalar_t local_src_node,
                        const int64_t count,
-                       const scalar_t seed_time,
-                       const scalar_t* time,
+                       const temporal_t seed_time,
+                       const temporal_t* time,
                        pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                        pyg::random::RandintEngine<scalar_t>& generator,
                        std::vector<node_t>& out_global_dst_nodes) {
@@ -217,7 +218,10 @@ sample(const at::Tensor& rowptr,
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
-    typedef NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>
+    // TODO(zeyuan): Do not force int64_t for time type.
+    typedef int64_t temporal_t;
+    typedef NeighborSampler<node_t, scalar_t, temporal_t, replace, directed,
+                            return_edge_id>
         NeighborSamplerImpl;
 
     pyg::random::RandintEngine<scalar_t> generator;
@@ -227,7 +231,7 @@ sample(const at::Tensor& rowptr,
     auto sampler =
         NeighborSamplerImpl(rowptr.data_ptr<scalar_t>(),
                             col.data_ptr<scalar_t>(), temporal_strategy);
-    std::vector<scalar_t> seed_times;
+    std::vector<temporal_t> seed_times;
 
     const auto seed_data = seed.data_ptr<scalar_t>();
     if constexpr (!disjoint) {
@@ -239,12 +243,12 @@ sample(const at::Tensor& rowptr,
         mapper.insert({i, seed_data[i]});
       }
       if (seed_time.has_value()) {
-        const auto seed_time_data = seed_time.value().data_ptr<scalar_t>();
+        const auto seed_time_data = seed_time.value().data_ptr<temporal_t>();
         for (size_t i = 0; i < seed.numel(); ++i) {
           seed_times.push_back(seed_time_data[i]);
         }
       } else if (time.has_value()) {
-        const auto time_data = time.value().data_ptr<scalar_t>();
+        const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = 0; i < seed.numel(); ++i) {
           seed_times.push_back(time_data[seed_data[i]]);
         }
@@ -262,7 +266,7 @@ sample(const at::Tensor& rowptr,
                                  /*out_global_dst_nodes=*/sampled_nodes);
         }
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
-        const auto time_data = time.value().data_ptr<scalar_t>();
+        const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
           const auto batch_idx = sampled_nodes[i].first;
           sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
@@ -345,7 +349,9 @@ sample(const std::vector<node_type>& node_types,
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
     typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
-    typedef NeighborSampler<node_t, scalar_t, replace, directed, return_edge_id>
+    typedef int64_t temporal_t;
+    typedef NeighborSampler<node_t, scalar_t, temporal_t, replace, directed,
+                            return_edge_id>
         NeighborSamplerImpl;
 
     pyg::random::RandintEngine<scalar_t> generator;
@@ -438,7 +444,7 @@ sample(const std::vector<node_type>& node_types,
           }
         } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
           const at::Tensor& dst_time = time_dict.value().at(dst);
-          const auto dst_time_data = dst_time.data_ptr<scalar_t>();
+          const auto dst_time_data = dst_time.data_ptr<temporal_t>();
           for (size_t i = begin; i < end; ++i) {
             batch_idx = src_sampled_nodes[i].first;
             sampler.temporal_sample(/*global_src_node=*/src_sampled_nodes[i],

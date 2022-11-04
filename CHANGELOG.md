@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 ### Added
 - Added native PyTorch support for `segment|grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
-- Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141))
+- Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141), [#142](https://github.com/pyg-team/pyg-lib/pull/142))
 - Added `triton` dependency ([#133](https://github.com/pyg-team/pyg-lib/pull/133), [#134](https://github.com/pyg-team/pyg-lib/pull/134))
 - Enable `pytest` testing ([#132](https://github.com/pyg-team/pyg-lib/pull/132))
 - Added C++-based autograd and TorchScript support for `segment_matmul` ([#120](https://github.com/pyg-team/pyg-lib/pull/120), [#122](https://github.com/pyg-team/pyg-lib/pull/122))
@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
 ### Changed
+- Allow different types for graph and timestamp data ([#143](https://github.com/pyg-team/pyg-lib/pull/143))
 - Fixed dispatcher in `hetero_neighbor_sample` ([#125](https://github.com/pyg-team/pyg-lib/pull/125))
 - Require sorted neighborhoods according to time in temporal sampling ([#108](https://github.com/pyg-team/pyg-lib/pull/108))
 - Only sample neighbors with a strictly earlier timestamp than the seed node ([#104](https://github.com/pyg-team/pyg-lib/pull/104))
