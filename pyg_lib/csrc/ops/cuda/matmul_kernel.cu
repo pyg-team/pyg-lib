@@ -320,8 +320,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   auto other_nested = torch::nested::as_nested_tensor(
                           other.contiguous().split(/*split_size=*/1, /*dim=*/0))
                           .contiguous();
-  auto out =
-      torch::cat(torch::bmm(inputs_nested, other_nested).contiguous().unbind(), 0)
+  auto out = torch::cat(
+      torch::bmm(inputs_nested, other_nested).contiguous().unbind(), 0)
 #else
   std::cout << "using og pathway!";
   std::cout << TORCH_VERSION_MINOR;
@@ -334,7 +334,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
 #endif
 
-          return out;
+      return out;
 }
 
 }  // namespace
