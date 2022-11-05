@@ -5,9 +5,9 @@ import pyg_lib
 
 DEVICE_STRS = ['cpu', 'cuda:0']
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-print(major_vers, minor_vers)
 test_group_matmul = int(major_vers) >= 2 or int(minor_vers) >= 14
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
+
 
 def assert_close_enough(x, y, tol=1e-5):
     assert ((x - y).abs().max() <= tol), 'Max Abs Err: ' + str(float(
@@ -26,6 +26,7 @@ def test_segment_matmul_autograd(device_str):
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
+
 
 @pytest.mark.skipif(not test_group_matmul, reason="grouped_matmul requires torch >= 1.14")
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
