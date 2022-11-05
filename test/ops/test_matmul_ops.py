@@ -1,6 +1,8 @@
+import os
+
 import pytest
 import torch
-import os
+
 import pyg_lib
 
 DEVICE_STRS = ['cpu', 'cuda:0']
@@ -10,8 +12,9 @@ os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
 
 
 def assert_close_enough(x, y, tol=1e-5):
-    assert ((x - y).abs().max() <= tol), 'Max Abs Err: ' + str(float(
-        (x - y).abs().max())) + ', Tolerance: ' + str(tol)
+    assert ((x - y).abs().max() <=
+            tol), 'Max Abs Err: ' + str(float(
+                (x - y).abs().max())) + ', Tolerance: ' + str(tol)
 
 
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
@@ -28,11 +31,16 @@ def test_segment_matmul_autograd(device_str):
     assert inputs.grad.shape == inputs.shape
 
 
-@pytest.mark.skipif(not test_group_matmul, reason="grouped_matmul requires torch >= 1.14")
+@pytest.mark.skipif(not test_group_matmul,
+                    reason="grouped_matmul requires torch >= 1.14")
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
 def test_grouped_matmul_autograd(device_str):
     device = torch.device(device_str)
-    inputs = [torch.randn(5, 16).to(device), torch.randn(6, 9).to(device), torch.randn(3, 32).to(device)]
+    inputs = [
+        torch.randn(5, 16).to(device),
+        torch.randn(6, 9).to(device),
+        torch.randn(3, 32).to(device)
+    ]
     others = [
         torch.randn((16, 48), requires_grad=True, device=device_str),
         torch.randn((9, 42), requires_grad=True, device=device_str),
@@ -43,7 +51,7 @@ def test_grouped_matmul_autograd(device_str):
     for i in range(len(outs)):
         assert outs[i].size() == (inputs[i].shape[0], others[i].shape[-1])
         assert_close_enough(outs[i], inputs[i] @ others[i])
-    
+
     sum([out.sum() for out in outs]).backward()
     for i in range(len(outs)):
         assert others[i].grad.shape == others[i].shape
