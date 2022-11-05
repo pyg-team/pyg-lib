@@ -7,7 +7,7 @@ import pyg_lib
 
 DEVICE_STRS = ['cpu']
 if torch.cuda.is_available():
-        DEVICE_STRS.append('cuda:0')
+    DEVICE_STRS.append('cuda:0')
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 test_group_matmul = int(major_vers) >= 2 or int(minor_vers) >= 14
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
