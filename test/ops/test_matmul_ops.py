@@ -11,11 +11,9 @@ if torch.cuda.is_available():
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 test_group_matmul = int(major_vers) >= 2 or int(minor_vers) >= 14
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
-if int(minor_vers) >= 12 or int(major_vers) > 1: # This only exists after 1.12
-    torch.set_float32_matmul_precision('highest') # Enforce FP32
+if int(minor_vers) >= 12 or int(major_vers) > 1:  # This only exists after 1.12
+    torch.set_float32_matmul_precision('highest')  # Enforce FP32
 torch.backends.cuda.matmul.allow_tf32 = False
-
-
 
 
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
