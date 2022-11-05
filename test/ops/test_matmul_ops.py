@@ -51,7 +51,8 @@ def test_grouped_matmul_autograd(device_str):
     assert len(outs) == len(inputs)
     for i in range(len(outs)):
         assert outs[i].size() == (inputs[i].shape[0], others[i].shape[-1])
-        assert torch.allclose(outs[i], inputs[i] @ others[i])
+        out_i = inputs[i] @ others[i]
+        assert torch.allclose(outs[i], out_i)
 
     sum([out.sum() for out in outs]).backward()
     for i in range(len(outs)):
