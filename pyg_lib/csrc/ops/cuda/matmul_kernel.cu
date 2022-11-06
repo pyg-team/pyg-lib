@@ -2,7 +2,6 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
-#include <torch/version.h>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
@@ -309,21 +308,12 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
-#if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
-  auto input_nested = at::_nested_tensor_from_tensor_list(
-      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-  auto other_nested = at::_nested_tensor_from_tensor_list(
-                          other.contiguous().unbind());
-  auto out_nested = at::matmul(input_nested, other_nested);
-  auto out = at::cat(out_nested.contiguous().unbind());
-#else
   const auto out = input.new_empty({input.size(0), other.size(-1)});
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
       other.contiguous().split(/*split_size=*/1, /*dim=*/0),
       out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-#endif
 
   return out;
 }
