@@ -10,7 +10,7 @@ if torch.cuda.is_available():
     DEVICE_STRS.append('cuda:0')
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 test_group_matmul = int(major_vers) >= 2 or int(minor_vers) >= 14
-os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
+os.environ['NVIDIA_TF32_OVERRIDE'] = 0
 if int(minor_vers) >= 12 or int(major_vers) > 1:  # This only exists after 1.12
     torch.set_float32_matmul_precision('highest')  # Enforce FP32
 torch.backends.cuda.matmul.allow_tf32 = False
@@ -23,8 +23,10 @@ def test_segment_matmul_autograd(device_str):
     other = torch.randn((2, 16, 32), requires_grad=True, device=device_str)
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
     assert out.shape == (inputs.shape[0], other.shape[-1])
-    assert torch.allclose(out[0:ptr[1]], inputs[0:ptr[1]] @ other[0])
-    assert torch.allclose(out[ptr[1]:ptr[2]], inputs[ptr[1]:ptr[2]] @ other[1])
+    out_1 = inputs[0:ptr[1]] @ other[0]
+    assert torch.allclose(out[0:ptr[1]], out_1)
+    out_2 = inputs[ptr[1]:ptr[2]] @ other[1]
+    assert torch.allclose(out[ptr[1]:ptr[2]], out_2) 
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
