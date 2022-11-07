@@ -33,11 +33,15 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         :obj:`[N_i, M_i]`.
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-    assert int(major_vers) >= 2 or int(minor_vers) >= 14, (
-        'grouped_matmul only available w/ torch >= 1.14.0')
-    inputs = torch.nested.as_nested_tensor(inputs).contiguous()
-    others = torch.nested.as_nested_tensor(others).contiguous()
-    return list(torch.bmm(inputs, others).contiguous().unbind())
+
+    if int(major_vers) >= 2 or int(minor_vers) >= 14:
+        inputs = torch.nested.as_nested_tensor(inputs).contiguous()
+        others = torch.nested.as_nested_tensor(others).contiguous()
+        return list(torch.bmm(inputs, others).contiguous().unbind())
+    else:
+        assert not (any([i.requires_grad for i in inputs]) or any([i.requires_grad for i in others])), 
+            'torch >= 1.14 required for AutoGrad support using Nested Tensors'
+        return torch.ops.pyg.grouped_matmul(inputs, others)
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:

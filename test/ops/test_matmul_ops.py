@@ -9,7 +9,7 @@ DEVICE_STRS = ['cpu']
 if torch.cuda.is_available():
     DEVICE_STRS.append('cuda:0')
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-test_group_matmul = int(major_vers) >= 2 or int(minor_vers) >= 14
+req_grad_for_grouped = int(major_vers) >= 2 or int(minor_vers) >= 14
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
 if int(minor_vers) >= 12 or int(major_vers) > 1:  # This only exists after 1.12
     torch.set_float32_matmul_precision('highest')  # Enforce FP32
@@ -32,8 +32,6 @@ def test_segment_matmul_autograd(device_str):
     assert inputs.grad.shape == inputs.shape
 
 
-@pytest.mark.skipif(not test_group_matmul,
-                    reason="grouped_matmul requires torch >= 1.14")
 @pytest.mark.parametrize('device_str', DEVICE_STRS)
 def test_grouped_matmul_autograd(device_str):
     device = torch.device(device_str)
@@ -43,9 +41,9 @@ def test_grouped_matmul_autograd(device_str):
         torch.randn(3, 32).to(device)
     ]
     others = [
-        torch.randn((16, 48), requires_grad=True, device=device_str),
-        torch.randn((9, 42), requires_grad=True, device=device_str),
-        torch.randn((32, 64), requires_grad=True, device=device_str)
+        torch.randn((16, 48), requires_grad=req_grad_for_grouped, device=device_str),
+        torch.randn((9, 42), requires_grad=req_grad_for_grouped, device=device_str),
+        torch.randn((32, 64), requires_grad=req_grad_for_grouped, device=device_str)
     ]
     outs = pyg_lib.ops.grouped_matmul(inputs, others)
     assert len(outs) == len(inputs)
@@ -53,7 +51,7 @@ def test_grouped_matmul_autograd(device_str):
         assert outs[i].size() == (inputs[i].shape[0], others[i].shape[-1])
         out_i = inputs[i] @ others[i]
         assert torch.allclose(outs[i], out_i)
-
-    sum([out.sum() for out in outs]).backward()
-    for i in range(len(outs)):
-        assert others[i].grad.shape == others[i].shape
+    if req_grad_for_grouped:
+        sum([out.sum() for out in outs]).backward()
+        for i in range(len(outs)):
+            assert others[i].grad.shape == others[i].shape
