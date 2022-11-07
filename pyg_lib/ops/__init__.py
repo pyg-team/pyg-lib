@@ -43,7 +43,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         input_req_grad = any([i.requires_grad for i in inputs])
         other_req_grad = any([i.requires_grad for i in others])
         assert not (input_req_grad or other_req_grad), autograd_msg
-            
+
         return torch.ops.pyg.grouped_matmul(inputs, others)
 
 
