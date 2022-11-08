@@ -312,8 +312,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 #if TORCH_VERSION_MINOR >= 14 or TORCH_VERSION_MAJOR > 1
   auto input_nested = at::_nested_tensor_from_tensor_list(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
-  auto other_nested = at::_nested_tensor_from_tensor_list(
-                          other.contiguous().unbind());
+  auto other_nested =
+      at::_nested_tensor_from_tensor_list(other.contiguous().unbind());
   auto out_nested = at::matmul(input_nested, other_nested);
   auto out = at::cat(out_nested.contiguous().unbind());
 #else
