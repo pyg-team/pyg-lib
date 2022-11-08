@@ -26,7 +26,7 @@ def test_segment_matmul_autograd(device_str):
     out_1 = inputs[0:ptr[1]] @ other[0]
     assert torch.allclose(out[0:ptr[1]], out_1)
     out_2 = inputs[ptr[1]:ptr[2]] @ other[1]
-    assert torch.allclose(out[ptr[1]:ptr[2]], out_2) 
+    assert torch.allclose(out[ptr[1]:ptr[2]], out_2)
     out.sum().backward()
     assert other.grad.shape == other.shape
     assert inputs.grad.shape == inputs.shape
