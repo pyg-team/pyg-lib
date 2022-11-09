@@ -39,7 +39,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         others = torch.nested.as_nested_tensor(others).contiguous()
         return list(torch.bmm(inputs, others).contiguous().unbind())
     else:
-        assert not (any([i.requires_grad for i in inputs]) or any([i.requires_grad for i in others])), 
+        assert not (any([i.requires_grad for i in inputs]) or any([i.requires_grad for i in others])),
             'torch >= 1.14 required for AutoGrad support using Nested Tensors'
         return torch.ops.pyg.grouped_matmul(inputs, others)
 

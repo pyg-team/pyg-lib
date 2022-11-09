@@ -41,9 +41,12 @@ def test_grouped_matmul_autograd(device_str):
         torch.randn(3, 32).to(device)
     ]
     others = [
-        torch.randn((16, 48), requires_grad=req_grad_for_grouped, device=device_str),
-        torch.randn((9, 42), requires_grad=req_grad_for_grouped, device=device_str),
-        torch.randn((32, 64), requires_grad=req_grad_for_grouped, device=device_str)
+        torch.randn((16, 48), requires_grad=req_grad_for_grouped,
+                    device=device_str),
+        torch.randn((9, 42), requires_grad=req_grad_for_grouped,
+                    device=device_str),
+        torch.randn((32, 64), requires_grad=req_grad_for_grouped,
+                    device=device_str)
     ]
     outs = pyg_lib.ops.grouped_matmul(inputs, others)
     assert len(outs) == len(inputs)
