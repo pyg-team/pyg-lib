@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added PyTorch 1.13 support ([#145](https://github.com/pyg-team/pyg-lib/pull/145))
 - Added native PyTorch support for `grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
 - Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141), [#142](https://github.com/pyg-team/pyg-lib/pull/142))
 - Added `triton` dependency ([#133](https://github.com/pyg-team/pyg-lib/pull/133), [#134](https://github.com/pyg-team/pyg-lib/pull/134))
