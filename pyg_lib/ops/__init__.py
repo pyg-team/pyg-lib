@@ -4,6 +4,7 @@ import torch
 from torch import Tensor
 
 from .softmax import softmax
+from .scatter_reduce import fused_scatter_reduce
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
@@ -32,12 +33,21 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    outs = torch.ops.pyg.grouped_matmul(inputs, others)
+    major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 
-    for src, other, out in zip(inputs, others, outs):
-        out.requires_grad = src.requires_grad or other.requires_grad
+    if int(major_vers) >= 2 or int(minor_vers) >= 14:
+        inputs = torch.nested.as_nested_tensor(inputs).contiguous()
+        others = torch.nested.as_nested_tensor(others).contiguous()
+        return list(torch.bmm(inputs, others).contiguous().unbind())
+    else:
+        input_req_grad = any([i.requires_grad for i in inputs])
+        other_req_grad = any([i.requires_grad for i in others])
+        if input_req_grad or other_req_grad:
+            raise ValueError("Autograd is not supported in `grouped_matmul` "
+                             "for PyTorch < 1.14. Please `detach()` your "
+                             "input tensors before calling this function.")
 
-    return outs
+        return torch.ops.pyg.grouped_matmul(inputs, others)
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
@@ -75,4 +85,5 @@ __all__ = [
     'grouped_matmul',
     'segment_matmul',
     'softmax',
+    'fused_scatter_reduce',
 ]

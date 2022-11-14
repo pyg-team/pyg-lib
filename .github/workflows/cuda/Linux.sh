@@ -3,6 +3,12 @@
 OS=ubuntu1804
 
 case ${1} in
+  cu117)
+    CUDA=11.7
+    APT_KEY=${OS}-${CUDA/./-}-local
+    FILENAME=cuda-repo-${APT_KEY}_${CUDA}.1-515.65.01-1_amd64.deb
+    URL=https://developer.download.nvidia.com/compute/cuda/${CUDA}.1/local_installers
+    ;;
   cu116)
     CUDA=11.6
     APT_KEY=${OS}-${CUDA/./-}-local
@@ -37,7 +43,12 @@ wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/c
 sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
 wget -nv ${URL}/${FILENAME}
 sudo dpkg -i ${FILENAME}
-sudo apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
+
+if [ "${1}" = "cu117" ]; then
+  sudo cp /var/cuda-repo-${APT_KEY}/cuda-*-keyring.gpg /usr/share/keyrings/
+else
+  sudo apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
+fi
 
 sudo apt-get -qq update
 sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
