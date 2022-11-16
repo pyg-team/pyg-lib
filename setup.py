@@ -37,6 +37,7 @@ class CMakeBuild(build_ext):
 
     def build_extension(self, ext):
         import sysconfig
+
         import torch
 
         extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
@@ -85,6 +86,7 @@ class CMakeBuild(build_ext):
 def maybe_append_with_mkl(dependencies):
     if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
         import re
+
         import torch
         torch_config = torch.__config__.show()
         with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
