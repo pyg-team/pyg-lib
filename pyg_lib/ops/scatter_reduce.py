@@ -138,7 +138,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_reductions,
         inputs.numel(),
         REDUCE_LIST=reduce_list,
-        BLOCK_SIZE=1024,
+        BLOCK_SIZE=256,
     )
 
     # Post-processing:
