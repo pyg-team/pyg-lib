@@ -10,6 +10,11 @@ NUM_REDUCTIONS = len(REDUCTIONS)
 NONE = 'none'
 
 
+@triton.autotune(configs=[
+    triton.Config(meta={'BLOCK_SIZE': 256}),
+    triton.Config(meta={'BLOCK_SIZE': 512}),
+    triton.Config(meta={'BLOCK_SIZE': 1024}),
+], key=['num_feats'])
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
                                 num_reductions, numel, **meta):
@@ -138,21 +143,21 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_reductions,
         inputs.numel(),
         REDUCE_LIST=reduce_list,
-        BLOCK_SIZE=1024,
+        # BLOCK_SIZE=256,
     )
 
     # Post-processing:
-    if 'mean' in reduce_slice_dict:
-        degree = inputs.new_zeros(dim_size)
-        degree.scatter_add_(0, index, inputs.new_ones(index.numel()))
-        degree.clamp_(min=1.0)
-        tmp = out[:, reduce_slice_dict['mean']]
-        tmp /= degree.view(-1, 1)
-    if 'min' in reduce_slice_dict:
-        tmp = out[:, reduce_slice_dict['min']]
-        tmp[tmp == float('inf')] = 0.
-    if 'max' in reduce_slice_dict:
-        tmp = out[:, reduce_slice_dict['max']]
-        tmp[tmp == float('-inf')] = 0.
+    # if 'mean' in reduce_slice_dict:
+    #     degree = inputs.new_zeros(dim_size)
+    #     degree.scatter_add_(0, index, inputs.new_ones(index.numel()))
+    #     degree.clamp_(min=1.0)
+    #     tmp = out[:, reduce_slice_dict['mean']]
+    #     tmp /= degree.view(-1, 1)
+    # if 'min' in reduce_slice_dict:
+    #     tmp = out[:, reduce_slice_dict['min']]
+    #     tmp[tmp == float('inf')] = 0.
+    # if 'max' in reduce_slice_dict:
+    #     tmp = out[:, reduce_slice_dict['max']]
+    #     tmp[tmp == float('-inf')] = 0.
 
     return out
