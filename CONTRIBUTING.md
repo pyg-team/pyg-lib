@@ -37,7 +37,7 @@ cmake --build .
 ```
 
 If you want to build a library with MKL BLAS support, you need to have MKL headers present on your machine.
-In a typical case, where MKL headers are installed via conda or pip, run following commands:
+In a typical case, where MKL headers are installed via `conda` or `pip`, run following commands:
 
 ```
 export BLAS_INCLUDE_DIR=`python -c 'import sysconfig;print(sysconfig.get_path("data"))'`/include
