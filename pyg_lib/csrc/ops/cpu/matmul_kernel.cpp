@@ -267,14 +267,20 @@ void grouped_matmul_out_kernel(const std::vector<at::Tensor> input,
 
 std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
                                               const at::TensorList other) {
+  const auto n_matrices = input.size();
+
   std::vector<at::Tensor> input_contig;
   std::vector<at::Tensor> other_contig;
   std::vector<at::Tensor> out;
 
-  for (size_t i = 0; i < input.size(); ++i) {
-    input_contig.push_back(input[i].contiguous());
-    other_contig.push_back(other[i].contiguous());
-    out.push_back(input_contig[i].new_empty(
+  input_contig.reserve(n_matrices);
+  other_contig.reserve(n_matrices);
+  out.reserve(n_matrices);
+
+  for (size_t i = 0; i < n_matrices; ++i) {
+    input_contig.emplace_back(input[i].contiguous());
+    other_contig.emplace_back(other[i].contiguous());
+    out.emplace_back(input_contig[i].new_empty(
         {input_contig[i].size(0), other_contig[i].size(-1)}));
   }
 
