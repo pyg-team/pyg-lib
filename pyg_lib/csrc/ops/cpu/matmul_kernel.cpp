@@ -114,19 +114,19 @@ using is_blas_library_type =
                                std::is_same<scalar_t, double>::value>;
 
 template <typename scalar_t>
-void parallel_mkl_blas_gemm_batched(const scalar_t** src0_ptrs,
-                                    const scalar_t** src1_ptrs,
-                                    scalar_t** dst_ptrs,
-                                    const std::vector<int>& ms,
+void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
                                     const std::vector<int>& ns,
                                     const std::vector<int>& ks,
-                                    const std::vector<int>& ld_src0,
-                                    const std::vector<int>& ld_src1,
-                                    const std::vector<int>& ld_dst,
-                                    const std::vector<int>& group_sizes,
                                     const std::vector<scalar_t>& alpha,
+                                    const scalar_t** src0_ptrs,
+                                    const std::vector<int>& ld_src0,
+                                    const scalar_t&& src1_ptrs,
+                                    const std::vector<int>& ld_src1,
                                     const std::vector<scalar_t>& beta,
-                                    const int group_count) {
+                                    scalar_t** dst_ptrs,
+                                    const std::vector<int>& ld_dst,
+                                    const int group_count,
+                                    const std::vector<int>& group_sizes) {
   int64_t work_size = 0;
   for (size_t i = 0; i < group_count; ++i) {
     work_size += ks[i] * group_sizes[i];
@@ -165,6 +165,14 @@ void parallel_mkl_blas_gemm_batched(const scalar_t** src0_ptrs,
   }
 }
 
+void grouped_matmul_out_kernel_at_impl(const std::vector<at::Tensor> input,
+                                       const std::vector<at::Tensor> other,
+                                       std::vector<at::Tensor> out) {
+  for (size_t i = 0; i < out.size(); ++i) {
+    at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
+  }
+}
+
 void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
                                         const std::vector<at::Tensor> other,
                                         std::vector<at::Tensor> out) {
@@ -183,9 +191,9 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
 
   AT_DISPATCH_FLOATING_TYPES(
       input.front().scalar_type(), "grouped_matmul_out_kernel_mkl_impl", [&] {
-        std::vector<scalar_t> alpha(groups.size(), 1);
-        std::vector<scalar_t> beta(groups.size(), 0);
         const auto group_count = static_cast<int>(groups.size());
+        std::vector<scalar_t> alpha(group_count, 1);
+        std::vector<scalar_t> beta(group_count, 0);
 
         std::vector<int> ms(group_count);
         std::vector<int> ns(group_count);
@@ -229,39 +237,15 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
 #if AT_MKL_SEQUENTIAL()
         // unlikely to happen - requires Torch to be built from source with
         // explicit flag denoting MKL sequential version
-        parallel_mkl_blas_gemm_batched(src0_ptrs, src1_ptrs, dst_ptrs, ms, ns,
-                                       ks, ld_src0, ld_src1, ld_dst,
-                                       group_sizes, alpha, beta, group_count);
+        parallel_mkl_blas_gemm_batched(ms, ns, ks, alpha, src0_ptrs, ld_src0,
+                                       src1_ptrs, ld_src1, beta, dst_ptrs,
+                                       ld_dst, group_count, group_sizes);
 #else
         mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
-                              src0_ptrs, ld_src0.data(), src1_ptrs,
-                              ld_src1.data(), beta.data(), dst_ptrs,
-                              ld_dst.data(), group_count, group_sizes.data());
+                              src0_ptrs, ld_src0.data(), src1_ptrs, ld_src1.data(),
+                              beta.data(), dst_ptrs, ld_dst.data(), group_count,
+                              group_sizes.data());
 #endif
-      });
-}
-
-void grouped_matmul_out_kernel_at_impl(const std::vector<at::Tensor> input,
-                                       const std::vector<at::Tensor> other,
-                                       std::vector<at::Tensor> out) {
-  for (size_t i = 0; i < out.size(); ++i) {
-    at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
-  }
-}
-
-void grouped_matmul_out_kernel(const std::vector<at::Tensor> input,
-                               const std::vector<at::Tensor> other,
-                               std::vector<at::Tensor> out) {
-  AT_DISPATCH_ALL_TYPES(
-      input.front().scalar_type(), "grouped_matmul_out_kernel", [&] {
-        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
-                                is_blas_library_type<scalar_t>::value>(
-            [&](auto _) {
-              grouped_matmul_out_kernel_mkl_impl(input, other, out);
-            },
-            [&](auto _) {
-              grouped_matmul_out_kernel_at_impl(input, other, out);
-            });
       });
 }
 
@@ -284,9 +268,115 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
         {input_contig[i].size(0), other_contig[i].size(-1)}));
   }
 
-  grouped_matmul_out_kernel(input_contig, other_contig, out);
+  AT_DISPATCH_ALL_TYPES(
+      input_contig.front().scalar_type(), "grouped_matmul_kernel", [&] {
+        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
+                                is_blas_library_type<scalar_t>::value>(
+            [&](auto _) {
+              grouped_matmul_out_kernel_mkl_impl(input_contig, other_contig,
+                                                 out);
+            },
+            [&](auto _) {
+              grouped_matmul_out_kernel_at_impl(input_contig, other_contig,
+                                                out);
+            });
+      });
 
   return out;
+}
+
+struct offset_params {
+  int src0_offset;
+  int src1_offset;
+  int dst_offset;
+
+  offset_params& operator+=(const offset_params& rhs) {
+    this->src0_offset += rhs.src0_offset;
+    this->src1_offset += rhs.src1_offset;
+    this->dst_offset += rhs.dst_offset;
+    return *this;
+  }
+};
+
+void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
+                                        const at::Tensor& other,
+                                        at::Tensor& out,
+                                        const at::IntArrayRef& sizes) {
+  const int n = other.size(-1);
+  const int k = input.size(-1);
+  const int nk = n * k;
+  std::map<int, std::vector<size_t>> groups;
+  std::vector<offset_params> offsets = {{0, 0, 0}};
+  offsets.reserve(sizes.size() + 1);
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    const int m = sizes[i];
+    if (groups.count(m)) {
+      groups[m].push_back(i);
+    } else {
+      groups.insert({m, {i}});
+    }
+
+    offset_params offset = {m * k, nk, m * n};
+    offset += offsets.back();
+    offsets.push_back(offset);
+  }
+  offsets.pop_back();
+
+  AT_DISPATCH_FLOATING_TYPES(
+      input.scalar_type(), "segment_matmul_out_kernel_mkl_impl", [&] {
+        const auto group_count = static_cast<int>(groups.size());
+        std::vector<scalar_t> alpha(group_count, 1);
+        std::vector<scalar_t> beta(group_count, 0);
+        std::vector<int> ns(group_count, n);
+        std::vector<int> ks(group_count, k);
+        std::vector<int> ld_src0(group_count, k);
+        std::vector<int> ld_src1(group_count, n);
+        std::vector<int> ld_dst(group_count, n);
+
+        std::vector<int> ms(group_count);
+        std::vector<int> group_sizes(group_count);
+        std::vector<scalar_t*> src0;
+        std::vector<scalar_t*> src1;
+        std::vector<scalar_t*> dst;
+
+        const auto src0_base_ptr = input.data_ptr<scalar_t>();
+        const auto src1_base_ptr = other.data_ptr<scalar_t>();
+        const auto dst_base_ptr = out.data_ptr<scalar_t>();
+
+        size_t group_idx = 0;
+        for (const auto group_kv : groups) {
+          int m = group_kv.first;
+          const auto indices = group_kv.second;
+
+          ms[group_idx] = m;
+          group_sizes[group_idx] = indices.size();
+          ++group_idx;
+
+          for (const auto offset_idx : indices) {
+            const auto offset = offsets[offset_idx];
+            src0.push_back(src0_base_ptr + offset.src0_offset);
+            src1.push_back(src1_base_ptr + offset.src1_offset);
+            dst.push_back(dst_base_ptr + offset.dst_offset);
+          }
+        }
+
+        auto src0_ptrs = const_cast<const scalar_t**>(src0.data());
+        auto src1_ptrs = const_cast<const scalar_t**>(src1.data());
+        auto dst_ptrs = dst.data();
+
+#if AT_MKL_SEQUENTIAL()
+        // unlikely to happen - requires Torch to be built from source with
+        // explicit flag denoting MKL sequential version
+        parallel_mkl_blas_gemm_batched(ms, ns, ks, alpha, src0_ptrs, ld_src0,
+                                       src1_ptrs, ld_src1, beta, dst_ptrs,
+                                       ld_dst, group_count, group_sizes);
+#else
+        mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
+                              src0_ptrs, ld_src0.data(), src1_ptrs, ld_src1.data(),
+                              beta.data(), dst_ptrs, ld_dst.data(), group_count,
+                              group_sizes.data());
+#endif
+      });
 }
 
 at::Tensor segment_matmul_kernel(const at::Tensor& input,
@@ -296,16 +386,27 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto input_contig = input.contiguous();
   const auto other_contig = other.contiguous();
-  const auto out = input_contig.new_empty({input.size(0), other.size(-1)});
+  auto out = input_contig.new_empty({input.size(0), other.size(-1)});
 
-  auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-  for (auto& out_part : outs) {
-    out_part.resize_(0);
-  }
-
-  grouped_matmul_out_kernel(
-      input_contig.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
+  AT_DISPATCH_ALL_TYPES(
+      input_contig.scalar_type(), "segment_matmul_kernel", [&] {
+        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
+                                is_blas_library_type<scalar_t>::value>(
+            [&](auto _) {
+              segment_matmul_out_kernel_mkl_impl(input_contig, other_contig,
+                                                 out, sizes);
+            },
+            [&](auto _) {
+              auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+              for (auto& out_part : outs) {
+                out_part.unsqueeze_(0);
+              }
+              grouped_matmul_out_kernel_at_impl(
+                  input_contig.split_with_sizes(/*split_size=*/sizes,
+                                                /*dim=*/0),
+                  other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
+            });
+      });
 
   return out;
 }
