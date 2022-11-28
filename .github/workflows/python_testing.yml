@@ -9,38 +9,19 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   pytest:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: [3.9]
-        torch-version: [1.13.0]
+    runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
       - uses: actions/checkout@v3
         with:
-          submodules: 'recursive'
+          submodules: recursive
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Free up disk space
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          sudo rm -rf /usr/share/dotnet
-
-      - name: Install PyTorch ${{ matrix.torch-version }}+cpu
-        run: |
-          pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/cpu
-          python -c "import torch; print('PyTorch:', torch.__version__)"
-          python -c "import torch; print('CUDA:', torch.version.cuda)"
+      - name: Setup packages
+        uses: ./.github/actions/setup
 
       - name: Install package
         run: |
-          pip install ninja
           pip install --verbose -e .[triton,test]
 
       - name: Run tests
