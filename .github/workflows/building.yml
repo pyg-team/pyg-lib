@@ -1,20 +1,16 @@
-name: Nightly Wheels
+name: Building Wheels
 
-on:  # yamllint disable-line rule:truthy
-  workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+on: [workflow_dispatch]  # yamllint disable-line rule:truthy
 
 jobs:
 
   wheel:
-    if: github.repository == 'pyg-team/pyg-lib'
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-18.04, macos-10.15, windows-2019]
         python-version: ['3.7', '3.8', '3.9', '3.10']
         torch-version: [1.11.0, 1.12.0, 1.13.0]
         cuda-version: ['cpu', 'cu102', 'cu113', 'cu115', 'cu116', 'cu117']
@@ -33,6 +29,18 @@ jobs:
             cuda-version: 'cu113'
           - torch-version: 1.13.0
             cuda-version: 'cu115'
+          - os: macos-10.15
+            cuda-version: 'cu102'
+          - os: macos-10.15
+            cuda-version: 'cu113'
+          - os: macos-10.15
+            cuda-version: 'cu115'
+          - os: macos-10.15
+            cuda-version: 'cu116'
+          - os: macos-10.15
+            cuda-version: 'cu117'
+          - os: windows-2019
+            cuda-version: 'cu102'
 
     steps:
       - name: Checkout repository
@@ -52,10 +60,9 @@ jobs:
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
           CUDA_VERSION=if [ ${{ os.runner }} != "macOS" ]; then `echo ${{ matrix.cuda-version }}`; else ""; fi
-          TODAY=`date +'%Y%m%d'`
-          echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION"
-          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" setup.py
-          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
+          echo "New version name: $VERSION+$TORCH_VERSION$CUDA_VERSION"
+          sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" setup.py
+          sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
         shell: bash
 
       - name: Build wheel
@@ -73,38 +80,13 @@ jobs:
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
 
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-1
+      # - name: Configure AWS
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-west-1
 
-      - name: Upload wheel
-        run: |
-          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
-
-  boto3:
-    if: ${{ always() }}
-    needs: [wheel]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          pip install boto3
-
-      - name: Upload index
-        run: |
-          python ./.github/workflows/aws/upload_nightly_index.py
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # - name: Upload wheel
+      #   run: |
+      #     aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
