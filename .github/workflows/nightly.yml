@@ -47,15 +47,27 @@ jobs:
           torch-version: ${{ matrix.torch-version }}
           cuda-version: ${{ matrix.cuda-version }}
 
-      - name: Set version
+      - name: Set version on non-macOS
+        if: ${{ runner.os != 'macOS' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
-          if [ ${{ runner.os }} != "macOS" ]; then CUDA_VERSION=`echo ${{ matrix.cuda-version }}`; else CUDA_VERSION=""; fi
+          CUDA_VERSION=`echo ${{ matrix.cuda-version }}`
           TODAY=`date +'%Y%m%d'`
           echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION"
           sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" setup.py
           sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
+        shell: bash
+
+      - name: Set version on macOS
+        if: ${{ runner.os = 'macOS' }}
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
+          TODAY=`date +'%Y%m%d'`
+          echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION"
+          sed -i "" "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION/" setup.py
+          sed -i "" "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION/" pyg_lib/__init__.py
         shell: bash
 
       - name: Build wheel
