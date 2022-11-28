@@ -17,7 +17,7 @@ jobs:
         with:
           submodules: recursive
 
-      - Setup packages:
+      - name: Setup packages
         uses: ./.github/actions/setup
 
       - name: Configure
