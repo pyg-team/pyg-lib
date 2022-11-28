@@ -68,7 +68,7 @@ jobs:
         shell: bash
 
       - name: Set version on macOS
-        if: ${{ runner.os != 'macOS' }}
+        if: ${{ runner.os == 'macOS' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
