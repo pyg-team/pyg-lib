@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-10.15, windows-2019]
+        os: [ubuntu-18.04, macos-10.15]  # windows-2019
         python-version: ['3.7', '3.8', '3.9', '3.10']
         torch-version: [1.11.0, 1.12.0, 1.13.0]
         cuda-version: ['cpu', 'cu102', 'cu113', 'cu115', 'cu116', 'cu117']
@@ -55,14 +55,25 @@ jobs:
           torch-version: ${{ matrix.torch-version }}
           cuda-version: ${{ matrix.cuda-version }}
 
-      - name: Set version
+      - name: Set version on non-macOS
+        if: ${{ runner.os != 'macOS' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
-          CUDA_VERSION=if [ ${{ os.runner }} != "macOS" ]; then `echo ${{ matrix.cuda-version }}`; else ""; fi
+          CUDA_VERSION=`echo ${{ matrix.cuda-version }}`
           echo "New version name: $VERSION+$TORCH_VERSION$CUDA_VERSION"
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" setup.py
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
+        shell: bash
+
+      - name: Set version on macOS
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
+          echo "New version name: $VERSION+$TORCH_VERSION"
+          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" setup.py
+          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" pyg_lib/__init__.py
         shell: bash
 
       - name: Build wheel
@@ -80,13 +91,13 @@ jobs:
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
 
-      # - name: Configure AWS
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: us-west-1
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
 
-      # - name: Upload wheel
-      #   run: |
-      #     aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+      - name: Upload wheel
+        run: |
+          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
