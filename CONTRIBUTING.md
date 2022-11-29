@@ -36,6 +36,14 @@ cmake .. -GNinja -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON -DWITH_CUDA=ON -DCMAKE_CUD
 cmake --build .
 ```
 
+If you want to build a library with MKL BLAS support, you need to have MKL headers present on your machine.
+In a typical case, where MKL headers are installed via `conda` or `pip`, run following commands:
+
+```
+export BLAS_INCLUDE_DIR=`python -c 'import sysconfig;print(sysconfig.get_path("data"))'`/include
+cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON -DUSE_MKL_BLAS=ON -DBLAS_INCLUDE_DIR=${BLAS_INCLUDE_DIR}
+```
+
 If you want to include the test suite or benchmarks, specify `-DBUILD_TEST=ON` or `-DBUILD_BENCHMARK=ON`, respectively
 (both are `OFF` by default).
 Finally, run tests via:

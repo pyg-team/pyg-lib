@@ -1,3 +1,8 @@
+# Environment flags to control different options
+#
+#   USE_MKL_BLAS=1
+#     enables use of MKL BLAS (requires PyTorch to be built with MKL support)
+
 import importlib
 import os
 import os.path as osp
@@ -18,6 +23,11 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
+    @staticmethod
+    def check_env_flag(name: str, default: str = "") -> bool:
+        value = os.getenv(name, default).upper()
+        return value in ["1", "ON", "YES", "TRUE", "Y"]
+
     def get_ext_filename(self, ext_name):
         # Remove Python ABI suffix:
         ext_filename = super().get_ext_filename(ext_name)
@@ -25,19 +35,17 @@ class CMakeBuild(build_ext):
         ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
         return '.'.join(ext_filename_parts)
 
-    def check_env_flag(self, name: str, default: str = "") -> bool:
-        value = os.getenv(name, default).upper()
-        return value in ["1", "ON", "YES", "TRUE", "Y"]
-
     def build_extension(self, ext):
+        import sysconfig
+
         import torch
 
         extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
         self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
-            if self.check_env_flag("DEBUG"):
+            if CMakeBuild.check_env_flag("DEBUG"):
                 self.build_type = "DEBUG"
-            elif self.check_env_flag("REL_WITH_DEB_INFO"):
+            elif CMakeBuild.check_env_flag("REL_WITH_DEB_INFO"):
                 self.build_type = "RELWITHDEBINFO"
 
         if not osp.exists(self.build_temp):
@@ -56,6 +64,11 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
+        if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
+            include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
+            cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
+            cmake_args.append('-DUSE_MKL_BLAS=ON')
+
         if importlib.util.find_spec('ninja') is not None:
             cmake_args += ['-GNinja']
         else:
@@ -70,7 +83,29 @@ class CMakeBuild(build_ext):
                               cwd=self.build_temp)
 
 
+def maybe_append_with_mkl(dependencies):
+    if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
+        import re
+
+        import torch
+        torch_config = torch.__config__.show()
+        with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
+        if torch.backends.mkl.is_available() and with_mkl_blas:
+            # product version is decoupled from library version. For older
+            # releases, where MKL was not a part of oneAPI, we can safely use
+            # 2021.4 as it is backward compatible (default for PyTorch conda
+            # distribution).
+            product_version = '2021.4'
+            pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
+            match = re.search(pattern, torch_config)
+            if match:
+                product_version = match.group(0).split(' ')[-1]
+
+            dependencies.append(f'mkl-include=={product_version}')
+
+
 install_requires = []
+maybe_append_with_mkl(install_requires)
 
 triton_requires = [
     'triton==1.1.1',
