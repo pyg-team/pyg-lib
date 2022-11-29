@@ -3,7 +3,14 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+
+## [0.2.0] - 2023-MM-DD
+### Added
+### Changed
+- Improved `[segment|grouped]_matmul` CPU implementation via `at::matmul_out` and MKL BLAS `gemm_batch` ([#146](https://github.com/pyg-team/pyg-lib/pull/146))
+### Removed
+
+## [0.1.0] - 2022-11-28
 ### Added
 - Added PyTorch 1.13 support ([#145](https://github.com/pyg-team/pyg-lib/pull/145))
 - Added native PyTorch support for `grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
@@ -12,7 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Enable `pytest` testing ([#132](https://github.com/pyg-team/pyg-lib/pull/132))
 - Added C++-based autograd and TorchScript support for `segment_matmul` ([#120](https://github.com/pyg-team/pyg-lib/pull/120), [#122](https://github.com/pyg-team/pyg-lib/pull/122))
 - Allow overriding `time` for seed nodes via `seed_time` in `neighbor_sample` ([#118](https://github.com/pyg-team/pyg-lib/pull/118))
-- Added `[segment|grouped]_matmul` CPU implementation via `at::matmul_out` and MKL BLAS `gemm_batch` ([#111](https://github.com/pyg-team/pyg-lib/pull/111), [#146](https://github.com/pyg-team/pyg-lib/pull/146))
+- Added `[segment|grouped]_matmul` CPU implementation ([#111](https://github.com/pyg-team/pyg-lib/pull/111))
 - Added `temporal_strategy` option to `neighbor_sample` ([#114](https://github.com/pyg-team/pyg-lib/pull/114))
 - Added benchmarking tool (Google Benchmark) along with `pyg::sampler::Mapper` benchmark example ([#101](https://github.com/pyg-team/pyg-lib/pull/101))
 - Added CSC mode to `pyg::sampler::neighbor_sample` and `pyg::sampler::hetero_neighbor_sample` ([#95](https://github.com/pyg-team/pyg-lib/pull/95), [#96](https://github.com/pyg-team/pyg-lib/pull/96))
@@ -53,4 +60,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Absolute headers ([#30](https://github.com/pyg-team/pyg-lib/pull/30))
 - Use `at::equal` rather than `at::all` in tests ([#37](https://github.com/pyg-team/pyg-lib/pull/37))
 - Build `*.so` extension on Mac instead of `*.dylib`([#107](https://github.com/pyg-team/pyg-lib/pull/107))
-### Removed
