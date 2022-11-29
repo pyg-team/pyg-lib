@@ -2,6 +2,15 @@ include LICENSE
 include README.md
 
 recursive-include third_party *
+recursive-exclude third_party/cutlass/docs *
+recursive-exclude third_party/cutlass/test *
+recursive-exclude third_party/cutlass/media *
+recursive-exclude third_party/cutlass/examples *
+recursive-exclude third_party/parallel-hashmap/css *
+recursive-exclude third_party/parallel-hashmap/html *
+recursive-exclude third_party/parallel-hashmap/tests *
+recursive-exclude third_party/parallel-hashmap/examples *
+recursive-exclude third_party/parallel-hashmap/benchmark *
 
 recursive-exclude test *
 recursive-exclude docs *
