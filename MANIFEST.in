@@ -1,1 +1,8 @@
 include LICENSE
+include README.md
+
+recursive-include third_party *
+
+recursive-exclude test *
+recursive-exclude docs *
+recursive-exclude benchmark *
