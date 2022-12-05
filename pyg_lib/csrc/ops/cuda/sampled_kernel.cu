@@ -18,14 +18,15 @@ const std::map<std::string, FnType> to_fn_type = {
     {"div", DIV},
 };
 
-template <typename scalar_t, bool has_left_index, bool has_right_index>
+template <typename scalar_t>
 __global__ void sampled_op_kernel_impl(const scalar_t* __restrict__ left,
                                        const scalar_t* __restrict__ right,
                                        scalar_t* __restrict__ out,
                                        const int64_t* __restrict__ left_index,
                                        const int64_t* __restrict__ right_index,
                                        const FnType fn,
-                                       const int64_t dim_size,
+                                       const bool has_left_index,
+                                       const bool has_right_index,
                                        const int64_t num_feats,
                                        const int64_t numel) {
   int64_t thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -83,33 +84,20 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
     const auto right_data = right.data_ptr<scalar_t>();
     auto out_data = out.data_ptr<scalar_t>();
 
-    if (left_index.has_value() && right_index.has_value()) {
-      const auto left_index_data = left_index.value().data_ptr<int64_t>();
-      const auto right_index_data = right_index.value().data_ptr<int64_t>();
-
-      sampled_op_kernel_impl<scalar_t, true, true>
-          <<<CDIV(numel, THREADS), THREADS, 0, stream>>>(
-              left_data, right_data, out_data, left_index_data,
-              right_index_data, to_fn_type.at(fn), dim_size, num_feats, numel);
-
-    } else if (left_index.has_value()) {
-      const auto left_index_data = left_index.value().data_ptr<int64_t>();
-      const int64_t* right_index_data = NULL;
-
-      sampled_op_kernel_impl<scalar_t, true, false>
-          <<<CDIV(numel, THREADS), THREADS, 0, stream>>>(
-              left_data, right_data, out_data, left_index_data,
-              right_index_data, to_fn_type.at(fn), dim_size, num_feats, numel);
-
-    } else if (right_index.has_value()) {
-      const int64_t* left_index_data = NULL;
-      const auto right_index_data = right_index.value().data_ptr<int64_t>();
-
-      sampled_op_kernel_impl<scalar_t, false, true>
-          <<<CDIV(numel, THREADS), THREADS, 0, stream>>>(
-              left_data, right_data, out_data, left_index_data,
-              right_index_data, to_fn_type.at(fn), dim_size, num_feats, numel);
+    int64_t* left_index_data = NULL;
+    if (left_index.has_value()) {
+      left_index_data = left_index.value().data_ptr<int64_t>();
     }
+    int64_t* right_index_data = NULL;
+    if (right_index.has_value()) {
+      right_index_data = right_index.value().data_ptr<int64_t>();
+    }
+
+    sampled_op_kernel_impl<scalar_t>
+        <<<CDIV(numel, THREADS), THREADS, 0, stream>>>(
+            left_data, right_data, out_data, left_index_data, right_index_data,
+            to_fn_type.at(fn), left_index.has_value(), right_index.has_value(),
+            num_feats, numel);
   });
   return out;
 }
