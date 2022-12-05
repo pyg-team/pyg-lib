@@ -80,8 +80,12 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
 
-def sampled_add(left: Tensor, right: Tensor, left_index: Optional[Tensor],
-                right_index=Optional[Tensor]) -> Tensor:
+def sampled_add(
+    left: Tensor,
+    right: Tensor,
+    left_index: Optional[Tensor] = None,
+    right_index: Optional[Tensor] = None,
+) -> Tensor:
     r"""Performs a sampled **addition** of :obj:`left` and :obj:`right`
     according to the indices specified in :obj:`left_index` and
     :obj:`right_index`:
@@ -108,8 +112,12 @@ def sampled_add(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     return out
 
 
-def sampled_sub(left: Tensor, right: Tensor, left_index: Optional[Tensor],
-                right_index=Optional[Tensor]) -> Tensor:
+def sampled_sub(
+    left: Tensor,
+    right: Tensor,
+    left_index: Optional[Tensor] = None,
+    right_index: Optional[Tensor] = None,
+) -> Tensor:
     r"""Performs a sampled **subtraction** of :obj:`left` by :obj:`right`
     according to the indices specified in :obj:`left_index` and
     :obj:`right_index`:
@@ -118,7 +126,7 @@ def sampled_sub(left: Tensor, right: Tensor, left_index: Optional[Tensor],
         \textrm{out} = \textrm{left}[\textrm{left_index}] -
         \textrm{right}[\textrm{right_index}]
 
-    This operation fuses the indexing and addition operation together, thus
+    This operation fuses the indexing and subtraction operation together, thus
     being more runtime and memory-efficient.
 
     Args:
@@ -136,8 +144,12 @@ def sampled_sub(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     return out
 
 
-def sampled_mul(left: Tensor, right: Tensor, left_index: Optional[Tensor],
-                right_index=Optional[Tensor]) -> Tensor:
+def sampled_mul(
+    left: Tensor,
+    right: Tensor,
+    left_index: Optional[Tensor] = None,
+    right_index: Optional[Tensor] = None,
+) -> Tensor:
     r"""Performs a sampled **multiplication** of :obj:`left` and :obj:`right`
     according to the indices specified in :obj:`left_index` and
     :obj:`right_index`:
@@ -146,8 +158,8 @@ def sampled_mul(left: Tensor, right: Tensor, left_index: Optional[Tensor],
         \textrm{out} = \textrm{left}[\textrm{left_index}] *
         \textrm{right}[\textrm{right_index}]
 
-    This operation fuses the indexing and addition operation together, thus
-    being more runtime and memory-efficient.
+    This operation fuses the indexing and multiplication operation together,
+    thus being more runtime and memory-efficient.
 
     Args:
         left (torch.Tensor): The left tensor.
@@ -164,8 +176,12 @@ def sampled_mul(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     return out
 
 
-def sampled_div(left: Tensor, right: Tensor, left_index: Optional[Tensor],
-                right_index=Optional[Tensor]) -> Tensor:
+def sampled_div(
+    left: Tensor,
+    right: Tensor,
+    left_index: Optional[Tensor] = None,
+    right_index: Optional[Tensor] = None,
+) -> Tensor:
     r"""Performs a sampled **division** of :obj:`left` by :obj:`right`
     according to the indices specified in :obj:`left_index` and
     :obj:`right_index`:
@@ -174,7 +190,7 @@ def sampled_div(left: Tensor, right: Tensor, left_index: Optional[Tensor],
         \textrm{out} = \textrm{left}[\textrm{left_index}] /
         \textrm{right}[\textrm{right_index}]
 
-    This operation fuses the indexing and addition operation together, thus
+    This operation fuses the indexing and division operation together, thus
     being more runtime and memory-efficient.
 
     Args:
