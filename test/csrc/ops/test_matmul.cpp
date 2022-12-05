@@ -4,9 +4,9 @@
 
 #include "pyg_lib/csrc/ops/matmul.h"
 
-class MatmulTest : public testing::TestWithParam<c10::DeviceType> {};
+class MultipleDeviceTest : public testing::TestWithParam<c10::DeviceType> {};
 
-TEST_P(MatmulTest, GroupedMatmulForward) {
+TEST_P(MultipleDeviceTest, GroupedMatmulForward) {
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
   auto options = at::TensorOptions().device(param);
 
@@ -26,7 +26,7 @@ TEST_P(MatmulTest, GroupedMatmulForward) {
   EXPECT_TRUE(at::allclose(out[1], expected_out1, 0.1, 0.1));
 }
 
-TEST_P(MatmulTest, SegmentMatmulForward) {
+TEST_P(MultipleDeviceTest, SegmentMatmulForward) {
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
   auto options = at::TensorOptions().device(param);
 
@@ -43,9 +43,7 @@ TEST_P(MatmulTest, SegmentMatmulForward) {
   EXPECT_TRUE(at::allclose(out.narrow(0, 5, 3), expected_out1, 0.1, 0.1));
 }
 
-// TODO (matthias) add a grouped matmul backward test.
-
-TEST_P(MatmulTest, SegmentMatmulBackward) {
+TEST_P(MultipleDeviceTest, SegmentMatmulBackward) {
   const auto param = ::testing::TestWithParam<c10::DeviceType>::GetParam();
   auto options = at::TensorOptions().device(param);
 
@@ -60,9 +58,9 @@ TEST_P(MatmulTest, SegmentMatmulBackward) {
 }
 
 INSTANTIATE_TEST_SUITE_P(OpsTest,
-                         MatmulTest,
+                         MultipleDeviceTest,
 #ifdef WITH_CUDA
-                         testing::Values(at::kCUDA, at::kCPU));
+                         testing::Values(at::kCPU, at::kCUDA));
 #else
                          testing::Values(at::kCPU));
 #endif
