@@ -87,8 +87,8 @@ def sampled_add(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     :obj:`right_index`:
 
     .. math::
-        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
-        \textrm{right}[\textrm{right\_index}]
+        \textrm{out} = \textrm{left}[\textrm{left_index}] +
+        \textrm{right}[\textrm{right_index}]
 
     This operation fuses the indexing and addition operation together, thus
     being more runtime and memory-efficient.
@@ -115,8 +115,8 @@ def sampled_sub(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     :obj:`right_index`:
 
     .. math::
-        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
-        \textrm{right}[\textrm{right\_index}]
+        \textrm{out} = \textrm{left}[\textrm{left_index}] -
+        \textrm{right}[\textrm{right_index}]
 
     This operation fuses the indexing and addition operation together, thus
     being more runtime and memory-efficient.
@@ -143,8 +143,8 @@ def sampled_mul(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     :obj:`right_index`:
 
     .. math::
-        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
-        \textrm{right}[\textrm{right\_index}]
+        \textrm{out} = \textrm{left}[\textrm{left_index}] *
+        \textrm{right}[\textrm{right_index}]
 
     This operation fuses the indexing and addition operation together, thus
     being more runtime and memory-efficient.
@@ -171,8 +171,8 @@ def sampled_div(left: Tensor, right: Tensor, left_index: Optional[Tensor],
     :obj:`right_index`:
 
     .. math::
-        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
-        \textrm{right}[\textrm{right\_index}]
+        \textrm{out} = \textrm{left}[\textrm{left_index}] /
+        \textrm{right}[\textrm{right_index}]
 
     This operation fuses the indexing and addition operation together, thus
     being more runtime and memory-efficient.
