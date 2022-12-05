@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import torch
 from torch import Tensor
@@ -80,8 +80,124 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     return torch.ops.pyg.segment_matmul(inputs, ptr, other)
 
 
+def sampled_add(left: Tensor, right: Tensor, left_index: Optional[Tensor],
+                right_index=Optional[Tensor]) -> Tensor:
+    r"""Performs a sampled **addition** of :obj:`left` and :obj:`right`
+    according to the indices specified in :obj:`left_index` and
+    :obj:`right_index`:
+
+    .. math::
+        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
+        \textrm{right}[\textrm{right\_index}]
+
+    This operation fuses the indexing and addition operation together, thus
+    being more runtime and memory-efficient.
+
+    Args:
+        left (torch.Tensor): The left tensor.
+        right (torch.Tensor): The right tensor.
+        left_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`left` tensor. (default: :obj:`None`)
+        right_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`right` tensor. (default: :obj:`None`)
+
+    Returns:
+        torch.Tensor: The output tensor.
+    """
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "add")
+    return out
+
+
+def sampled_sub(left: Tensor, right: Tensor, left_index: Optional[Tensor],
+                right_index=Optional[Tensor]) -> Tensor:
+    r"""Performs a sampled **subtraction** of :obj:`left` by :obj:`right`
+    according to the indices specified in :obj:`left_index` and
+    :obj:`right_index`:
+
+    .. math::
+        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
+        \textrm{right}[\textrm{right\_index}]
+
+    This operation fuses the indexing and addition operation together, thus
+    being more runtime and memory-efficient.
+
+    Args:
+        left (torch.Tensor): The left tensor.
+        right (torch.Tensor): The right tensor.
+        left_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`left` tensor. (default: :obj:`None`)
+        right_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`right` tensor. (default: :obj:`None`)
+
+    Returns:
+        torch.Tensor: The output tensor.
+    """
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "sub")
+    return out
+
+
+def sampled_mul(left: Tensor, right: Tensor, left_index: Optional[Tensor],
+                right_index=Optional[Tensor]) -> Tensor:
+    r"""Performs a sampled **multiplication** of :obj:`left` and :obj:`right`
+    according to the indices specified in :obj:`left_index` and
+    :obj:`right_index`:
+
+    .. math::
+        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
+        \textrm{right}[\textrm{right\_index}]
+
+    This operation fuses the indexing and addition operation together, thus
+    being more runtime and memory-efficient.
+
+    Args:
+        left (torch.Tensor): The left tensor.
+        right (torch.Tensor): The right tensor.
+        left_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`left` tensor. (default: :obj:`None`)
+        right_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`right` tensor. (default: :obj:`None`)
+
+    Returns:
+        torch.Tensor: The output tensor.
+    """
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "mul")
+    return out
+
+
+def sampled_div(left: Tensor, right: Tensor, left_index: Optional[Tensor],
+                right_index=Optional[Tensor]) -> Tensor:
+    r"""Performs a sampled **division** of :obj:`left` by :obj:`right`
+    according to the indices specified in :obj:`left_index` and
+    :obj:`right_index`:
+
+    .. math::
+        \textrm{out} = \textrm{left}[\textrm{left\_index}] +
+        \textrm{right}[\textrm{right\_index}]
+
+    This operation fuses the indexing and addition operation together, thus
+    being more runtime and memory-efficient.
+
+    Args:
+        left (torch.Tensor): The left tensor.
+        right (torch.Tensor): The right tensor.
+        left_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`left` tensor. (default: :obj:`None`)
+        right_index (torch.LongTensor, optional): The values to sample from the
+            :obj:`right` tensor. (default: :obj:`None`)
+
+    Returns:
+        torch.Tensor: The output tensor.
+    """
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "div")
+    return out
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
+    'sampled_add',
+    'sampled_sub',
+    'sampled_mul',
+    'sampled_div',
     'fused_scatter_reduce',
 ]
