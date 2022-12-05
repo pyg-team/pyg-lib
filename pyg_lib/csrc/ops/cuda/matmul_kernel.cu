@@ -2,6 +2,7 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
 #include <torch/library.h>
+#include <torch/version.h>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
@@ -9,7 +10,6 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
-#include <torch/version.h>
 
 namespace pyg {
 namespace ops {
