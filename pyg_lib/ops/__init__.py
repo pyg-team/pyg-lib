@@ -3,7 +3,6 @@ from typing import List
 import torch
 from torch import Tensor
 
-from .broadcast import broadcast_sub
 from .scatter_reduce import fused_scatter_reduce
 
 
@@ -84,6 +83,5 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
-    'broadcast_sub',
     'fused_scatter_reduce',
 ]

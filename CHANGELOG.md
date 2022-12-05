@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.2.0] - 2023-MM-DD
 ### Added
+- Added `sampled_op` impementation ([#156](https://github.com/pyg-team/pyg-lib/pull/156))
 ### Changed
 - Improved `[segment|grouped]_matmul` CPU implementation via `at::matmul_out` and MKL BLAS `gemm_batch` ([#146](https://github.com/pyg-team/pyg-lib/pull/146))
 ### Removed
