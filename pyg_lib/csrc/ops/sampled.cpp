@@ -43,6 +43,10 @@ PYG_API at::Tensor sampled_op(const at::Tensor& left,
     at::checkSize(c, left_index_arg, 0, right_index_arg->size(0));
   }
 
+  if (!left_index.has_value() && !right_index.has_value()) {
+    at::checkSize(c, left_arg, 0, right_arg->size(0));
+  }
+
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::sampled_op", "")
                        .typed<decltype(sampled_op)>();

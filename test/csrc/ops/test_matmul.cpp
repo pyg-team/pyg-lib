@@ -60,7 +60,7 @@ TEST_P(MultipleDeviceTest, SegmentMatmulBackward) {
 INSTANTIATE_TEST_SUITE_P(OpsTest,
                          MultipleDeviceTest,
 #ifdef WITH_CUDA
-                         testing::Values(at::kCUDA, at::kCPU));
+                         testing::Values(at::kCPU, at::kCUDA));
 #else
                          testing::Values(at::kCPU));
 #endif

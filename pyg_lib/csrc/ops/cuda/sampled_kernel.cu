@@ -24,7 +24,7 @@ __global__ void sampled_op_kernel_impl(const scalar_t* __restrict__ left,
                                        scalar_t* __restrict__ out,
                                        const int64_t* __restrict__ left_index,
                                        const int64_t* __restrict__ right_index,
-                                       const FnType fn,
+                                       const FnType fn_type,
                                        const bool has_left_index,
                                        const bool has_right_index,
                                        const int64_t num_feats,
@@ -50,14 +50,15 @@ __global__ void sampled_op_kernel_impl(const scalar_t* __restrict__ left,
   scalar_t b = right[j * num_feats + k];
 
   scalar_t c;
-  if (fn == ADD)
+  if (fn_type == ADD) {
     c = a + b;
-  else if (fn == SUB)
+  } else if (fn_type == SUB) {
     c = a - b;
-  else if (fn == MUL)
+  } else if (fn_type == MUL) {
     c = a * b;
-  else if (fn == DIV)
+  } else if (fn_type == DIV) {
     c = a / b;
+  }
 
   out[thread_idx] = c;
 }
@@ -71,12 +72,12 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
   if (left_index.has_value() && !right_index.has_value()) {
     dim_size = right.size(0);
   } else if (left_index.has_value() && right_index.has_value()) {
-    left_index.value().size(0);
+    dim_size = left_index.value().size(0);
   }
   const auto num_feats = left.size(1);
   const auto numel = dim_size * num_feats;
 
-  const auto out = left.new_empty({dim_size, left.size(1)});
+  const auto out = left.new_empty({dim_size, num_feats});
 
   auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_ALL_TYPES(left.scalar_type(), "sampled_kernel_impl", [&] {
