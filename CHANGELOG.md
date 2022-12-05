@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.0] - 2022-11-28
 ### Added
+- Added fused softmax kernel implementation ([#135](https://github.com/pyg-team/pyg-lib/pull/135))
 - Added PyTorch 1.13 support ([#145](https://github.com/pyg-team/pyg-lib/pull/145))
 - Added native PyTorch support for `grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
 - Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141), [#142](https://github.com/pyg-team/pyg-lib/pull/142))

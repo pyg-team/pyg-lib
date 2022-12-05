@@ -3,6 +3,7 @@ from typing import List
 import torch
 from torch import Tensor
 
+from .softmax import softmax
 from .scatter_reduce import fused_scatter_reduce
 
 
@@ -83,5 +84,6 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
+    'softmax',
     'fused_scatter_reduce',
 ]
