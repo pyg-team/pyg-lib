@@ -28,6 +28,8 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
             :obj:`[N_i, K_i]`.
         others (List[torch.Tensor]): List of right operand 2D matrices of
             shapes :obj:`[K_i, M_i]`.
+        biases (List[torch.Tensor], optional): Optional bias terms to apply for
+            each element. (default: :obj:`None`)
 
     Returns:
         List[torch.Tensor]: List of 2D output matrices of shapes
