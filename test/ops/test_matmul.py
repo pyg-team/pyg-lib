@@ -51,12 +51,19 @@ def test_grouped_matmul_autograd(device):
         torch.randn(9, 42, device=device, requires_grad=REQ_GRAD),
         torch.randn(32, 64, device=device, requires_grad=REQ_GRAD),
     ]
-    outs = pyg_lib.ops.grouped_matmul(inputs, others)
+
+    biases = [
+        torch.randn(48, device=device, requires_grad=REQ_GRAD),
+        torch.randn(42, device=device, requires_grad=REQ_GRAD),
+        torch.randn(64, device=device, requires_grad=REQ_GRAD),
+    ]
+
+    outs = pyg_lib.ops.grouped_matmul(inputs, others, biases)
     assert len(outs) == len(inputs)
 
     for i in range(len(outs)):
         assert outs[i].size() == (inputs[i].size(0), others[i].size(-1))
-        assert torch.allclose(outs[i], inputs[i] @ others[i], atol=1e-6)
+        assert torch.allclose(outs[i], inputs[i] @ others[i] + biases[i], atol=1e-6)
 
     if REQ_GRAD:
         sum([out.sum() for out in outs]).backward()
