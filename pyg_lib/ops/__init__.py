@@ -84,13 +84,16 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
             For best performance, given as a CPU tensor.
         other (torch.Tensor): The right operand 3D tensor of shape
             :obj:`[B, K, M]`.
+        bias (torch.Tensor, optional): Optional bias term of shape
+            :obj:`[B, M]` (default: :obj:`None`)
 
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
     out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
     if bias is not None:
-        out += bias
+        for i in range(ptr.numel() - 1):
+            out[ptr[i]:ptr[i+1]] += bias[i]
     return out
 
 
