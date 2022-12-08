@@ -93,7 +93,7 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
     out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
     if bias is not None:
         for i in range(ptr.numel() - 1):
-            out[ptr[i]:ptr[i+1]] += bias[i]
+            out[ptr[i]:ptr[i + 1]] += bias[i]
     return out
 
 
