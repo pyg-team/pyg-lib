@@ -63,7 +63,8 @@ def test_grouped_matmul_autograd(device):
 
     for i in range(len(outs)):
         assert outs[i].size() == (inputs[i].size(0), others[i].size(-1))
-        assert torch.allclose(outs[i], inputs[i] @ others[i] + biases[i], atol=1e-6)
+        assert torch.allclose(outs[i], inputs[i] @ others[i] + biases[i],
+                              atol=1e-6)
 
     if REQ_GRAD:
         sum([out.sum() for out in outs]).backward()
