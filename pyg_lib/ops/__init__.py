@@ -57,7 +57,8 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
     return outs
 
 
-def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
+def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
+                   bias: Optional[Tensor] = None) -> Tensor:
     r"""Performs dense-dense matrix multiplication according to segments along
     the first dimension of :obj:`inputs` as given by :obj:`ptr`, utilizing
     dedicated kernels that effectively parallelize over groups.
@@ -85,7 +86,10 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    if bias is not None:
+        out += bias
+    return out
 
 
 def sampled_add(
