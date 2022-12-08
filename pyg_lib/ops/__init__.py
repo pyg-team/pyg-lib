@@ -6,7 +6,7 @@ from torch import Tensor
 from .scatter_reduce import fused_scatter_reduce
 
 
-def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
+def grouped_matmul(inputs: List[Tensor], others: List[Tensor], bias: Optional[List[Tensor]] = None) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -37,7 +37,10 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
         inputs = torch.nested.as_nested_tensor(inputs).contiguous()
         others = torch.nested.as_nested_tensor(others).contiguous()
-        return list(torch.bmm(inputs, others).contiguous().unbind())
+        outs = torch.bmm(inputs, others).contiguous()
+        if bias is not None:
+            outs += torch.nested.as_nested_tensor(bias)
+        outs = list(outs.unbind())
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
         other_req_grad = any([i.requires_grad for i in others])
@@ -46,7 +49,11 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
                              "for PyTorch < 1.14. Please `detach()` your "
                              "input tensors before calling this function.")
 
-        return torch.ops.pyg.grouped_matmul(inputs, others)
+        outs = torch.ops.pyg.grouped_matmul(inputs, others)
+        for i in range(len(bias)):
+            outs[i] += bias[i]
+    return outs
+
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
