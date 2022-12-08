@@ -6,7 +6,8 @@ from torch import Tensor
 from .scatter_reduce import fused_scatter_reduce
 
 
-def grouped_matmul(inputs: List[Tensor], others: List[Tensor], biases: Optional[List[Tensor]] = None) -> List[Tensor]:
+def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
+                   biases: Optional[List[Tensor]] = None) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -54,7 +55,6 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor], biases: Optional[
             for i in range(len(biases)):
                 outs[i] += biases[i]
     return outs
-
 
 
 def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
