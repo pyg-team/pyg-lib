@@ -6,7 +6,8 @@ from torch import Tensor
 from .scatter_reduce import fused_scatter_reduce
 
 
-def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
+def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
+                   biases: Optional[List[Tensor]] = None) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -27,6 +28,8 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
             :obj:`[N_i, K_i]`.
         others (List[torch.Tensor]): List of right operand 2D matrices of
             shapes :obj:`[K_i, M_i]`.
+        biases (List[torch.Tensor], optional): Optional bias terms to apply for
+            each element. (default: :obj:`None`)
 
     Returns:
         List[torch.Tensor]: List of 2D output matrices of shapes
@@ -37,7 +40,10 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
         inputs = torch.nested.as_nested_tensor(inputs).contiguous()
         others = torch.nested.as_nested_tensor(others).contiguous()
-        return list(torch.bmm(inputs, others).contiguous().unbind())
+        outs = torch.bmm(inputs, others).contiguous()
+        if biases is not None:
+            outs += torch.nested.as_nested_tensor(biases)
+        outs = list(outs.unbind())
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
         other_req_grad = any([i.requires_grad for i in others])
@@ -46,10 +52,15 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor]) -> List[Tensor]:
                              "for PyTorch < 1.14. Please `detach()` your "
                              "input tensors before calling this function.")
 
-        return torch.ops.pyg.grouped_matmul(inputs, others)
+        outs = torch.ops.pyg.grouped_matmul(inputs, others)
+        if biases is not None:
+            for i in range(len(biases)):
+                outs[i] += biases[i]
+    return outs
 
 
-def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
+def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
+                   bias: Optional[Tensor] = None) -> Tensor:
     r"""Performs dense-dense matrix multiplication according to segments along
     the first dimension of :obj:`inputs` as given by :obj:`ptr`, utilizing
     dedicated kernels that effectively parallelize over groups.
@@ -73,11 +84,17 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor) -> Tensor:
             For best performance, given as a CPU tensor.
         other (torch.Tensor): The right operand 3D tensor of shape
             :obj:`[B, K, M]`.
+        bias (torch.Tensor, optional): Optional bias term of shape
+            :obj:`[B, M]` (default: :obj:`None`)
 
     Returns:
         torch.Tensor: The 2D output matrix of shape :obj:`[N, M]`.
     """
-    return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
+    if bias is not None:
+        for i in range(ptr.numel() - 1):
+            out[ptr[i]:ptr[i + 1]] += bias[i]
+    return out
 
 
 def sampled_add(
