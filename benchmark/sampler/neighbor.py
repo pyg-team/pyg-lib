@@ -18,22 +18,36 @@ argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
     4096,
     8192,
 ])
+argparser.add_argument('--directed', action='store_true')
+argparser.add_argument('--disjoint', action='store_true')
 argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
     [-1],
     [15, 10, 5],
     [20, 15, 10],
 ])
 argparser.add_argument('--replace', action='store_true')
-argparser.add_argument('--directed', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
+argparser.add_argument('--temporal', action='store_true')
+argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
+                       default='uniform')
 args = argparser.parse_args()
 
 
 @withSeed
 @withDataset('DIMACS10', 'citationCiteseer')
 def test_neighbor(dataset, **kwargs):
+    if args.temporal and not args.disjoint:
+        raise ValueError(
+            "Temporal sampling needs to create disjoint subgraphs")
+
     (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
     dgl_graph = dgl.graph(('csc', (rowptr, col, torch.arange(col.size(0)))))
+
+    if args.temporal:
+        # generate random timestamps
+        node_time, _ = torch.sort(torch.randint(0, 100000, (num_nodes, )))
+    else:
+        node_time = None
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes)
@@ -50,43 +64,48 @@ def test_neighbor(dataset, **kwargs):
                     col,
                     seed,
                     num_neighbors,
+                    time=node_time,
+                    seed_time=None,
                     replace=args.replace,
                     directed=args.directed,
-                    disjoint=False,
+                    disjoint=args.disjoint,
+                    temporal_strategy=args.temporal_strategy,
                     return_edge_id=True,
                 )
             pyg_lib_duration = time.perf_counter() - t
 
-            t = time.perf_counter()
-            for seed in tqdm(node_perm.split(batch_size)):
-                torch.ops.torch_sparse.neighbor_sample(
-                    rowptr,
-                    col,
-                    seed,
-                    num_neighbors,
-                    args.replace,
-                    args.directed,
-                )
-            torch_sparse_duration = time.perf_counter() - t
+            if not args.disjoint:
+                t = time.perf_counter()
+                for seed in tqdm(node_perm.split(batch_size)):
+                    torch.ops.torch_sparse.neighbor_sample(
+                        rowptr,
+                        col,
+                        seed,
+                        num_neighbors,
+                        args.replace,
+                        args.directed,
+                    )
+                torch_sparse_duration = time.perf_counter() - t
 
-            dgl_sampler = dgl.dataloading.NeighborSampler(
-                num_neighbors,
-                replace=args.replace,
-            )
-            dgl_loader = dgl.dataloading.DataLoader(
-                dgl_graph,
-                node_perm,
-                dgl_sampler,
-                batch_size=batch_size,
-            )
-            t = time.perf_counter()
-            for _ in tqdm(dgl_loader):
-                pass
-            dgl_duration = time.perf_counter() - t
+                dgl_sampler = dgl.dataloading.NeighborSampler(
+                    num_neighbors,
+                    replace=args.replace,
+                )
+                dgl_loader = dgl.dataloading.DataLoader(
+                    dgl_graph,
+                    node_perm,
+                    dgl_sampler,
+                    batch_size=batch_size,
+                )
+                t = time.perf_counter()
+                for _ in tqdm(dgl_loader):
+                    pass
+                dgl_duration = time.perf_counter() - t
 
             print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
-            print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
-            print(f'         dgl={dgl_duration:.3f} seconds')
+            if not args.disjoint:
+                print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
+                print(f'         dgl={dgl_duration:.3f} seconds')
             print()
 
 

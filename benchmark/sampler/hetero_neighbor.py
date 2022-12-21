@@ -17,6 +17,10 @@ argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
     4096,
     8192,
 ])
+
+# TODO (kgajdamo): Support undirected hetero graphs
+# argparser.add_argument('--directed', action='store_true')
+argparser.add_argument('--disjoint', action='store_true')
 argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
     [-1],
     [15, 10, 5],
@@ -24,17 +28,30 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
 ])
 # TODO(kgajdamo): Enable sampling with replacement
 # argparser.add_argument('--replace', action='store_true')
-# TODO (kgajdamo): Support undirected hetero graphs
-# argparser.add_argument('--directed', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
+argparser.add_argument('--temporal', action='store_true')
+argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
+                       default='uniform')
 args = argparser.parse_args()
 
 
 @withSeed
 @withDataset('ogb', 'mag')
 def test_hetero_neighbor(dataset, **kwargs):
+    if args.temporal and not args.disjoint:
+        raise ValueError(
+            "Temporal sampling needs to create disjoint subgraphs")
+
     colptr_dict, row_dict = dataset
     num_nodes_dict = {k[-1]: v.size(0) - 1 for k, v in colptr_dict.items()}
+
+    if args.temporal:
+        # generate random timestamps
+        node_time, _ = torch.sort(
+            torch.randint(0, 100000, (num_nodes_dict['paper'], )))
+        node_time_dict = {'paper': node_time}
+    else:
+        node_time_dict = None
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes_dict['paper'])
@@ -54,40 +71,43 @@ def test_hetero_neighbor(dataset, **kwargs):
                     row_dict,
                     seed_dict,
                     num_neighbors_dict,
-                    None,  # time_dict
+                    node_time_dict,
                     None,  # seed_time_dict
                     True,  # csc
                     False,  # replace
                     True,  # directed
+                    disjoint=args.disjoint,
                 )
             pyg_lib_duration = time.perf_counter() - t
 
-            t = time.perf_counter()
-            for seed in tqdm(node_perm.split(batch_size)[:20]):
-                node_types = list(num_nodes_dict.keys())
-                edge_types = list(colptr_dict.keys())
-                colptr_dict_sparse = remap_keys(colptr_dict)
-                row_dict_sparse = remap_keys(row_dict)
-                seed_dict = {'paper': seed}
-                num_neighbors_dict_sparse = remap_keys(num_neighbors_dict)
-                num_hops = max([len(v) for v in [num_neighbors]])
-                torch.ops.torch_sparse.hetero_neighbor_sample(
-                    node_types,
-                    edge_types,
-                    colptr_dict_sparse,
-                    row_dict_sparse,
-                    seed_dict,
-                    num_neighbors_dict_sparse,
-                    num_hops,
-                    False,  # replace
-                    True,  # directed
-                )
-            torch_sparse_duration = time.perf_counter() - t
+            if not args.disjoint:
+                t = time.perf_counter()
+                for seed in tqdm(node_perm.split(batch_size)[:20]):
+                    node_types = list(num_nodes_dict.keys())
+                    edge_types = list(colptr_dict.keys())
+                    colptr_dict_sparse = remap_keys(colptr_dict)
+                    row_dict_sparse = remap_keys(row_dict)
+                    seed_dict = {'paper': seed}
+                    num_neighbors_dict_sparse = remap_keys(num_neighbors_dict)
+                    num_hops = max([len(v) for v in [num_neighbors]])
+                    torch.ops.torch_sparse.hetero_neighbor_sample(
+                        node_types,
+                        edge_types,
+                        colptr_dict_sparse,
+                        row_dict_sparse,
+                        seed_dict,
+                        num_neighbors_dict_sparse,
+                        num_hops,
+                        False,  # replace
+                        True,  # directed
+                    )
+                torch_sparse_duration = time.perf_counter() - t
 
-            # TODO (kgajdamo): Add dgl hetero sampler.
+                # TODO (kgajdamo): Add dgl hetero sampler.
 
             print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
-            print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
+            if not args.disjoint:
+                print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
             print()
 
 
