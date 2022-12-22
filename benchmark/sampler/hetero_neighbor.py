@@ -77,6 +77,8 @@ def test_hetero_neighbor(dataset, **kwargs):
                     False,  # replace
                     True,  # directed
                     disjoint=args.disjoint,
+                    temporal_strategy=args.temporal_strategy,
+                    return_edge_id=True,
                 )
             pyg_lib_duration = time.perf_counter() - t
 
