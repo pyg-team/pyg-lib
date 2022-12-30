@@ -1,6 +1,8 @@
 import argparse
 import ast
 import time
+import pandas as pd
+from datetime import datetime
 
 import dgl
 import torch
@@ -30,6 +32,8 @@ argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
 argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
                        default='uniform')
+argparser.add_argument('--write-csv', action='store_true')
+argparser.add_argument('--libraries', nargs="*", type=str, default=['pyg-lib', 'torch-sparse', 'dgl'])
 args = argparser.parse_args()
 
 
@@ -41,7 +45,8 @@ def test_neighbor(dataset, **kwargs):
             "Temporal sampling needs to create disjoint subgraphs")
 
     (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
-    dgl_graph = dgl.graph(('csc', (rowptr, col, torch.arange(col.size(0)))))
+    if 'dgl' in args.libraries:
+        dgl_graph = dgl.graph(('csc', (rowptr, col, torch.arange(col.size(0)))))
 
     if args.temporal:
         # generate random timestamps
@@ -53,60 +58,75 @@ def test_neighbor(dataset, **kwargs):
         node_perm = torch.randperm(num_nodes)
     else:
         node_perm = torch.arange(num_nodes)
-
+    
+    if args.write_csv:
+        data = {'num_neighbors': [], 'batch-size': [], 'pyg-lib': [], 'torch-sparse': [], 'dgl': []}
+	
     for num_neighbors in args.num_neighbors:
         for batch_size in args.batch_sizes:
             print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
-            t = time.perf_counter()
-            for seed in tqdm(node_perm.split(batch_size)):
-                pyg_lib.sampler.neighbor_sample(
-                    rowptr,
-                    col,
-                    seed,
-                    num_neighbors,
-                    time=node_time,
-                    seed_time=None,
-                    replace=args.replace,
-                    directed=args.directed,
-                    disjoint=args.disjoint,
-                    temporal_strategy=args.temporal_strategy,
-                    return_edge_id=True,
-                )
-            pyg_lib_duration = time.perf_counter() - t
-
-            if not args.disjoint:
+            data['num_neighbors'].append(num_neighbors)
+            data['batch-size'].append(batch_size)
+            if 'pyg-lib' in args.libraries:
                 t = time.perf_counter()
                 for seed in tqdm(node_perm.split(batch_size)):
-                    torch.ops.torch_sparse.neighbor_sample(
-                        rowptr,
-                        col,
-                        seed,
-                        num_neighbors,
-                        args.replace,
-                        args.directed,
-                    )
-                torch_sparse_duration = time.perf_counter() - t
+                    pyg_lib.sampler.neighbor_sample(
+						rowptr,
+						col,
+						seed,
+						num_neighbors,
+						time=node_time,
+						seed_time=None,
+						replace=args.replace,
+						directed=args.directed,
+						disjoint=args.disjoint,
+						temporal_strategy=args.temporal_strategy,
+						return_edge_id=True,
+					)
+                pyg_lib_duration = time.perf_counter() - t
+                data['pyg-lib'].append(round(pyg_lib_duration, 3))
+                print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
 
-                dgl_sampler = dgl.dataloading.NeighborSampler(
-                    num_neighbors,
-                    replace=args.replace,
-                )
-                dgl_loader = dgl.dataloading.DataLoader(
-                    dgl_graph,
-                    node_perm,
-                    dgl_sampler,
-                    batch_size=batch_size,
-                )
-                t = time.perf_counter()
-                for _ in tqdm(dgl_loader):
-                    pass
-                dgl_duration = time.perf_counter() - t
-
-            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
             if not args.disjoint:
-                print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
-                print(f'         dgl={dgl_duration:.3f} seconds')
+                if 'torch-sparse' in args.libraries:
+                    t = time.perf_counter()
+                    for seed in tqdm(node_perm.split(batch_size)):
+                        torch.ops.torch_sparse.neighbor_sample(
+							rowptr,
+							col,
+							seed,
+							num_neighbors,
+							args.replace,
+							args.directed,
+						)
+                    torch_sparse_duration = time.perf_counter() - t
+                    data['torch-sparse'].append(round(torch_sparse_duration, 3))
+                    print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
+				
+                if 'dgl' in args.libraries:
+                    dgl_sampler = dgl.dataloading.NeighborSampler(
+						num_neighbors,
+						replace=args.replace,
+					)
+                    dgl_loader = dgl.dataloading.DataLoader(
+						dgl_graph,
+						node_perm,
+						dgl_sampler,
+						batch_size=batch_size,
+					)
+                    t = time.perf_counter()
+                    for _ in tqdm(dgl_loader):
+                        pass
+                    dgl_duration = time.perf_counter() - t
+                    data['dgl'].append(round(dgl_duration, 3))
+                    print(f'         dgl={dgl_duration:.3f} seconds')
             print()
+    
+    if args.write_csv:
+        df = pd.DataFrame()
+        for key in data.keys(): 
+            if len(data[key]) != 0: df[key] = data[key]
+        df.to_csv(f'neighbor{datetime.now()}.csv', index=False)
 
 
 if __name__ == '__main__':
