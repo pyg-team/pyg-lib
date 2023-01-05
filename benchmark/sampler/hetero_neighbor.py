@@ -35,7 +35,8 @@ argparser.add_argument('--temporal', action='store_true')
 argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
                        default='uniform')
 argparser.add_argument('--write-csv', action='store_true')
-argparser.add_argument('--libraries', nargs="*", type=str, default=['pyg-lib', 'torch-sparse'])
+argparser.add_argument('--libraries', nargs="*", type=str,
+                       default=['pyg-lib', 'torch-sparse'])
 args = argparser.parse_args()
 
 
@@ -61,9 +62,10 @@ def test_hetero_neighbor(dataset, **kwargs):
         node_perm = torch.randperm(num_nodes_dict['paper'])
     else:
         node_perm = torch.arange(0, num_nodes_dict['paper'])
-		
+
     if args.write_csv:
-        data = {'num_neighbors': [], 'batch-size': [], 'pyg-lib': [], 'torch-sparse': []}
+        data = {'num_neighbors': [], 'batch-size': [],
+                'pyg-lib': [], 'torch-sparse': []}
 
     for num_neighbors in args.num_neighbors:
         num_neighbors_dict = {key: num_neighbors for key in colptr_dict.keys()}
@@ -77,19 +79,19 @@ def test_hetero_neighbor(dataset, **kwargs):
                 for seed in tqdm(node_perm.split(batch_size)[:20]):
                     seed_dict = {'paper': seed}
                     pyg_lib.sampler.hetero_neighbor_sample(
-						colptr_dict,
-						row_dict,
-						seed_dict,
-						num_neighbors_dict,
-						node_time_dict,
-						None,  # seed_time_dict
-						True,  # csc
-						False,  # replace
-						True,  # directed
-						disjoint=args.disjoint,
-						temporal_strategy=args.temporal_strategy,
-						return_edge_id=True,
-					)
+                        colptr_dict,
+                        row_dict,
+                        seed_dict,
+                        num_neighbors_dict,
+                        node_time_dict,
+                        None,  # seed_time_dict
+                        True,  # csc
+                        False,  # replace
+                        True,  # directed
+                        disjoint=args.disjoint,
+                        temporal_strategy=args.temporal_strategy,
+                        return_edge_id=True,
+                    )
                 pyg_lib_duration = time.perf_counter() - t
                 data['pyg-lib'].append(round(pyg_lib_duration, 3))
                 print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
@@ -103,30 +105,33 @@ def test_hetero_neighbor(dataset, **kwargs):
                         colptr_dict_sparse = remap_keys(colptr_dict)
                         row_dict_sparse = remap_keys(row_dict)
                         seed_dict = {'paper': seed}
-                        num_neighbors_dict_sparse = remap_keys(num_neighbors_dict)
+                        num_neighbors_dict_sparse = remap_keys(
+                            num_neighbors_dict)
                         num_hops = max([len(v) for v in [num_neighbors]])
                         torch.ops.torch_sparse.hetero_neighbor_sample(
-							node_types,
-							edge_types,
-							colptr_dict_sparse,
-							row_dict_sparse,
-							seed_dict,
-							num_neighbors_dict_sparse,
-							num_hops,
-							False,  # replace
-							True,  # directed
-						)
+                            node_types,
+                            edge_types,
+                            colptr_dict_sparse,
+                            row_dict_sparse,
+                            seed_dict,
+                            num_neighbors_dict_sparse,
+                            num_hops,
+                            False,  # replace
+                            True,  # directed
+                        )
                     torch_sparse_duration = time.perf_counter() - t
-                    data['torch-sparse'].append(round(torch_sparse_duration, 3))
+                    data['torch-sparse'].append(
+                        round(torch_sparse_duration, 3))
                     print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
 
                 # TODO (kgajdamo): Add dgl hetero sampler.
             print()
-    
+
     if args.write_csv:
         df = pd.DataFrame()
-        for key in data.keys(): 
-            if len(data[key]) != 0: df[key] = data[key]
+        for key in data.keys():
+            if len(data[key]) != 0:
+                df[key] = data[key]
         df.to_csv(f'hetero_neighbor{datetime.now()}.csv', index=False)
 
 
