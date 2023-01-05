@@ -1,10 +1,10 @@
 import argparse
 import ast
 import time
-import pandas as pd
 from datetime import datetime
 
 import dgl
+import pandas as pd
 import torch
 import torch_sparse  # noqa
 from tqdm import tqdm
@@ -62,8 +62,13 @@ def test_neighbor(dataset, **kwargs):
         node_perm = torch.arange(num_nodes)
 
     if args.write_csv:
-        data = {'num_neighbors': [], 'batch-size': [],
-                'pyg-lib': [], 'torch-sparse': [], 'dgl': []}
+        data = {
+            'num_neighbors': [],
+            'batch-size': [],
+            'pyg-lib': [],
+            'torch-sparse': [],
+            'dgl': []
+        }
 
     for num_neighbors in args.num_neighbors:
         for batch_size in args.batch_sizes:
@@ -103,8 +108,8 @@ def test_neighbor(dataset, **kwargs):
                             args.directed,
                         )
                     torch_sparse_duration = time.perf_counter() - t
-                    data['torch-sparse'].append(
-                        round(torch_sparse_duration, 3))
+                    data['torch-sparse'].append(round(torch_sparse_duration,
+                                                      3))
                     print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
 
                 if 'dgl' in args.libraries:

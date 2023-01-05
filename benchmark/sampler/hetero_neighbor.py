@@ -1,9 +1,9 @@
 import argparse
 import ast
 import time
-import pandas as pd
 from datetime import datetime
 
+import pandas as pd
 import torch
 import torch_sparse  # noqa
 from tqdm import tqdm
@@ -64,8 +64,12 @@ def test_hetero_neighbor(dataset, **kwargs):
         node_perm = torch.arange(0, num_nodes_dict['paper'])
 
     if args.write_csv:
-        data = {'num_neighbors': [], 'batch-size': [],
-                'pyg-lib': [], 'torch-sparse': []}
+        data = {
+            'num_neighbors': [],
+            'batch-size': [],
+            'pyg-lib': [],
+            'torch-sparse': []
+        }
 
     for num_neighbors in args.num_neighbors:
         num_neighbors_dict = {key: num_neighbors for key in colptr_dict.keys()}
@@ -120,8 +124,8 @@ def test_hetero_neighbor(dataset, **kwargs):
                             True,  # directed
                         )
                     torch_sparse_duration = time.perf_counter() - t
-                    data['torch-sparse'].append(
-                        round(torch_sparse_duration, 3))
+                    data['torch-sparse'].append(round(torch_sparse_duration,
+                                                      3))
                     print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
 
                 # TODO (kgajdamo): Add dgl hetero sampler.
