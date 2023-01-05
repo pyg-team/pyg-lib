@@ -69,7 +69,9 @@ class CMakeBuild(build_ext):
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
             cmake_args.append('-DUSE_MKL_BLAS=ON')
 
-        if importlib.util.find_spec('ninja') is not None:
+        with_ninja = importlib.util.find_spec('ninja') is not None
+        with_ninja |= os.environ.get('FORCE_NINJA') is not None
+        if with_ninja:
             cmake_args += ['-GNinja']
         else:
             warnings.warn("Building times of 'pyg-lib' can be heavily improved"
