@@ -12,11 +12,11 @@ NONE = 'none'
 
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
-                                num_reductions, numel, **meta):
+                                num_reductions, numel, REDUCE0: int, REDUCE1: int, REDUCE2: int, REDUCE3: int, BLOCK_SIZE: int):
     pid = tl.program_id(axis=0)
-    block_start = pid * meta['BLOCK_SIZE']
+    block_start = pid * BLOCK_SIZE
 
-    offsets = block_start + tl.arange(0, meta['BLOCK_SIZE'])
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
     mask = offsets < numel
     inputs = tl.load(inputs_ptr + offsets, mask=mask)
 
@@ -26,7 +26,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # NOTE Triton does not support for-loops. As such, we cap the maximum
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
-    reduce = meta['REDUCE0']
+    reduce = REDUCE0
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
@@ -39,7 +39,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE1']
+    reduce = REDUCE1
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
@@ -53,7 +53,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE2']
+    reduce = REDUCE2
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
@@ -67,7 +67,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE3']
+    reduce = REDUCE3
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
