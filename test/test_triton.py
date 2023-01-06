@@ -1,5 +1,6 @@
 import torch
 from torch import Tensor
+
 from pyg_lib._triton import tl, triton
 from pyg_lib.testing import onlyCUDA, onlyTriton
 
