@@ -26,7 +26,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # NOTE Triton does not support for-loops. As such, we cap the maximum
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
-    reduce = meta['REDUCE_LIST'][0]
+    reduce = meta['REDUCE0']
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
@@ -39,7 +39,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][1]
+    reduce = meta['REDUCE1']
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
@@ -53,7 +53,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][2]
+    reduce = meta['REDUCE2']
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
@@ -67,7 +67,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][3]
+    reduce = meta['REDUCE3']
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
@@ -130,7 +130,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
-    meta = {'REDUCE_LIST': reduce_list, 'BLOCK_SIZE': 256}
+    meta = {'REDUCE0': reduce_list[0], 'REDUCE1': reduce_list[1], 'REDUCE2': reduce_list[2], 'REDUCE3': reduce_list[3], 'BLOCK_SIZE': 256}
     fused_scatter_reduce_kernel[grid](inputs, index, out, num_feats,
                                       num_reductions, inputs.numel(), **meta)
 
