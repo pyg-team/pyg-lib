@@ -44,7 +44,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         outs = list(outs.unbind())
         if biases is not None:
             for i in range(len(biases)):
-                outs[i] += biases[i]
+                outs[i] = outs[i] + biases[i]
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
         other_req_grad = any([i.requires_grad for i in others])
