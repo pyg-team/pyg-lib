@@ -136,7 +136,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         reduce_list[1],
         reduce_list[2],
         reduce_list[3],
-        256 # BLOCK_SIZE
+        256  # BLOCK_SIZE
     ]
     fused_scatter_reduce_kernel[grid](inputs, index, out, num_feats,
                                       num_reductions, inputs.numel(), *meta)
