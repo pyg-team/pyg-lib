@@ -12,8 +12,9 @@ NONE = 'none'
 
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
-                                num_reductions, numel, REDUCE0: int, REDUCE1: int,
-                                REDUCE2: int, REDUCE3: int, BLOCK_SIZE: int):
+                                num_reductions, numel, REDUCE0: int,
+                                REDUCE1: int, REDUCE2: int, REDUCE3: int,
+                                BLOCK_SIZE: int):
     pid = tl.program_id(axis=0)
     block_start = pid * BLOCK_SIZE
 
@@ -28,7 +29,8 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
     def reduction_from_int(r_int):
-      return REDUCTIONS[r_int] if r_int != -1 else NONE
+        return REDUCTIONS[r_int] if r_int != -1 else NONE
+
     reduce = reduction_from_int(REDUCE0)
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
@@ -133,8 +135,11 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
+
     def reduction_int(r_idx):
-      REDUCTIONS.index(reduce_list[r_idx]) if reduce_list[r_idx] != NONE else -1
+        REDUCTIONS.index(
+            reduce_list[r_idx]) if reduce_list[r_idx] != NONE else -1
+
     meta = [
         reduction_int(0),  # cannot pass str such as 'sum'
         reduction_int(1),
