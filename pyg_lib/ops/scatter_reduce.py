@@ -30,58 +30,58 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # TODO (matthias) Try to clean this up.
 
     reduce = REDUCTIONS(REDUCE0)
-    if reduce != NONE:
+    if reduce != 4: # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
-    if reduce == 'sum':
+    if reduce == 0: # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'mean':
+    elif reduce == 1: # mean
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'min':
+    elif reduce == 2: # min
         tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'max':
+    elif reduce == 3: # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCTIONS(REDUCE1)
-    if reduce != NONE:
+    if reduce != 4: # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
         out_offsets = out_offsets + (offsets % num_feats)
-    if reduce == 'sum':
+    if reduce == 0: # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'mean':
+    elif reduce == 1: # mean
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'min':
+    elif reduce == 2: # min
         tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'max':
+    elif reduce == 3: # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCTIONS(REDUCE2)
-    if reduce != NONE:
+    if reduce != 4: # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
-    if reduce == 'sum':
+    if reduce == 0: # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'mean':
+    elif reduce == 1: # mean
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'min':
+    elif reduce == 2: # min
         tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'max':
+    elif reduce == 3: # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCTIONS(REDUCE3)
-    if reduce != NONE:
+    if reduce != 4: # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
-    if reduce == 'sum':
+    if reduce == 0: # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'mean':
+    elif reduce == 1: # mean
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'min':
+    elif reduce == 2: # min
         tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-    elif reduce == 'max':
+    elif reduce == 3: # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
 
@@ -134,26 +134,14 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
 
-    meta = [
-        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
-        REDUCTIONS.index(reduce_list[1]),
-        REDUCTIONS.index(reduce_list[2]),
-        REDUCTIONS.index(reduce_list[3]),
-        256  # BLOCK_SIZE
-    ]
-    fused_scatter_reduce_kernel[grid](
-        inputs,
-        index,
-        out,
-        num_feats,
-        num_reductions,
-        inputs.numel(),
-        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
-        REDUCTIONS.index(reduce_list[1]),
-        REDUCTIONS.index(reduce_list[2]),
-        REDUCTIONS.index(reduce_list[3]),
-        256  # BLOCK_SIZE
-    )
+    fused_scatter_reduce_kernel[grid](inputs, index, out, num_feats,
+                                      num_reductions, inputs.numel(),
+                                      REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
+                                      REDUCTIONS.index(reduce_list[1]),
+                                      REDUCTIONS.index(reduce_list[2]),
+                                      REDUCTIONS.index(reduce_list[3]),
+                                      256  # BLOCK_SIZE
+                                     )
 
     # Post-processing:
     if 'mean' in reduce_slice_dict:
