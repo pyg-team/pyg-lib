@@ -11,7 +11,7 @@ def test_fused_scatter_reduce():
     index = torch.tensor([0, 1, 0, 1, 0], device='cuda')
 
     out = fused_scatter_reduce(x, index, dim_size=2,
-                               REDUCE_LIST=['sum', 'mean'])
+                               reduce_list=['sum', 'mean'])
 
     assert out.size() == (2, 8)
     assert torch.allclose(out[0, 0:4], x[index == 0].sum(dim=0))
