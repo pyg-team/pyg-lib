@@ -12,7 +12,8 @@ NONE = 'none'
 
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
-                                num_reductions, numel, REDUCE_LIST: List, **meta):
+                                num_reductions, numel, REDUCE_LIST: List,
+                                **meta):
     pid = tl.program_id(axis=0)
     block_start = pid * meta['BLOCK_SIZE']
 
