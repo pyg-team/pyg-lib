@@ -132,7 +132,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
     meta = [
-        REDUCTIONS.index(reduce_list[0]), # cannot pass str such as 'sum'
+        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
         REDUCTIONS.index(reduce_list[1]),
         REDUCTIONS.index(reduce_list[2]),
         REDUCTIONS.index(reduce_list[3]),
