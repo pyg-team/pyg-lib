@@ -30,9 +30,8 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # TODO (matthias) Try to clean this up.
 
     reduce = REDUCE0
-    if reduce != 4:  # none
-        out_offsets = (num_feats * num_reductions) * index
-        out_offsets = out_offsets + (offsets % num_feats)
+    out_offsets = (num_feats * num_reductions) * index
+    out_offsets = out_offsets + (offsets % num_feats)
     if reduce == 0:  # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
     elif reduce == 1:  # mean
@@ -43,10 +42,9 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCE1
-    if reduce != 4:  # none
-        out_offsets = (num_feats * num_reductions) * index
-        out_offsets = out_offsets + num_feats
-        out_offsets = out_offsets + (offsets % num_feats)
+    out_offsets = (num_feats * num_reductions) * index
+    out_offsets = out_offsets + num_feats
+    out_offsets = out_offsets + (offsets % num_feats)
     if reduce == 0:  # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
     elif reduce == 1:  # mean
@@ -57,10 +55,9 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCE2
-    if reduce != 4:  # none
-        out_offsets = (num_feats * num_reductions) * index
-        out_offsets = out_offsets + (2 * num_feats)
-        out_offsets = out_offsets + (offsets % num_feats)
+    out_offsets = (num_feats * num_reductions) * index
+    out_offsets = out_offsets + (2 * num_feats)
+    out_offsets = out_offsets + (offsets % num_feats)
     if reduce == 0:  # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
     elif reduce == 1:  # mean
@@ -71,10 +68,9 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     reduce = REDUCE3
-    if reduce != 4:  # none
-        out_offsets = (num_feats * num_reductions) * index
-        out_offsets = out_offsets + (3 * num_feats)
-        out_offsets = out_offsets + (offsets % num_feats)
+    out_offsets = (num_feats * num_reductions) * index
+    out_offsets = out_offsets + (3 * num_feats)
+    out_offsets = out_offsets + (offsets % num_feats)
     if reduce == 0:  # sum
         tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
     elif reduce == 1:  # mean
