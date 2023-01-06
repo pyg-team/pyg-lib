@@ -13,11 +13,11 @@ NONE = 'none'
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
                                 num_reductions, numel, REDUCE_LIST: List,
-                                **meta):
+                                BLOCK_SIZE: int):
     pid = tl.program_id(axis=0)
-    block_start = pid * meta['BLOCK_SIZE']
+    block_start = pid * BLOCK_SIZE
 
-    offsets = block_start + tl.arange(0, meta['BLOCK_SIZE'])
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
     mask = offsets < numel
     inputs = tl.load(inputs_ptr + offsets, mask=mask)
 
