@@ -130,16 +130,9 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
-    meta = {'REDUCE_LIST':reduce_list, 'BLOCK_SIZE': 256}
-    fused_scatter_reduce_kernel[grid](
-        inputs,
-        index,
-        out,
-        num_feats,
-        num_reductions,
-        inputs.numel(),
-        meta
-    )
+    meta = {'REDUCE_LIST': reduce_list, 'BLOCK_SIZE': 256}
+    fused_scatter_reduce_kernel[grid](inputs, index, out, num_feats,
+                                      num_reductions, inputs.numel(), meta)
 
     # Post-processing:
     if 'mean' in reduce_slice_dict:
