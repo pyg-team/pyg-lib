@@ -24,7 +24,7 @@ def add_kernel(x_ptr, y_ptr, out_ptr, numel, BLOCK_SIZE: int):
 def add(x: Tensor, y: Tensor) -> Tensor:
     out = torch.empty_like(x)
     assert x.is_cuda and y.is_cuda and out.is_cuda
-    grid = lambda BLOCK_SIZE: (triton.cdiv(x.numel(), BLOCK_SIZE), )
+    grid = lambda meta: (triton.cdiv(x.numel(), meta['BLOCK_SIZE']), )
     add_kernel[grid](x, y, out, x.numel(), BLOCK_SIZE=1024)
     return out
 
