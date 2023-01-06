@@ -7,6 +7,7 @@ from pyg_lib._triton import tl, triton
 
 REDUCTIONS = ['sum', 'mean', 'min', 'max', 'none']
 NUM_REDUCTIONS = len(REDUCTIONS) - 1
+NONE = 'none'
 
 
 @triton.jit
