@@ -133,16 +133,17 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
+
     def to_int(reduction_str):
-      if reduction_str == 'sum':
-        return 0
-      if reduction_str == 'mean':
-        return 1
-      if reduction_str == 'min':
-        return 2
-      if reduction_str == 'max':
-        return 3
-      
+        if reduction_str == 'sum':
+            return 0
+        if reduction_str == 'mean':
+            return 1
+        if reduction_str == 'min':
+            return 2
+        if reduction_str == 'max':
+            return 3
+
     fused_scatter_reduce_kernel[grid](
         inputs,
         index,
