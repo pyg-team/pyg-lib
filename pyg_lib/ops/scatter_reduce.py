@@ -142,7 +142,12 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         256  # BLOCK_SIZE
     ]
     fused_scatter_reduce_kernel[grid](inputs, index, out, num_feats,
-                                      num_reductions, inputs.numel(), *meta)
+                                      num_reductions, inputs.numel(), REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
+        REDUCTIONS.index(reduce_list[1]),
+        REDUCTIONS.index(reduce_list[2]),
+        REDUCTIONS.index(reduce_list[3]),
+        256  # BLOCK_SIZE
+    )
 
     # Post-processing:
     if 'mean' in reduce_slice_dict:
