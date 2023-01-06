@@ -5,7 +5,7 @@ from torch import Tensor
 
 from pyg_lib._triton import tl, triton
 
-REDUCTIONS = {'sum', 'mean', 'min', 'max', 'none'}
+REDUCTIONS = ['sum', 'mean', 'min', 'max', 'none']
 NUM_REDUCTIONS = len(REDUCTIONS) - 1
 NONE = 'none'
 
@@ -29,7 +29,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
 
-    reduce = REDUCTIONS(REDUCE0)
+    reduce = REDUCE0
     if reduce != 4:  # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
@@ -42,7 +42,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 3:  # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCTIONS(REDUCE1)
+    reduce = REDUCE1
     if reduce != 4:  # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
@@ -56,7 +56,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 3:  # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCTIONS(REDUCE2)
+    reduce = REDUCE2
     if reduce != 4:  # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
@@ -70,7 +70,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 3:  # max
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCTIONS(REDUCE3)
+    reduce = REDUCE3
     if reduce != 4:  # none
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
@@ -134,16 +134,6 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
 
-    def to_int(reduction_str):
-        if reduction_str == 'sum':
-            return 0
-        if reduction_str == 'mean':
-            return 1
-        if reduction_str == 'min':
-            return 2
-        if reduction_str == 'max':
-            return 3
-
     fused_scatter_reduce_kernel[grid](
         inputs,
         index,
@@ -151,10 +141,10 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_feats,
         num_reductions,
         inputs.numel(),
-        to_int(reduce_list[0]),  # cannot pass str such as 'sum'
-        to_int(reduce_list[1]),
-        to_int(reduce_list[2]),
-        to_int(reduce_list[3]),
+        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum' or lists
+        REDUCTIONS.index(reduce_list[1]),
+        REDUCTIONS.index(reduce_list[2]),
+        REDUCTIONS.index(reduce_list[3]),
         256  # BLOCK_SIZE
     )
 
