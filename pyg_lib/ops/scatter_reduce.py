@@ -5,7 +5,7 @@ from torch import Tensor
 
 from pyg_lib._triton import tl, triton
 
-REDUCTIONS = ['sum', 'mean', 'min', 'max', 'none']
+REDUCTIONS = {'sum', 'mean', 'min', 'max', 'none'}
 NUM_REDUCTIONS = len(REDUCTIONS) - 1
 NONE = 'none'
 
@@ -133,7 +133,16 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
-
+    def to_int(reduction_str):
+      if reduction_str == 'sum':
+        return 0
+      if reduction_str == 'mean':
+        return 1
+      if reduction_str == 'min':
+        return 2
+      if reduction_str == 'max':
+        return 3
+      
     fused_scatter_reduce_kernel[grid](
         inputs,
         index,
@@ -141,10 +150,10 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_feats,
         num_reductions,
         inputs.numel(),
-        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum'
-        REDUCTIONS.index(reduce_list[1]),
-        REDUCTIONS.index(reduce_list[2]),
-        REDUCTIONS.index(reduce_list[3]),
+        to_int(reduce_list[0]),  # cannot pass str such as 'sum'
+        to_int(reduce_list[1]),
+        to_int(reduce_list[2]),
+        to_int(reduce_list[3]),
         256  # BLOCK_SIZE
     )
 
