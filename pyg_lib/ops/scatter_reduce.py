@@ -1,5 +1,5 @@
 import warnings
-from typing import List
+from typing import List, Optional
 
 from torch import Tensor
 
@@ -12,7 +12,7 @@ NONE = 'none'
 
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
-                                num_reductions, numel, **meta):
+                                num_reductions, numel, REDUCE_LIST: List, **meta):
     pid = tl.program_id(axis=0)
     block_start = pid * meta['BLOCK_SIZE']
 
@@ -26,7 +26,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # NOTE Triton does not support for-loops. As such, we cap the maximum
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
-    reduce = meta['REDUCE_LIST'][0]
+    reduce = REDUCE_LIST[0]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
@@ -39,7 +39,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][1]
+    reduce = REDUCE_LIST[1]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
@@ -53,7 +53,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][2]
+    reduce = REDUCE_LIST[2]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
@@ -67,7 +67,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = meta['REDUCE_LIST'][3]
+    reduce = REDUCE_LIST[3]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
