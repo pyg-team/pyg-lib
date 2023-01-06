@@ -141,7 +141,8 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_feats,
         num_reductions,
         inputs.numel(),
-        REDUCTIONS.index(reduce_list[0]),  # cannot pass str such as 'sum' or lists
+        REDUCTIONS.index(
+            reduce_list[0]),  # cannot pass str such as 'sum' or lists
         REDUCTIONS.index(reduce_list[1]),
         REDUCTIONS.index(reduce_list[2]),
         REDUCTIONS.index(reduce_list[3]),
