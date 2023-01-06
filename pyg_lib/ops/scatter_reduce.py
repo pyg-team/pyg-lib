@@ -12,12 +12,11 @@ NONE = 'none'
 
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
-                                num_reductions, numel, REDUCE_LIST: List,
-                                BLOCK_SIZE: int):
+                                num_reductions, numel, meta):
     pid = tl.program_id(axis=0)
-    block_start = pid * BLOCK_SIZE
+    block_start = pid * meta['BLOCK_SIZE']
 
-    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+    offsets = block_start + tl.arange(0, meta['BLOCK_SIZE'])
     mask = offsets < numel
     inputs = tl.load(inputs_ptr + offsets, mask=mask)
 
@@ -27,7 +26,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # NOTE Triton does not support for-loops. As such, we cap the maximum
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
-    reduce = REDUCE_LIST[0]
+    reduce = meta['REDUCE_LIST'][0]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
@@ -40,7 +39,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE_LIST[1]
+    reduce = meta['REDUCE_LIST'][1]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
@@ -54,7 +53,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE_LIST[2]
+    reduce = meta['REDUCE_LIST'][2]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
@@ -68,7 +67,7 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     elif reduce == 'max':
         tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE_LIST[3]
+    reduce = meta['REDUCE_LIST'][3]
     if reduce != NONE:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
@@ -131,6 +130,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
+    meta = {'REDUCE_LIST':reduce_list, 'BLOCK_SIZE': 256}
     fused_scatter_reduce_kernel[grid](
         inputs,
         index,
@@ -138,8 +138,7 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_feats,
         num_reductions,
         inputs.numel(),
-        REDUCE_LIST=reduce_list,
-        BLOCK_SIZE=256,
+        meta
     )
 
     # Post-processing:
