@@ -151,7 +151,7 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
                                     const std::vector<scalar_t>& alpha,
                                     const scalar_t** src0_ptrs,
                                     const std::vector<int>& ld_src0,
-                                    const scalar_t&& src1_ptrs,
+                                    const scalar_t** src1_ptrs,
                                     const std::vector<int>& ld_src1,
                                     const std::vector<scalar_t>& beta,
                                     scalar_t** dst_ptrs,
@@ -162,10 +162,9 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
   for (size_t i = 0; i < group_count; ++i) {
     work_size += ks[i] * group_sizes[i];
   }
-  const int64_t grain_size = at::internal::GRAIN_SIZE / work_size;
 
   if (group_count > 1) {
-    at::parallel_for(0, group_count, grain_size, [&](size_t beg, size_t end) {
+    at::parallel_for(0, group_count, 1, [&](size_t beg, size_t end) {
       for (size_t i = beg; i < end; ++i) {
         const auto offset = (i) ? std::accumulate(group_sizes.begin(),
                                                   group_sizes.begin() + i, 0)
@@ -180,19 +179,18 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
       }
     });
   } else {
-    at::parallel_for(
-        0, group_sizes.front(), grain_size, [&](size_t beg, size_t end) {
-          for (size_t i = beg; i < end; ++i) {
-            const scalar_t** src0_ptrs_local = src0_ptrs + i;
-            const scalar_t** src1_ptrs_local = src1_ptrs + i;
-            scalar_t** dst_ptrs_local = dst_ptrs + i;
-            const int bs = 1;
-            mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
-                                  src0_ptrs_local, ld_src0.data(),
-                                  src1_ptrs_local, ld_src1.data(), beta.data(),
-                                  dst_ptrs_local, ld_dst.data(), 1, &bs);
-          }
-        });
+    at::parallel_for(0, group_sizes.front(), 1, [&](size_t beg, size_t end) {
+      for (size_t i = beg; i < end; ++i) {
+        const scalar_t** src0_ptrs_local = src0_ptrs + i;
+        const scalar_t** src1_ptrs_local = src1_ptrs + i;
+        scalar_t** dst_ptrs_local = dst_ptrs + i;
+        const int bs = 1;
+        mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
+                              src0_ptrs_local, ld_src0.data(), src1_ptrs_local,
+                              ld_src1.data(), beta.data(), dst_ptrs_local,
+                              ld_dst.data(), 1, &bs);
+      }
+    });
   }
 }
 
