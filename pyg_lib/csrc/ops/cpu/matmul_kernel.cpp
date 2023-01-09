@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <climits>
 #include <numeric>
 #include <tuple>
 #include <type_traits>
@@ -112,6 +114,35 @@ using is_blas_library_type =
     std::integral_constant<bool,
                            std::is_same<scalar_t, float>::value ||
                                std::is_same<scalar_t, double>::value>;
+
+template <typename scalar_t>
+bool mkl_path_available() {
+  return (WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
+          is_blas_library_type<scalar_t>::value);
+}
+
+bool mkl_path_possible(const at::IntArrayRef& sizes, int64_t n, int64_t k) {
+  const int64_t limit = INT_MAX;
+  const bool is_size_invalid =
+      n > limit || k > limit ||
+      std::any_of(sizes.cbegin(), sizes.cend(),
+                  [limit](int64_t m) { return m > limit; });
+  return !is_size_invalid;
+}
+
+bool mkl_path_possible(const std::vector<at::Tensor>& left,
+                       const std::vector<at::Tensor>& right) {
+  const int64_t limit = INT_MAX;
+  const bool mk_invalid =
+      std::any_of(left.cbegin(), left.cend(), [limit](const at::Tensor& t) {
+        return t.size(0) > limit || t.size(-1) > limit;
+      });
+  const bool n_invalid =
+      std::any_of(right.cbegin(), right.cend(),
+                  [limit](const at::Tensor& t) { return t.size(-1) > limit; });
+  const bool is_size_invalid = mk_invalid || n_invalid;
+  return !is_size_invalid;
+}
 
 template <typename scalar_t>
 void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
@@ -270,16 +301,12 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
 
   AT_DISPATCH_ALL_TYPES(
       input_contig.front().scalar_type(), "grouped_matmul_kernel", [&] {
-        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
-                                is_blas_library_type<scalar_t>::value>(
-            [&](auto _) {
-              grouped_matmul_out_kernel_mkl_impl(input_contig, other_contig,
-                                                 out);
-            },
-            [&](auto _) {
-              grouped_matmul_out_kernel_at_impl(input_contig, other_contig,
-                                                out);
-            });
+        if (mkl_path_available<scalar_t>() &&
+            mkl_path_possible(input_contig, other_contig)) {
+          grouped_matmul_out_kernel_mkl_impl(input_contig, other_contig, out);
+        } else {
+          grouped_matmul_out_kernel_at_impl(input_contig, other_contig, out);
+        }
       });
 
   return out;
@@ -390,22 +417,20 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
   AT_DISPATCH_ALL_TYPES(
       input_contig.scalar_type(), "segment_matmul_kernel", [&] {
-        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
-                                is_blas_library_type<scalar_t>::value>(
-            [&](auto _) {
-              segment_matmul_out_kernel_mkl_impl(input_contig, other_contig,
-                                                 out, sizes);
-            },
-            [&](auto _) {
-              auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-              for (auto& out_part : outs) {
-                out_part.unsqueeze_(0);
-              }
-              grouped_matmul_out_kernel_at_impl(
-                  input_contig.split_with_sizes(/*split_size=*/sizes,
-                                                /*dim=*/0),
-                  other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
-            });
+        const auto n = other_contig.size(-1);
+        const auto k = input_contig.size(-1);
+        if (mkl_path_available<scalar_t>() && mkl_path_possible(sizes, n, k)) {
+          segment_matmul_out_kernel_mkl_impl(input_contig, other_contig, out,
+                                             sizes);
+        } else {
+          auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+          for (auto& out_part : outs) {
+            out_part.unsqueeze_(0);
+          }
+          grouped_matmul_out_kernel_at_impl(
+              input_contig.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+              other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
+        }
       });
 
   return out;
