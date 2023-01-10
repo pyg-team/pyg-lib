@@ -15,3 +15,4 @@ alpha/
 .venv
 *.out
 *.pt
+pyg_lib/csrc/config.h

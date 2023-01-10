@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <climits>
 #include <numeric>
 #include <tuple>
 #include <type_traits>
@@ -114,13 +116,42 @@ using is_blas_library_type =
                                std::is_same<scalar_t, double>::value>;
 
 template <typename scalar_t>
+bool mkl_path_available() {
+  return (WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
+          is_blas_library_type<scalar_t>::value);
+}
+
+bool mkl_path_possible(const at::IntArrayRef& sizes, int64_t n, int64_t k) {
+  const int64_t limit = INT_MAX;
+  const bool is_size_invalid =
+      n > limit || k > limit ||
+      std::any_of(sizes.cbegin(), sizes.cend(),
+                  [limit](int64_t m) { return m > limit; });
+  return !is_size_invalid;
+}
+
+bool mkl_path_possible(const std::vector<at::Tensor>& left,
+                       const std::vector<at::Tensor>& right) {
+  const int64_t limit = INT_MAX;
+  const bool mk_invalid =
+      std::any_of(left.cbegin(), left.cend(), [limit](const at::Tensor& t) {
+        return t.size(0) > limit || t.size(-1) > limit;
+      });
+  const bool n_invalid =
+      std::any_of(right.cbegin(), right.cend(),
+                  [limit](const at::Tensor& t) { return t.size(-1) > limit; });
+  const bool is_size_invalid = mk_invalid || n_invalid;
+  return !is_size_invalid;
+}
+
+template <typename scalar_t>
 void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
                                     const std::vector<int>& ns,
                                     const std::vector<int>& ks,
                                     const std::vector<scalar_t>& alpha,
                                     const scalar_t** src0_ptrs,
                                     const std::vector<int>& ld_src0,
-                                    const scalar_t&& src1_ptrs,
+                                    const scalar_t** src1_ptrs,
                                     const std::vector<int>& ld_src1,
                                     const std::vector<scalar_t>& beta,
                                     scalar_t** dst_ptrs,
@@ -131,10 +162,9 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
   for (size_t i = 0; i < group_count; ++i) {
     work_size += ks[i] * group_sizes[i];
   }
-  const int64_t grain_size = at::internal::GRAIN_SIZE / work_size;
 
   if (group_count > 1) {
-    at::parallel_for(0, group_count, grain_size, [&](size_t beg, size_t end) {
+    at::parallel_for(0, group_count, 1, [&](size_t beg, size_t end) {
       for (size_t i = beg; i < end; ++i) {
         const auto offset = (i) ? std::accumulate(group_sizes.begin(),
                                                   group_sizes.begin() + i, 0)
@@ -149,19 +179,18 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
       }
     });
   } else {
-    at::parallel_for(
-        0, group_sizes.front(), grain_size, [&](size_t beg, size_t end) {
-          for (size_t i = beg; i < end; ++i) {
-            const scalar_t** src0_ptrs_local = src0_ptrs + i;
-            const scalar_t** src1_ptrs_local = src1_ptrs + i;
-            scalar_t** dst_ptrs_local = dst_ptrs + i;
-            const int bs = 1;
-            mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
-                                  src0_ptrs_local, ld_src0.data(),
-                                  src1_ptrs_local, ld_src1.data(), beta.data(),
-                                  dst_ptrs_local, ld_dst.data(), 1, &bs);
-          }
-        });
+    at::parallel_for(0, group_sizes.front(), 1, [&](size_t beg, size_t end) {
+      for (size_t i = beg; i < end; ++i) {
+        const scalar_t** src0_ptrs_local = src0_ptrs + i;
+        const scalar_t** src1_ptrs_local = src1_ptrs + i;
+        scalar_t** dst_ptrs_local = dst_ptrs + i;
+        const int bs = 1;
+        mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
+                              src0_ptrs_local, ld_src0.data(), src1_ptrs_local,
+                              ld_src1.data(), beta.data(), dst_ptrs_local,
+                              ld_dst.data(), 1, &bs);
+      }
+    });
   }
 }
 
@@ -270,16 +299,12 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
 
   AT_DISPATCH_ALL_TYPES(
       input_contig.front().scalar_type(), "grouped_matmul_kernel", [&] {
-        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
-                                is_blas_library_type<scalar_t>::value>(
-            [&](auto _) {
-              grouped_matmul_out_kernel_mkl_impl(input_contig, other_contig,
-                                                 out);
-            },
-            [&](auto _) {
-              grouped_matmul_out_kernel_at_impl(input_contig, other_contig,
-                                                out);
-            });
+        if (mkl_path_available<scalar_t>() &&
+            mkl_path_possible(input_contig, other_contig)) {
+          grouped_matmul_out_kernel_mkl_impl(input_contig, other_contig, out);
+        } else {
+          grouped_matmul_out_kernel_at_impl(input_contig, other_contig, out);
+        }
       });
 
   return out;
@@ -390,22 +415,20 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
   AT_DISPATCH_ALL_TYPES(
       input_contig.scalar_type(), "segment_matmul_kernel", [&] {
-        c10::guts::if_constexpr<WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
-                                is_blas_library_type<scalar_t>::value>(
-            [&](auto _) {
-              segment_matmul_out_kernel_mkl_impl(input_contig, other_contig,
-                                                 out, sizes);
-            },
-            [&](auto _) {
-              auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-              for (auto& out_part : outs) {
-                out_part.unsqueeze_(0);
-              }
-              grouped_matmul_out_kernel_at_impl(
-                  input_contig.split_with_sizes(/*split_size=*/sizes,
-                                                /*dim=*/0),
-                  other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
-            });
+        const auto n = other_contig.size(-1);
+        const auto k = input_contig.size(-1);
+        if (mkl_path_available<scalar_t>() && mkl_path_possible(sizes, n, k)) {
+          segment_matmul_out_kernel_mkl_impl(input_contig, other_contig, out,
+                                             sizes);
+        } else {
+          auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+          for (auto& out_part : outs) {
+            out_part.unsqueeze_(0);
+          }
+          grouped_matmul_out_kernel_at_impl(
+              input_contig.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+              other_contig.split(/*split_size=*/1, /*dim=*/0), outs);
+        }
       });
 
   return out;
