@@ -6,7 +6,7 @@ from pyg_lib.testing import onlyCUDA, onlyTriton
 
 
 @triton.jit
-def add_kernel(x_ptr, y_ptr, out_ptr, numel, BLOCK_SIZE: int):
+def add_kernel(x_ptr, y_ptr, out_ptr, numel, BLOCK_SIZE):
     pid = tl.program_id(axis=0)
     block_start = pid * BLOCK_SIZE
 
