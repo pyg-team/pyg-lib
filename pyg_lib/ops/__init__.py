@@ -53,7 +53,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
     if biases is not None:
         for i in range(len(biases)):
-            outs[i] += biases[i]
+            outs[i] = outs[i] + biases[i]
     return outs
 
 
