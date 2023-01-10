@@ -1,7 +1,9 @@
 :github_url: https://github.com/pyg-team/pyg-lib
 
-pyg_lib Documentation
+PyG-lib Documentation
 =====================
+
+.. slack::
 
 .. toctree::
    :maxdepth: 1
@@ -10,9 +12,3 @@ pyg_lib Documentation
    modules/root
    modules/ops
    modules/sampler
-
-Indices and Tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
