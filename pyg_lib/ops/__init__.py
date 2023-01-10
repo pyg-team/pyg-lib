@@ -41,8 +41,6 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         inputs = torch.nested.as_nested_tensor(inputs).contiguous()
         others = torch.nested.as_nested_tensor(others).contiguous()
         outs = torch.bmm(inputs, others).contiguous()
-        if biases is not None:
-            outs += torch.nested.as_nested_tensor(biases)
         outs = list(outs.unbind())
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
@@ -53,9 +51,9 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
                              "input tensors before calling this function.")
 
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
-        if biases is not None:
-            for i in range(len(biases)):
-                outs[i] += biases[i]
+    if biases is not None:
+        for i in range(len(biases)):
+            outs[i] = outs[i] + biases[i]
     return outs
 
 
