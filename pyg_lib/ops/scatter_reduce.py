@@ -5,9 +5,11 @@ from torch import Tensor
 
 from pyg_lib._triton import tl, triton
 
-REDUCTIONS = ['sum', 'mean', 'min', 'max', 'none']
-NUM_REDUCTIONS = len(REDUCTIONS) - 1
+REDUCTIONS = ['sum', 'mean', 'min', 'max']
+NUM_REDUCTIONS = len(REDUCTIONS)
 NONE = 'none'
+
+OPT_REDUCTIONS = [NONE] + REDUCTIONS
 
 
 @triton.jit
@@ -29,59 +31,55 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
     # number of fused operations to `4` and unroll the loop.
     # TODO (matthias) Try to clean this up.
 
-    reduce = REDUCE0
-    if reduce != 4:  # none
+    if REDUCE0 > 0:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (offsets % num_feats)
-        if reduce == 0:  # sum
+        if REDUCE0 == 1:  # sum
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 1:  # mean
+        elif REDUCE0 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 2:  # min
+        elif REDUCE0 == 3:  # min
             tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 3:  # max
+        elif REDUCE0 == 4:  # max
             tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE1
-    if reduce != 4:  # none
+    if REDUCE1 > 0:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + num_feats
         out_offsets = out_offsets + (offsets % num_feats)
-        if reduce == 0:  # sum
+        if REDUCE1 == 1:  # sum
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 1:  # mean
+        elif REDUCE1 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 2:  # min
+        elif REDUCE2 == 3:  # min
             tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 3:  # max
+        elif REDUCE3 == 4:  # max
             tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE2
-    if reduce != 4:  # none
+    if REDUCE2 > 0:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (2 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
-        if reduce == 0:  # sum
+        if REDUCE2 == 1:  # sum
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 1:  # mean
+        elif REDUCE2 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 2:  # min
+        elif REDUCE2 == 3:  # min
             tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 3:  # max
+        elif REDUCE2 == 4:  # max
             tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
-    reduce = REDUCE3
-    if reduce != 4:  # none
+    if REDUCE3 > 0:
         out_offsets = (num_feats * num_reductions) * index
         out_offsets = out_offsets + (3 * num_feats)
         out_offsets = out_offsets + (offsets % num_feats)
-        if reduce == 0:  # sum
+        if REDUCE3 == 1:  # sum
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 1:  # mean
+        elif REDUCE3 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 2:  # min
+        elif REDUCE3 == 3:  # min
             tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        elif reduce == 3:  # max
+        elif REDUCE3 == 4:  # max
             tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
 
@@ -141,12 +139,11 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
         num_feats,
         num_reductions,
         inputs.numel(),
-        REDUCTIONS.index(
-            reduce_list[0]),  # cannot pass str such as 'sum' or lists
-        REDUCTIONS.index(reduce_list[1]),
-        REDUCTIONS.index(reduce_list[2]),
-        REDUCTIONS.index(reduce_list[3]),
-        256  # BLOCK_SIZE
+        OPT_REDUCTIONS.index(reduce_list[0]),
+        OPT_REDUCTIONS.index(reduce_list[1]),
+        OPT_REDUCTIONS.index(reduce_list[2]),
+        OPT_REDUCTIONS.index(reduce_list[3]),
+        BLOCK_SIZE=256,
     )
 
     # Post-processing:
