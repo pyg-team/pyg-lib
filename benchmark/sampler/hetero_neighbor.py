@@ -1,7 +1,11 @@
 import argparse
 import ast
 import time
+from collections import defaultdict
+from datetime import datetime
+from itertools import product
 
+import pandas as pd
 import torch
 import torch_sparse  # noqa
 from tqdm import tqdm
@@ -32,6 +36,9 @@ argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
 argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
                        default='uniform')
+argparser.add_argument('--write-csv', action='store_true')
+argparser.add_argument('--libraries', nargs="*", type=str,
+                       default=['pyg-lib', 'torch-sparse'])
 args = argparser.parse_args()
 
 
@@ -58,11 +65,17 @@ def test_hetero_neighbor(dataset, **kwargs):
     else:
         node_perm = torch.arange(0, num_nodes_dict['paper'])
 
-    for num_neighbors in args.num_neighbors:
+    data = defaultdict(list)
+    for num_neighbors, batch_size in product(args.num_neighbors,
+                                             args.batch_sizes):
+
+        print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
+        data['num_neighbors'].append(num_neighbors)
+        data['batch-size'].append(batch_size)
+
         num_neighbors_dict = {key: num_neighbors for key in colptr_dict.keys()}
 
-        for batch_size in args.batch_sizes:
-            print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
+        if 'pyg-lib' in args.libraries:
             t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)[:20]):
                 seed_dict = {'paper': seed}
@@ -72,17 +85,20 @@ def test_hetero_neighbor(dataset, **kwargs):
                     seed_dict,
                     num_neighbors_dict,
                     node_time_dict,
-                    None,  # seed_time_dict
-                    True,  # csc
-                    False,  # replace
-                    True,  # directed
+                    seed_time_dict=None,
+                    csc=True,
+                    replace=False,
+                    directed=True,
                     disjoint=args.disjoint,
                     temporal_strategy=args.temporal_strategy,
                     return_edge_id=True,
                 )
             pyg_lib_duration = time.perf_counter() - t
+            data['pyg-lib'].append(round(pyg_lib_duration, 3))
+            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
 
-            if not args.disjoint:
+        if not args.disjoint:
+            if 'torch-sparse' in args.libraries:
                 t = time.perf_counter()
                 for seed in tqdm(node_perm.split(batch_size)[:20]):
                     node_types = list(num_nodes_dict.keys())
@@ -104,13 +120,15 @@ def test_hetero_neighbor(dataset, **kwargs):
                         True,  # directed
                     )
                 torch_sparse_duration = time.perf_counter() - t
-
-                # TODO (kgajdamo): Add dgl hetero sampler.
-
-            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds')
-            if not args.disjoint:
+                data['torch-sparse'].append(round(torch_sparse_duration, 3))
                 print(f'torch-sparse={torch_sparse_duration:.3f} seconds')
-            print()
+
+            # TODO (kgajdamo): Add dgl hetero sampler.
+        print()
+
+    if args.write_csv:
+        df = pd.DataFrame(data)
+        df.to_csv(f'hetero_neighbor{datetime.now()}.csv', index=False)
 
 
 if __name__ == '__main__':
