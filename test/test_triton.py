@@ -6,11 +6,11 @@ from pyg_lib.testing import onlyCUDA, onlyTriton
 
 
 @triton.jit
-def add_kernel(x_ptr, y_ptr, out_ptr, numel, **meta):
+def add_kernel(x_ptr, y_ptr, out_ptr, numel, BLOCK_SIZE):
     pid = tl.program_id(axis=0)
-    block_start = pid * meta['BLOCK_SIZE']
+    block_start = pid * BLOCK_SIZE
 
-    offsets = block_start + tl.arange(0, meta['BLOCK_SIZE'])
+    offsets = block_start + tl.arange(0, BLOCK_SIZE)
     mask = offsets < numel
 
     x = tl.load(x_ptr + offsets, mask=mask)

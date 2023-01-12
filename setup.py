@@ -110,7 +110,7 @@ install_requires = []
 maybe_append_with_mkl(install_requires)
 
 triton_requires = [
-    'triton==1.1.1',
+    'triton',
 ]
 
 test_requires = [
