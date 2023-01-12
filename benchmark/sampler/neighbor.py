@@ -126,7 +126,8 @@ def test_neighbor(dataset, **kwargs):
         print()
 
     if args.write_csv:
-        pd.DataFrame(data).to_csv(f'neighbor{datetime.now()}.csv', index=False)
+        df = pd.DataFrame(data)
+        df.to_csv(f'neighbor{datetime.now()}.csv', index=False)
 
 
 if __name__ == '__main__':
