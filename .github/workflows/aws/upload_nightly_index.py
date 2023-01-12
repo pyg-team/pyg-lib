@@ -17,8 +17,13 @@ wheels_dict = defaultdict(list)
 for obj in bucket.objects.filter(Prefix='whl/nightly'):
     if obj.key[-3:] != 'whl':
         continue
-    torch_version, wheel_name = obj.key.split('/')[-2:]
-    wheels_dict[torch_version].append(wheel_name)
+    torch_version, wheel = obj.key.split('/')[-2:]
+    wheels_dict[torch_version].append(wheel)
+
+    if '1.12.0' in torch_version:
+        wheels_dict[torch_version.replace('1.12.0', '1.12.1')].append(wheel)
+    if '1.13.0' in torch_version:
+        wheels_dict[torch_version.replace('1.13.0', '1.13.1')].append(wheel)
 
 index_html = html.format('\n'.join([
     href.format(f'{torch_version}.html'.replace('+', '%2B'), version)
