@@ -68,11 +68,13 @@ def test_hetero_neighbor(dataset, **kwargs):
     data = defaultdict(list)
     for num_neighbors, batch_size in product(args.num_neighbors,
                                              args.batch_sizes):
-        num_neighbors_dict = {key: num_neighbors for key in colptr_dict.keys()}
 
         print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
         data['num_neighbors'].append(num_neighbors)
         data['batch-size'].append(batch_size)
+
+        num_neighbors_dict = {key: num_neighbors for key in colptr_dict.keys()}
+
         if 'pyg-lib' in args.libraries:
             t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)[:20]):
@@ -126,7 +128,6 @@ def test_hetero_neighbor(dataset, **kwargs):
 
     if args.write_csv:
         df = pd.DataFrame(data)
-        print(df)
         df.to_csv(f'hetero_neighbor{datetime.now()}.csv', index=False)
 
 

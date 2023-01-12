@@ -65,9 +65,11 @@ def test_neighbor(dataset, **kwargs):
     data = defaultdict(list)
     for num_neighbors, batch_size in product(args.num_neighbors,
                                              args.batch_sizes):
+
         print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
         data['num_neighbors'].append(num_neighbors)
         data['batch-size'].append(batch_size)
+
         if 'pyg-lib' in args.libraries:
             t = time.perf_counter()
             for seed in tqdm(node_perm.split(batch_size)):
