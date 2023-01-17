@@ -21,33 +21,17 @@ void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out) {
   const auto num_matrices = input.size();
-  std::vector<at::Tensor> new_input, new_other, new_out;
-  std::vector<float*> ptr_A_cuda(num_matrices);
-  std::vector<float*> ptr_B_cuda(num_matrices);
-  std::vector<float*> ptr_C_cuda(num_matrices);
-
-  for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    ptr_A_host[i] = new_input[i].data_ptr<float>();
-
-    new_other.push_back(other[i].contiguous());
-    ptr_B_host[i] = new_other[i].data_ptr<float>();
-
-    new_out.push_back(out[i].contiguous());
-    ptr_C_host[i] = new_out[i].data_ptr<float>();
-  }
-
   cutlass::DeviceAllocation<float*> ptr_A;
   ptr_A.reset(num_matrices);
-  ptr_A.copy_from_host(ptr_A_host.data());
+  ptr_A.copy(input.data());
 
   cutlass::DeviceAllocation<float*> ptr_B;
   ptr_B.reset(num_matrices);
-  ptr_B.copy_from_host(ptr_B_host.data());
+  ptr_B.copy(ptr_B_cuda.data());
 
   cutlass::DeviceAllocation<float*> ptr_C;
   ptr_C.reset(num_matrices);
-  ptr_C.copy_from_host(ptr_C_host.data());
+  ptr_C.copy(ptr_C_cuda.data());
 
   std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
   std::vector<int64_t> ld_A_host(num_matrices);
@@ -84,7 +68,7 @@ void run_grouped_gemm(const at::TensorList input,
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
   typename GemmGrouped::Arguments args(
       all_problems_device.get(), num_matrices, /*threadblock_count=*/1024,
-      epilogue_op, input.data(), other.data(), out.data(), out.data(),
+      epilogue_op, ptr_A.get(), ptr_B.get(), ptr_C.get(), ptr_C.get(),
       ld_A.get(), ld_B.get(), ld_C.get(), ld_C.get());
 
   GemmGrouped gemm;
