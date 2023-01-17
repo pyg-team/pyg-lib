@@ -21,18 +21,6 @@ void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out) {
   const auto num_matrices = input.size();
-  cutlass::DeviceAllocation<float*> ptr_A;
-  ptr_A.reset(num_matrices);
-  ptr_A.copy(input.data());
-
-  cutlass::DeviceAllocation<float*> ptr_B;
-  ptr_B.reset(num_matrices);
-  ptr_B.copy(other.data());
-
-  cutlass::DeviceAllocation<float*> ptr_C;
-  ptr_C.reset(num_matrices);
-  ptr_C.copy(out.data());
-
   std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
   std::vector<int64_t> ld_A_host(num_matrices);
   std::vector<int64_t> ld_B_host(num_matrices);
@@ -68,7 +56,7 @@ void run_grouped_gemm(const at::TensorList input,
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
   typename GemmGrouped::Arguments args(
       all_problems_device.get(), num_matrices, /*threadblock_count=*/1024,
-      epilogue_op, ptr_A.get(), ptr_B.get(), ptr_C.get(), ptr_C.get(),
+      epilogue_op, input.data(), other.data(), out.data(), out.data(),
       ld_A.get(), ld_B.get(), ld_C.get(), ld_C.get());
 
   GemmGrouped gemm;
