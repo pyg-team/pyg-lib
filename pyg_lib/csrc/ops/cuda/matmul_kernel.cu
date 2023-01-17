@@ -27,11 +27,11 @@ void run_grouped_gemm(const at::TensorList input,
 
   cutlass::DeviceAllocation<float*> ptr_B;
   ptr_B.reset(num_matrices);
-  ptr_B.copy(ptr_B_cuda.data());
+  ptr_B.copy(other.data());
 
   cutlass::DeviceAllocation<float*> ptr_C;
   ptr_C.reset(num_matrices);
-  ptr_C.copy(ptr_C_cuda.data());
+  ptr_C.copy(out.data());
 
   std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
   std::vector<int64_t> ld_A_host(num_matrices);
