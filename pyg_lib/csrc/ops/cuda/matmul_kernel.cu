@@ -48,7 +48,7 @@ void run_grouped_gemm(const at::TensorList input,
   cutlass::DeviceAllocation<float*> ptr_C;
   ptr_C.reset(num_matrices);
   ptr_C.copy_from_host(ptr_C_host.data());
-  
+
   std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
   std::vector<int64_t> ld_A_host(num_matrices);
   std::vector<int64_t> ld_B_host(num_matrices);
