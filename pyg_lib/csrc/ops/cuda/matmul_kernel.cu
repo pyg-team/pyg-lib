@@ -101,21 +101,15 @@ int shared_memory_for_kernel() {
   return int(sizeof(typename GroupedGemmKernel::SharedStorage));
 }
 
-// Returns the bytes of shared memory available per SM on the GPU, or -1 on
-// error.
-int get_dev_prop() {
+cudaDeviceProp get_dev_prop() {
   cudaDeviceProp properties;
   int device_idx;
   cudaError_t result = cudaGetDevice(&device_idx);
+  TORCH_CHECK(result == cudaSuccess, cudaGetErrorString(result));
   if (result != cudaSuccess) {
     return -1;
   }
-
   result = cudaGetDeviceProperties(&properties, device_idx);
-  if (result != cudaSuccess) {
-    return -1;
-  }
-
   return properties;
 }
 
@@ -252,8 +246,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_FP32>();
-      int shared_mem_per_sm = shared_memory_per_sm();
-      if (grouped_shared_mem < shared_mem_per_sm) {
+      if (grouped_shared_mem < props.sharedMemPerMultiprocessor) {
         // full size GPU
         run_grouped_gemm<DefaultGemmKernel_FP32>(input, other, out);
       } else {
