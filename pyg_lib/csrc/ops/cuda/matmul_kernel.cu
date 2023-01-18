@@ -119,13 +119,14 @@ int shared_memory_per_sm() {
   return properties.sharedMemPerMultiprocessor;
 }
 
+cudaDeviceProp props;
+cudaError_t error = cudaGetDeviceProperties(&props, 0);
+TORCH_CHECK(error == cudaSuccess, cudaGetErrorString(error));
+
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
-  cudaDeviceProp props;
-
-  cudaError_t error = cudaGetDeviceProperties(&props, 0);
-  TORCH_CHECK(error == cudaSuccess, cudaGetErrorString(error));
+  
 
   if (props.major < 8) {
     // Compute capability less than that of Ampere. No TF32 available.
