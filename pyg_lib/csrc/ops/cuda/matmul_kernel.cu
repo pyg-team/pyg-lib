@@ -1,6 +1,7 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
+#include <stdexcept>
 #include <torch/library.h>
 #include <torch/version.h>
 #include "cutlass/cutlass.h"
@@ -105,9 +106,13 @@ cudaDeviceProp get_dev_prop() {
   cudaDeviceProp properties;
   int device_idx;
   cudaError_t result = cudaGetDevice(&device_idx);
-  TORCH_CHECK(result == cudaSuccess, cudaGetErrorString(result));
+  if (result != cudaSuccess) {
+    throw std::runtime_error(result);
+  }
   result = cudaGetDeviceProperties(&properties, device_idx);
-  TORCH_CHECK(result == cudaSuccess, cudaGetErrorString(result));
+  if (result != cudaSuccess) {
+    throw std::runtime_error(result);
+  }
   return properties;
 }
 
