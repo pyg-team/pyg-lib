@@ -41,10 +41,10 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         inputs = torch.nested.as_nested_tensor(inputs).contiguous()
         others = torch.nested.as_nested_tensor(others).contiguous()
         if inputs.dim() == 4 or others.dim() == 4:
-          # bmm only works on lists of 2D tensors
-          outs = torch.matmul(inputs, others).contiguous()
+            # bmm only works on lists of 2D tensors
+            outs = torch.matmul(inputs, others).contiguous()
         else:
-          outs = torch.bmm(inputs, others).contiguous()
+            outs = torch.bmm(inputs, others).contiguous()
         outs = list(outs.unbind())
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
