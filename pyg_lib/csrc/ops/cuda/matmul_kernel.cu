@@ -126,8 +126,6 @@ TORCH_CHECK(error == cudaSuccess, cudaGetErrorString(error));
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
-  
-
   if (props.major < 8) {
     // Compute capability less than that of Ampere. No TF32 available.
     // note: we only support Volta and onwards
