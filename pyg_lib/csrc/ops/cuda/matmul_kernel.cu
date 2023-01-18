@@ -106,10 +106,8 @@ cudaDeviceProp get_dev_prop() {
   int device_idx;
   cudaError_t result = cudaGetDevice(&device_idx);
   TORCH_CHECK(result == cudaSuccess, cudaGetErrorString(result));
-  if (result != cudaSuccess) {
-    return -1;
-  }
   result = cudaGetDeviceProperties(&properties, device_idx);
+  TORCH_CHECK(result == cudaSuccess, cudaGetErrorString(result));
   return properties;
 }
 
