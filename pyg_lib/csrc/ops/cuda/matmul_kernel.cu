@@ -117,8 +117,7 @@ cudaDeviceProp get_dev_prop() {
   return properties;
 }
 
-if torch
-  ::cuda::is_available() {
+if (torch::cuda::is_available()) {
     cudaDeviceProp props = get_dev_prop();
   }
 
