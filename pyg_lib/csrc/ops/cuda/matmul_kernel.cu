@@ -1,6 +1,7 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/util/host_tensor.h>
+#include <torch/cuda.h>
 #include <torch/library.h>
 #include <torch/version.h>
 #include <stdexcept>
@@ -116,7 +117,9 @@ cudaDeviceProp get_dev_prop() {
   return properties;
 }
 
-cudaDeviceProp props = get_dev_prop();
+if torch::cuda::is_available(){
+  cudaDeviceProp props = get_dev_prop();
+}
 
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
