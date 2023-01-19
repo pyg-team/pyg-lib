@@ -125,7 +125,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList out) {
   if (!props_queried) {
     props = get_dev_prop();
-    props_queried = True
+    props_queried = true;
   }
   if (props.major < 8) {
     // Compute capability less than that of Ampere. No TF32 available.
