@@ -193,7 +193,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_TF32>();
-      if (grouped_shared_mem < props.sharedMemPerMultiprocessor) {
+      if (grouped_shared_mem < props.sharedMemPerBlockOptin) {
         // full size GPU
         run_grouped_gemm<DefaultGemmKernel_TF32>(input, other, out);
       } else {
@@ -255,7 +255,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_FP32>();
-      if (grouped_shared_mem < props.sharedMemPerMultiprocessor) {
+      if (grouped_shared_mem < props.sharedMemPerBlockOptin) {
         // full size GPU
         run_grouped_gemm<DefaultGemmKernel_FP32>(input, other, out);
       } else {
