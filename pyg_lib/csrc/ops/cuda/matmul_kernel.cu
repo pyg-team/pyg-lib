@@ -118,13 +118,15 @@ cudaDeviceProp get_dev_prop() {
   return properties;
 }
 cudaDeviceProp props;
-if (torch::cuda::is_available()) {
-  props = get_dev_prop();
-}
+bool props_queried = false;
 
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
                                const at::TensorList out) {
+  if (!props_queried) {
+    props = get_dev_prop();
+    props_queried = True
+  }
   if (props.major < 8) {
     // Compute capability less than that of Ampere. No TF32 available.
     // note: we only support Volta and onwards
