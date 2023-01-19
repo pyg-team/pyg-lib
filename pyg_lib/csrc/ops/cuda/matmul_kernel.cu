@@ -117,9 +117,9 @@ cudaDeviceProp get_dev_prop() {
   }
   return properties;
 }
-
+cudaDeviceProp props;
 if (torch::cuda::is_available()) {
-  cudaDeviceProp props = get_dev_prop();
+  props = get_dev_prop();
 }
 
 void grouped_matmul_out_kernel(const at::TensorList input,
