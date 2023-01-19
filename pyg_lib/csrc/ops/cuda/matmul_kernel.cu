@@ -107,11 +107,11 @@ cudaDeviceProp get_dev_prop() {
   int device_idx;
   cudaError_t result = cudaGetDevice(&device_idx);
   if (result != cudaSuccess) {
-    throw std::runtime_error(result);
+    throw std::runtime_error(cudaGetErrorString(result));
   }
-  result = cudaGetDeviceProperties(&properties, device_idx);
+  cudaError_t result = cudaGetDeviceProperties(&properties, device_idx);
   if (result != cudaSuccess) {
-    throw std::runtime_error(result);
+    throw std::runtime_error(cudaGetErrorString(result));
   }
   return properties;
 }
