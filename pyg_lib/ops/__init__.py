@@ -236,7 +236,8 @@ def index_sort(input: LongTensor,
 
     .. note::
 
-        This operation works only for tensors associated with the CPU device.
+        This operation is optimized only for tensors associated with the CPU
+        device.
 
     Args:
         input (torch.LongTensor): 1-dimensional tensor with positive integer
@@ -250,7 +251,10 @@ def index_sort(input: LongTensor,
         A tuple containing sorted values and indices of the elements in the
         original :obj:`input` tensor.
     """
-    out = torch.ops.pyg.index_sort(input, max)
+    if input.is_cuda:
+        out = torch.sort(input)
+    else:
+        out = torch.ops.pyg.index_sort(input, max)
     return out
 
 
