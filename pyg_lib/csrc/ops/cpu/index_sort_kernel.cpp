@@ -32,6 +32,8 @@ void vectorized_copy(scalar_t* dst, const scalar_t* src, int64_t size) {
 std::tuple<at::Tensor, at::Tensor> index_sort_kernel(
     const at::Tensor& input,
     const at::optional<int64_t> max) {
+  TORCH_CHECK(input.is_contiguous(), "Input should be contiguous.")
+  TORCH_CHECK(input.dim() == 1, "Input should be 1-dimensional.");
   if (input.numel() > at::internal::GRAIN_SIZE && is_radix_sort_available()) {
     const auto elements = input.numel();
     const auto maximum = max.value_or(at::max(input).item<int64_t>());
