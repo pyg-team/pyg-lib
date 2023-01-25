@@ -41,7 +41,7 @@ def neighbor_sample(
         time (torch.Tensor, optional): Timestamps for the nodes in the graph.
             If set, temporal sampling will be used such that neighbors are
             guaranteed to fulfill temporal constraints, *i.e.* neighbors have
-            an earlier timestamp than the seed node.
+            an earlier or equal timestamp than the seed node.
             If used, the :obj:`col` vector needs to be sorted according to time
             within individual neighborhoods. Requires :obj:`disjoint=True`.
             (default: :obj:`None`)
