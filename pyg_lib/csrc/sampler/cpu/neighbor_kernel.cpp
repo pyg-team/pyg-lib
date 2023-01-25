@@ -59,9 +59,9 @@ class NeighborSampler {
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
-    auto it = std::lower_bound(
+    auto it = std::upper_bound(
         col_ + row_start, col_ + row_end, seed_time,
-        [&](const scalar_t& a, const scalar_t& b) { return time[a] < b; });
+        [&](const scalar_t& a, const scalar_t& b) { return a < time[b]; });
     row_end = it - col_;
 
     if (temporal_strategy_ == "last" && count >= 0) {

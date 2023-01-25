@@ -14,7 +14,7 @@ Clone a copy of `pyg-lib` from source:
 
 ```
 git clone --recursive https://github.com/pyg-team/pyg-lib
-cd pg-lib
+cd pyg-lib
 ```
 
 If you already previously cloned `pyg-lib`, update it:
