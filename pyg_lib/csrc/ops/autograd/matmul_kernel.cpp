@@ -97,9 +97,9 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
       auto input_t = input.transpose(-2, -1);
       variable_list split_input_t =
-          input_t.split_with_sizes(/*split_size=*/sizes, /*dim=*/1);
+          input_t.split_with_sizes_copy(/*split_size=*/sizes, /*dim=*/1);
       variable_list grad_out_split =
-          grad_out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
+          grad_out.split_with_sizes_copy(/*split_size=*/sizes, /*dim=*/0);
       variable_list others_grad;
       for (size_t i = 0; i < split_input_t.size(); ++i)
         others_grad.push_back(
