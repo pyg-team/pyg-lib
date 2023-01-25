@@ -1,7 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import torch
-from torch import Tensor
+from torch import Tensor, LongTensor
 
 from .scatter_reduce import fused_scatter_reduce
 
@@ -227,6 +227,38 @@ def sampled_div(
     return out
 
 
+def index_sort(
+        input: LongTensor,
+        max_value: Optional[int] = None) -> Tuple[LongTensor, LongTensor]:
+    r"""Sorts the elements of the :obj:`input` tensor in ascending order by
+    value. It is expected that :obj:`input` tensor is 1-dimensional and
+    contains only positive, integer values. If :obj:`max_value` is given, it
+    can be used by the underlying algorithm for better performance.
+
+    .. note::
+
+        This operation is optimized only for tensors associated with the CPU
+        device.
+
+    Args:
+        input (torch.LongTensor): 1-dimensional tensor with positive integer
+            values.
+        max_value (int, optional): A maximum value stored inside :obj:`input`.
+            This value can be an estimation, but needs to be greather
+            or equal to the real maximum. (default: :obj:`None`)
+
+    Returns:
+        Tuple[torch.LongTensor, torch.LongTensor]:
+        A tuple containing sorted values and indices of the elements in the
+        original :obj:`input` tensor.
+    """
+    if input.is_cuda:
+        out = torch.sort(input)
+    else:
+        out = torch.ops.pyg.index_sort(input, max_value)
+    return out
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -234,5 +266,6 @@ __all__ = [
     'sampled_sub',
     'sampled_mul',
     'sampled_div',
+    'index_sort',
     'fused_scatter_reduce',
 ]
