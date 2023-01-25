@@ -1,7 +1,7 @@
+import pytest
 import torch
 
 import pyg_lib
-import pytest
 
 DEVICES = [torch.device('cpu')]
 if torch.cuda.is_available():
