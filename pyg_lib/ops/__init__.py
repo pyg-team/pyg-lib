@@ -227,12 +227,13 @@ def sampled_div(
     return out
 
 
-def index_sort(input: LongTensor,
-               max: Optional[int] = None) -> Tuple[LongTensor, LongTensor]:
+def index_sort(
+        input: LongTensor,
+        max_value: Optional[int] = None) -> Tuple[LongTensor, LongTensor]:
     r"""Sorts the elements of the :obj:`input` tensor in ascending order by
     value. It is expected that :obj:`input` tensor is 1-dimensional and
-    contains only positive, integer values. If :obj:`max` is given, it can be
-    used by the underlying algorithm for better performance.
+    contains only positive, integer values. If :obj:`max_value` is given, it
+    can be used by the underlying algorithm for better performance.
 
     .. note::
 
@@ -242,7 +243,7 @@ def index_sort(input: LongTensor,
     Args:
         input (torch.LongTensor): 1-dimensional tensor with positive integer
             values.
-        max: (int, optional): A maximum value stored inside :obj:`input`.
+        max_value (int, optional): A maximum value stored inside :obj:`input`.
             This value can be an estimation, but needs to be greather
             or equal to the real maximum. (default: :obj:`None`)
 
@@ -254,7 +255,7 @@ def index_sort(input: LongTensor,
     if input.is_cuda:
         out = torch.sort(input)
     else:
-        out = torch.ops.pyg.index_sort(input, max)
+        out = torch.ops.pyg.index_sort(input, max_value)
     return out
 
 

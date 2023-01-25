@@ -36,8 +36,8 @@ std::tuple<at::Tensor, at::Tensor> index_sort_kernel(
   TORCH_CHECK(input.dim() == 1, "Input should be 1-dimensional.");
   if (input.numel() > at::internal::GRAIN_SIZE && is_radix_sort_available()) {
     const auto elements = input.numel();
-    const auto maximum = max.value_or(at::max(input).item<int64_t>());
-    auto out_vals = at::detach(input).clone();
+    const auto maximum = max.value_or(input.max().item<int64_t>());
+    auto out_vals = input.detach().clone();
     auto out_indices = at::arange(
         0, elements, at::TensorOptions().device(at::kCPU).dtype(at::kLong));
 

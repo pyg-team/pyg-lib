@@ -19,8 +19,7 @@ def test_index_sort(device):
     assert torch.all(ref_indices == indices)
 
 
-@pytest.mark.parametrize('device', DEVICES)
-def test_index_sort_negative(device):
-    input = torch.randint(low=0, high=1024, size=(16, 32), device=device)
+def test_index_sort_negative():
+    input = torch.randint(low=0, high=1024, size=(16, 32), device='cpu')
     with pytest.raises(RuntimeError):
         sorted_input, indices = pyg_lib.ops.index_sort(input)
