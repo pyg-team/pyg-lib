@@ -312,9 +312,9 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
 
   // TODO (matthias) Better handle non-contiguous memory layouts.
   grouped_matmul_out_kernel(
-      input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
+      input.contiguous().split_with_sizes_copy(/*split_size=*/sizes, /*dim=*/0),
       other.contiguous().split(/*split_size=*/1, /*dim=*/0),
-      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+      out.split_with_sizes_copy(/*split_size=*/sizes, /*dim=*/0));
 
   return out;
 }
