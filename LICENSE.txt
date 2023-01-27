@@ -1,8 +1,0 @@
-Copyright for a whole pyg-lib project (excluding radix_sort.h file located in
-pyg_lib/csrc/cpu directory) is held by Copyright (c) 2022 PyG Team <team@pyg.org>,
-and is provided under the MIT licence (definition located in
-LICENSE/LICENSE_pyg_lib file).
-
-Copyright for radix_sort.h file located in pyg_lib/csrc/cpu directory is held by
-Copyright (c) Meta Platforms, Inc. and affiliates, and is provided under the BSD
-license (definition located in LICENSE/LICENSE_radix_sort file).
