@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 
 import torch
-from torch import Tensor, LongTensor
+from torch import Tensor
 
 from .scatter_reduce import fused_scatter_reduce
 
@@ -228,12 +228,13 @@ def sampled_div(
 
 
 def index_sort(
-        input: LongTensor,
-        max_value: Optional[int] = None) -> Tuple[LongTensor, LongTensor]:
-    r"""Sorts the elements of the :obj:`input` tensor in ascending order by
-    value. It is expected that :obj:`input` tensor is 1-dimensional and
-    contains only positive, integer values. If :obj:`max_value` is given, it
-    can be used by the underlying algorithm for better performance.
+    inputs: Tensor,
+    max_value: Optional[int] = None,
+) -> Tuple[Tensor, Tensor]:
+    r"""Sorts the elements of the :obj:`inputs` tensor in ascending order.
+    It is expected that :obj:`inputs` is one-dimensional and that it only
+    contains positive integer values. If :obj:`max_value` is given, it can be
+    used by the underlying algorithm for better performance.
 
     .. note::
 
@@ -241,22 +242,19 @@ def index_sort(
         device.
 
     Args:
-        input (torch.LongTensor): 1-dimensional tensor with positive integer
-            values.
-        max_value (int, optional): A maximum value stored inside :obj:`input`.
-            This value can be an estimation, but needs to be greather
-            or equal to the real maximum. (default: :obj:`None`)
+        inputs (torch.Tensor): A vector with positive integer values.
+        max_value (int, optional): The maximum value stored inside
+            :obj:`inputs`. This value can be an estimation, but needs to be
+            greater than or equal to the real maximum. (default: :obj:`None`)
 
     Returns:
         Tuple[torch.LongTensor, torch.LongTensor]:
         A tuple containing sorted values and indices of the elements in the
         original :obj:`input` tensor.
     """
-    if input.is_cuda:
-        out = torch.sort(input)
-    else:
-        out = torch.ops.pyg.index_sort(input, max_value)
-    return out
+    if inputs.is_cuda:
+        return torch.sort(inputs)
+    return torch.ops.pyg.index_sort(inputs, max_value)
 
 
 __all__ = [
