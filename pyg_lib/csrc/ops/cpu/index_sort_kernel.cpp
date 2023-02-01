@@ -11,24 +11,6 @@ namespace ops {
 
 namespace {
 
-template <typename scalar_t>
-void vectorized_copy(scalar_t* dst, const scalar_t* src, int64_t size) {
-  constexpr int64_t unfold_step = 4;
-  int64_t index;
-  if (size >= unfold_step) {
-#pragma omp simd
-    for (index = 0; index < size; index += unfold_step) {
-      dst[index] = src[index];
-      dst[index + 1] = src[index + 1];
-      dst[index + 2] = src[index + 2];
-      dst[index + 3] = src[index + 3];
-    }
-  }
-  for (index; index < size; ++index) {
-    dst[index] = src[index];
-  }
-}
-
 std::tuple<at::Tensor, at::Tensor> index_sort_kernel(
     const at::Tensor& input,
     const at::optional<int64_t> max) {
@@ -61,9 +43,10 @@ std::tuple<at::Tensor, at::Tensor> index_sort_kernel(
                 0, common_size, at::internal::GRAIN_SIZE / num_threads,
                 [&](int64_t begin, int64_t end) {
                   const auto job_size = end - begin;
-                  vectorized_copy(vals + begin, sorted_vals + begin, job_size);
-                  vectorized_copy(indices + begin, sorted_indices + begin,
-                                  job_size);
+                  std::memcpy(vals + begin, sorted_vals + begin,
+                              job_size * out_vals.itemsize());
+                  std::memcpy(indices + begin, sorted_indices + begin,
+                              job_size * out_indices.itemsize());
                 });
           }
         });
