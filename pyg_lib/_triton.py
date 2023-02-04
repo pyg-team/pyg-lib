@@ -16,7 +16,7 @@ except ImportError:
 
         def report_error(self):
             raise ValueError(f"Could not compile function '{self.func_name}' "
-                             f"since 'triton>=2.0.0' dependency was not. "
+                             f"since 'triton>=2.0.0' dependency was not "
                              f"found. Please install the missing dependency "
                              f"via `pip install -U -pre triton`.")
 
