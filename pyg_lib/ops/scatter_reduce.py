@@ -15,7 +15,7 @@ OPT_REDUCTIONS = [NONE] + REDUCTIONS
 @triton.jit
 def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
                                 num_reductions, numel, REDUCE0, REDUCE1,
-                                REDUCE2, REDUCE3, BLOCK_SIZE):
+                                REDUCE2, REDUCE3, BLOCK_SIZE: tl.constexpr):
     pid = tl.program_id(axis=0)
     block_start = pid * BLOCK_SIZE
 
