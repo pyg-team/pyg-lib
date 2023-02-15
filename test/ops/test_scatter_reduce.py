@@ -33,26 +33,37 @@ if __name__ == '__main__':  # Benchmarking
     num_warmups = 1000
     num_steps = 10000
 
-    for i in range(num_warmups + num_steps):
-        if i == num_warmups:
-            torch.cuda.synchronize()
-            t = time.perf_counter()
-        out_fused = fused_scatter_reduce(x, index, dim_size=1000,
-                                         reduce_list=['sum', 'mean', 'max'])
-    torch.cuda.synchronize()
-    t = time.perf_counter() - t
-    print(f'  Fused implementation: {t:.4f} seconds')
+    aggrs = [
+        ['sum', 'mean'],
+        ['sum', 'mean', 'max'],
+        ['sum', 'mean', 'min', 'max'],
+    ]
 
-    for i in range(num_warmups + num_steps):
-        if i == num_warmups:
-            torch.cuda.synchronize()
-            t = time.perf_counter()
-        out1 = torch_scatter.scatter_add(x, index, dim_size=1000, dim=0)
-        out2 = torch_scatter.scatter_mean(x, index, dim_size=1000, dim=0)
-        out3 = torch_scatter.scatter_max(x, index, dim_size=1000, dim=0)[0]
-        out_vanilla = torch.cat([out1, out2, out3], dim=-1)
-    torch.cuda.synchronize()
-    t = time.perf_counter() - t
-    print(f'Vanilla implementation: {t:.4f} seconds')
+    for aggr in aggrs:
+        print(f'Aggregation: {aggr}')
 
-    assert torch.allclose(out_fused, out_vanilla, atol=1e-5)
+        for i in range(num_warmups + num_steps):
+            if i == num_warmups:
+                torch.cuda.synchronize()
+                t = time.perf_counter()
+            out_fused = fused_scatter_reduce(x, index, dim_size=1000,
+                                             reduce_list=aggr)
+        torch.cuda.synchronize()
+        t = time.perf_counter() - t
+        print(f'  Fused implementation: {t:.4f} seconds')
+
+        for i in range(num_warmups + num_steps):
+            if i == num_warmups:
+                torch.cuda.synchronize()
+                t = time.perf_counter()
+            outs = [
+                torch_scatter.scatter(x, index, dim_size=1000, dim=0,
+                                      reduce=reduce) for reduce in aggr
+            ]
+            out_vanilla = torch.cat(outs, dim=-1)
+        torch.cuda.synchronize()
+        t = time.perf_counter() - t
+        print(f'Vanilla implementation: {t:.4f} seconds')
+        print()
+
+        assert torch.allclose(out_fused, out_vanilla, atol=1e-5)
