@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.2.0] - 2023-MM-DD
 ### Added
+- Added option to return info about sampled graph([#197](https://github.com/pyg-team/pyg-lib/pull/197))
 - Added `index_sort` implementation ([#181](https://github.com/pyg-team/pyg-lib/pull/181), [#192](https://github.com/pyg-team/pyg-lib/pull/192))
 - Added `triton>=2.0` support ([#171](https://github.com/pyg-team/pyg-lib/pull/171))
 - Added `bias` term to `grouped_matmul` and `segment_matmul` ([#161](https://github.com/pyg-team/pyg-lib/pull/161))
