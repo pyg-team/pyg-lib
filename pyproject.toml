@@ -5,3 +5,8 @@ blank_line_before_nested_class_or_def = false
 
 [tool.pytest.ini_options]
 addopts = "--capture=no"
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+skip = [".gitingore", "__init__.py"]
