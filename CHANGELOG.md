@@ -3,22 +3,29 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-
 ## [0.2.0] - 2023-MM-DD
+
 ### Added
+
+- Added `pyproject.toml` ([#204](https://github.com/pyg-team/pyg-lib/pull/204))
 - Added `index_sort` implementation ([#181](https://github.com/pyg-team/pyg-lib/pull/181), [#192](https://github.com/pyg-team/pyg-lib/pull/192))
 - Added `triton>=2.0` support ([#171](https://github.com/pyg-team/pyg-lib/pull/171))
 - Added `bias` term to `grouped_matmul` and `segment_matmul` ([#161](https://github.com/pyg-team/pyg-lib/pull/161))
 - Added `sampled_op` implementation ([#156](https://github.com/pyg-team/pyg-lib/pull/156), [#159](https://github.com/pyg-team/pyg-lib/pull/159), [#160](https://github.com/pyg-team/pyg-lib/pull/160))
+
 ### Changed
+
 - Sample the nodes with the same timestamp as seed nodes ([#187](https://github.com/pyg-team/pyg-lib/pull/187))
 - Added `write-csv` (saves benchmark results as csv file) and `libraries` (determines which libraries will be used in benchmark) parameters ([#167](https://github.com/pyg-team/pyg-lib/pull/167))
 - Enable benchmarking of neighbor sampler on temporal graphs ([#165](https://github.com/pyg-team/pyg-lib/pull/165))
 - Improved `[segment|grouped]_matmul` CPU implementation via `at::matmul_out` and MKL BLAS `gemm_batch` ([#146](https://github.com/pyg-team/pyg-lib/pull/146), [#172](https://github.com/pyg-team/pyg-lib/pull/172))
+
 ### Removed
 
 ## [0.1.0] - 2022-11-28
+
 ### Added
+
 - Added PyTorch 1.13 support ([#145](https://github.com/pyg-team/pyg-lib/pull/145))
 - Added native PyTorch support for `grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
 - Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141), [#142](https://github.com/pyg-team/pyg-lib/pull/142))
@@ -52,7 +59,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `clang-format` linting via `pre-commit` ([#12](https://github.com/pyg-team/pyg-lib/pull/12))
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
+
 ### Changed
+
 - Allow different types for graph and timestamp data ([#143](https://github.com/pyg-team/pyg-lib/pull/143))
 - Fixed dispatcher in `hetero_neighbor_sample` ([#125](https://github.com/pyg-team/pyg-lib/pull/125))
 - Require sorted neighborhoods according to time in temporal sampling ([#108](https://github.com/pyg-team/pyg-lib/pull/108))
