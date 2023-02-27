@@ -11,7 +11,12 @@ namespace sampler {
 // in the graph given by `(rowptr, col)`.
 // Returns: (row, col, node_id, edge_id)
 PYG_API
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>, c10::optional<at::Tensor>, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,

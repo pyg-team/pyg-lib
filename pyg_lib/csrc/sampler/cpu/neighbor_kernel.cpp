@@ -31,8 +31,10 @@ class NeighborSampler {
   NeighborSampler(const scalar_t* rowptr,
                   const scalar_t* col,
                   const std::string temporal_strategy)
-      : rowptr_(rowptr), col_(col), temporal_strategy_(temporal_strategy), curr_hop(0) {
-
+      : rowptr_(rowptr),
+        col_(col),
+        temporal_strategy_(temporal_strategy),
+        curr_hop(0) {
     TORCH_CHECK(temporal_strategy == "uniform" || temporal_strategy == "last",
                 "No valid temporal strategy found");
   }
@@ -95,11 +97,7 @@ class NeighborSampler {
     }
   }
 
-  std::vector<scalar_t>
-  get_sampled_info() {
-    return sampled_edges_per_hop;
-  }
-
+  std::vector<scalar_t> get_sampled_info() { return sampled_edges_per_hop; }
 
  private:
   inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
@@ -124,7 +122,6 @@ class NeighborSampler {
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                pyg::random::RandintEngine<scalar_t>& generator,
                std::vector<node_t>& out_global_dst_nodes) {
-
     if (count == 0)
       return;
 
@@ -196,16 +193,26 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_rows_;
   std::vector<scalar_t> sampled_cols_;
   std::vector<scalar_t> sampled_edge_ids_;
-;
-  public:
+  ;
+
+ public:
   scalar_t curr_hop;
   std::vector<scalar_t> sampled_edges_per_hop;
 };
 
 // Homogeneous neighbor sampling ///////////////////////////////////////////////
 
-template <bool replace, bool directed, bool disjoint, bool return_edge_id, bool return_sampled_info>
-std::tuple<at::Tensor, at::Tensor, at::Tensor,  c10::optional<at::Tensor>, c10::optional<at::Tensor>, c10::optional<at::Tensor>>
+template <bool replace,
+          bool directed,
+          bool disjoint,
+          bool return_edge_id,
+          bool return_sampled_info>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>>
 sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
@@ -306,7 +313,8 @@ sample(const at::Tensor& rowptr,
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
     if (return_sampled_info) {
-      std::vector<scalar_t> edges_num_per_neighbors = sampler.get_sampled_info();
+      std::vector<scalar_t> edges_num_per_neighbors =
+          sampler.get_sampled_info();
       edges_num = pyg::utils::from_vector(edges_num_per_neighbors);
       nodes_num = pyg::utils::from_vector(num_nodes_per_hop);
     }
@@ -317,12 +325,17 @@ sample(const at::Tensor& rowptr,
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
     }
   });
-  return std::make_tuple(out_row, out_col, out_node_id, out_edge_id, edges_num, nodes_num);
+  return std::make_tuple(out_row, out_col, out_node_id, out_edge_id, edges_num,
+                         nodes_num);
 }
 
 // Heterogeneous neighbor sampling /////////////////////////////////////////////
 
-template <bool replace, bool directed, bool disjoint, bool return_edge_id, bool return_sampled_info>
+template <bool replace,
+          bool directed,
+          bool disjoint,
+          bool return_edge_id,
+          bool return_sampled_info>
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
@@ -414,7 +427,7 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& k : node_types) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes_dict[k];  // Initialize empty vector.
-      if constexpr(!disjoint && return_sampled_info) {
+      if constexpr (!disjoint && return_sampled_info) {
         sampled_nodes_num_dict[k];
         sampled_nodes_num_dict.at(k).push_back(0);
       }
@@ -440,7 +453,8 @@ sample(const std::vector<node_type>& node_types,
         sampled_nodes_dict[kv.key()] = pyg::utils::to_vector<scalar_t>(seed);
         mapper_dict.at(kv.key()).fill(seed);
         if constexpr (return_sampled_info)
-          sampled_nodes_num_dict.at(kv.key()).at(0) = sampled_nodes_dict.at(kv.key()).size();
+          sampled_nodes_num_dict.at(kv.key()).at(0) =
+              sampled_nodes_dict.at(kv.key()).size();
       } else {
         auto& sampled_nodes = sampled_nodes_dict.at(kv.key());
         auto& mapper = mapper_dict.at(kv.key());
@@ -480,13 +494,13 @@ sample(const std::vector<node_type>& node_types,
 
         if (!time_dict.has_value() || !time_dict.value().contains(dst)) {
           if (!disjoint && return_sampled_info)
-              sampler.sampled_edges_per_hop.push_back(0);
+            sampler.sampled_edges_per_hop.push_back(0);
           for (size_t i = begin; i < end; ++i) {
             sampler.uniform_sample(/*global_src_node=*/src_sampled_nodes[i],
                                    /*local_src_node=*/i, count, dst_mapper,
                                    generator, dst_sampled_nodes);
           }
-          if constexpr(!disjoint && return_sampled_info)
+          if constexpr (!disjoint && return_sampled_info)
             sampler.curr_hop++;
 
         } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
@@ -499,18 +513,20 @@ sample(const std::vector<node_type>& node_types,
                                     seed_times[batch_idx], dst_time_data,
                                     dst_mapper, generator, dst_sampled_nodes);
           }
-         }
+        }
       }
-    for (const auto& k : node_types) {
+      for (const auto& k : node_types) {
         slice_dict[k] = {slice_dict.at(k).second,
                          sampled_nodes_dict.at(k).size()};
-        if constexpr(!disjoint && return_sampled_info) {
+        if constexpr (!disjoint && return_sampled_info) {
           auto& k_nodes_num = sampled_nodes_num_dict.at(k);
-          if (ell == 0){
-            k_nodes_num.push_back(sampled_nodes_dict.at(k).size()-k_nodes_num.at(0));
+          if (ell == 0) {
+            k_nodes_num.push_back(sampled_nodes_dict.at(k).size() -
+                                  k_nodes_num.at(0));
           } else {
-            k_nodes_num.push_back(slice_dict.at(k).second-slice_dict.at(k).first);
-           }
+            k_nodes_num.push_back(slice_dict.at(k).second -
+                                  slice_dict.at(k).first);
+          }
         }
       }
     }
@@ -518,9 +534,9 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& k : node_types) {
       out_node_id_dict.insert(
           k, pyg::utils::from_vector(sampled_nodes_dict.at(k)));
-      if constexpr(!disjoint && return_sampled_info)
-         nodes_num_dict.insert(k, pyg::utils::from_vector(sampled_nodes_num_dict.at(k)));
-
+      if constexpr (!disjoint && return_sampled_info)
+        nodes_num_dict.insert(
+            k, pyg::utils::from_vector(sampled_nodes_num_dict.at(k)));
     }
 
     TORCH_CHECK(directed, "Undirected heterogeneous graphs not yet supported");
@@ -533,9 +549,11 @@ sample(const std::vector<node_type>& node_types,
           out_edge_id_dict.value().insert(to_rel_type(k),
                                           std::get<2>(edges).value());
         }
-        if constexpr(!disjoint && return_sampled_info) {
-          std::vector<scalar_t> edges_num_per_neighbors = sampler_dict.at(k).get_sampled_info();
-          edges_num_dict.insert(to_rel_type(k), pyg::utils::from_vector(edges_num_per_neighbors));
+        if constexpr (!disjoint && return_sampled_info) {
+          std::vector<scalar_t> edges_num_per_neighbors =
+              sampler_dict.at(k).get_sampled_info();
+          edges_num_dict.insert(
+              to_rel_type(k), pyg::utils::from_vector(edges_num_per_neighbors));
         }
       }
     }
@@ -547,75 +565,113 @@ sample(const std::vector<node_type>& node_types,
 
 // Dispatcher //////////////////////////////////////////////////////////////////
 
-#define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, return_sampled_info, ...) \
-  if (replace && directed && disjoint && return_edge_id && return_sampled_info)                \
-    return sample<true, true, true, true, true>(__VA_ARGS__);                                  \
-  if (replace && directed && disjoint && return_edge_id && !return_sampled_info)               \
-    return sample<true, true, true, true, false>(__VA_ARGS__);                                 \
-  if (replace && directed && disjoint && !return_edge_id && return_sampled_info)               \
-    return sample<true, true, true, false, true>(__VA_ARGS__);                                 \
-   if (replace && directed && disjoint && !return_edge_id && !return_sampled_info)             \
-    return sample<true, true, true, false, false>(__VA_ARGS__);                                \
-  if (replace && directed && !disjoint && return_edge_id && return_sampled_info)               \
-    return sample<true, true, false, true, true>(__VA_ARGS__);                                 \
-  if (replace && directed && !disjoint && return_edge_id && !return_sampled_info)              \
-    return sample<true, true, false, true, false>(__VA_ARGS__);                                \
-  if (replace && directed && !disjoint && !return_edge_id && return_sampled_info)              \
-    return sample<true, true, false, false, true>(__VA_ARGS__);                                \
-  if (replace && directed && !disjoint && !return_edge_id && !return_sampled_info)             \
-    return sample<true, true, false, false, false>(__VA_ARGS__);                               \
-  if (replace && !directed && disjoint && return_edge_id && return_sampled_info)               \
-    return sample<true, false, true, true, true>(__VA_ARGS__);                                 \
-  if (replace && !directed && disjoint && return_edge_id && !return_sampled_info)              \
-    return sample<true, false, true, true, false>(__VA_ARGS__);                                \
-  if (replace && !directed && disjoint && !return_edge_id && return_sampled_info)              \
-    return sample<true, false, true, false, true>(__VA_ARGS__);                                \
-  if (replace && !directed && disjoint && !return_edge_id && !return_sampled_info)             \
-    return sample<true, false, true, false, false>(__VA_ARGS__);                               \
-  if (replace && !directed && !disjoint && return_edge_id && return_sampled_info)              \
-    return sample<true, false, false, true, true>(__VA_ARGS__);                                \
-  if (replace && !directed && !disjoint && return_edge_id && !return_sampled_info)             \
-    return sample<true, false, false, true, false>(__VA_ARGS__);                               \
-  if (replace && !directed && !disjoint && !return_edge_id && return_sampled_info)             \
-    return sample<true, false, false, false, true>(__VA_ARGS__);                               \
-  if (replace && !directed && !disjoint && !return_edge_id && !return_sampled_info)            \
-    return sample<true, false, false, false, false>(__VA_ARGS__);                              \
-  if (!replace && directed && disjoint && return_edge_id && return_sampled_info)               \
-    return sample<false, true, true, true, true>(__VA_ARGS__);                                 \
-  if (!replace && directed && disjoint && return_edge_id && !return_sampled_info)              \
-    return sample<false, true, true, true, false>(__VA_ARGS__);                                \
-  if (!replace && directed && disjoint && !return_edge_id && return_sampled_info)              \
-    return sample<false, true, true, false, true>(__VA_ARGS__);                                \
-  if (!replace && directed && disjoint && !return_edge_id && !return_sampled_info)             \
-    return sample<false, true, true, false, false>(__VA_ARGS__);                               \
-  if (!replace && directed && !disjoint && return_edge_id && return_sampled_info)              \
-    return sample<false, true, false, true, true>(__VA_ARGS__);                                \
-  if (!replace && directed && !disjoint && return_edge_id && !return_sampled_info)             \
-    return sample<false, true, false, true, false>(__VA_ARGS__);                               \
-  if (!replace && directed && !disjoint && !return_edge_id && return_sampled_info)             \
-    return sample<false, true, false, false, true>(__VA_ARGS__);                               \
-  if (!replace && directed && !disjoint && !return_edge_id && !return_sampled_info)            \
-    return sample<false, true, false, false, false>(__VA_ARGS__);                              \
-  if (!replace && !directed && disjoint && return_edge_id && return_sampled_info)              \
-    return sample<false, false, true, true, true>(__VA_ARGS__);                                \
-  if (!replace && !directed && disjoint && return_edge_id && !return_sampled_info)             \
-    return sample<false, false, true, true, false>(__VA_ARGS__);                               \
-  if (!replace && !directed && disjoint && !return_edge_id && return_sampled_info)             \
-    return sample<false, false, true, false, true>(__VA_ARGS__);                               \
-  if (!replace && !directed && disjoint && !return_edge_id && !return_sampled_info)            \
-    return sample<false, false, true, false, false>(__VA_ARGS__);                              \
-  if (!replace && !directed && !disjoint && return_edge_id && return_sampled_info)             \
-    return sample<false, false, false, true, true>(__VA_ARGS__);                               \
-  if (!replace && !directed && !disjoint && return_edge_id && !return_sampled_info)            \
-    return sample<false, false, false, true, false>(__VA_ARGS__);                              \
-  if (!replace && !directed && !disjoint && !return_edge_id && return_sampled_info)            \
-    return sample<false, false, false, false, true>(__VA_ARGS__);                              \
-  if (!replace && !directed && !disjoint && !return_edge_id && !return_sampled_info)           \
+#define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, \
+                        return_sampled_info, ...)                    \
+  if (replace && directed && disjoint && return_edge_id &&           \
+      return_sampled_info)                                           \
+    return sample<true, true, true, true, true>(__VA_ARGS__);        \
+  if (replace && directed && disjoint && return_edge_id &&           \
+      !return_sampled_info)                                          \
+    return sample<true, true, true, true, false>(__VA_ARGS__);       \
+  if (replace && directed && disjoint && !return_edge_id &&          \
+      return_sampled_info)                                           \
+    return sample<true, true, true, false, true>(__VA_ARGS__);       \
+  if (replace && directed && disjoint && !return_edge_id &&          \
+      !return_sampled_info)                                          \
+    return sample<true, true, true, false, false>(__VA_ARGS__);      \
+  if (replace && directed && !disjoint && return_edge_id &&          \
+      return_sampled_info)                                           \
+    return sample<true, true, false, true, true>(__VA_ARGS__);       \
+  if (replace && directed && !disjoint && return_edge_id &&          \
+      !return_sampled_info)                                          \
+    return sample<true, true, false, true, false>(__VA_ARGS__);      \
+  if (replace && directed && !disjoint && !return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<true, true, false, false, true>(__VA_ARGS__);      \
+  if (replace && directed && !disjoint && !return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<true, true, false, false, false>(__VA_ARGS__);     \
+  if (replace && !directed && disjoint && return_edge_id &&          \
+      return_sampled_info)                                           \
+    return sample<true, false, true, true, true>(__VA_ARGS__);       \
+  if (replace && !directed && disjoint && return_edge_id &&          \
+      !return_sampled_info)                                          \
+    return sample<true, false, true, true, false>(__VA_ARGS__);      \
+  if (replace && !directed && disjoint && !return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<true, false, true, false, true>(__VA_ARGS__);      \
+  if (replace && !directed && disjoint && !return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<true, false, true, false, false>(__VA_ARGS__);     \
+  if (replace && !directed && !disjoint && return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<true, false, false, true, true>(__VA_ARGS__);      \
+  if (replace && !directed && !disjoint && return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<true, false, false, true, false>(__VA_ARGS__);     \
+  if (replace && !directed && !disjoint && !return_edge_id &&        \
+      return_sampled_info)                                           \
+    return sample<true, false, false, false, true>(__VA_ARGS__);     \
+  if (replace && !directed && !disjoint && !return_edge_id &&        \
+      !return_sampled_info)                                          \
+    return sample<true, false, false, false, false>(__VA_ARGS__);    \
+  if (!replace && directed && disjoint && return_edge_id &&          \
+      return_sampled_info)                                           \
+    return sample<false, true, true, true, true>(__VA_ARGS__);       \
+  if (!replace && directed && disjoint && return_edge_id &&          \
+      !return_sampled_info)                                          \
+    return sample<false, true, true, true, false>(__VA_ARGS__);      \
+  if (!replace && directed && disjoint && !return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<false, true, true, false, true>(__VA_ARGS__);      \
+  if (!replace && directed && disjoint && !return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<false, true, true, false, false>(__VA_ARGS__);     \
+  if (!replace && directed && !disjoint && return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<false, true, false, true, true>(__VA_ARGS__);      \
+  if (!replace && directed && !disjoint && return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<false, true, false, true, false>(__VA_ARGS__);     \
+  if (!replace && directed && !disjoint && !return_edge_id &&        \
+      return_sampled_info)                                           \
+    return sample<false, true, false, false, true>(__VA_ARGS__);     \
+  if (!replace && directed && !disjoint && !return_edge_id &&        \
+      !return_sampled_info)                                          \
+    return sample<false, true, false, false, false>(__VA_ARGS__);    \
+  if (!replace && !directed && disjoint && return_edge_id &&         \
+      return_sampled_info)                                           \
+    return sample<false, false, true, true, true>(__VA_ARGS__);      \
+  if (!replace && !directed && disjoint && return_edge_id &&         \
+      !return_sampled_info)                                          \
+    return sample<false, false, true, true, false>(__VA_ARGS__);     \
+  if (!replace && !directed && disjoint && !return_edge_id &&        \
+      return_sampled_info)                                           \
+    return sample<false, false, true, false, true>(__VA_ARGS__);     \
+  if (!replace && !directed && disjoint && !return_edge_id &&        \
+      !return_sampled_info)                                          \
+    return sample<false, false, true, false, false>(__VA_ARGS__);    \
+  if (!replace && !directed && !disjoint && return_edge_id &&        \
+      return_sampled_info)                                           \
+    return sample<false, false, false, true, true>(__VA_ARGS__);     \
+  if (!replace && !directed && !disjoint && return_edge_id &&        \
+      !return_sampled_info)                                          \
+    return sample<false, false, false, true, false>(__VA_ARGS__);    \
+  if (!replace && !directed && !disjoint && !return_edge_id &&       \
+      return_sampled_info)                                           \
+    return sample<false, false, false, false, true>(__VA_ARGS__);    \
+  if (!replace && !directed && !disjoint && !return_edge_id &&       \
+      !return_sampled_info)                                          \
     return sample<false, false, false, false, false>(__VA_ARGS__);
 
-} // namespace
+}  // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>, c10::optional<at::Tensor>, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
                        const at::Tensor& seed,
@@ -629,8 +685,9 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        std::string temporal_strategy,
                        bool return_edge_id,
                        bool return_sampled_info) {
-  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, return_sampled_info, rowptr, col,
-                  seed, num_neighbors, time, seed_time, csc, temporal_strategy);
+  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id,
+                  return_sampled_info, rowptr, col, seed, num_neighbors, time,
+                  seed_time, csc, temporal_strategy);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -655,10 +712,10 @@ hetero_neighbor_sample_kernel(
     std::string temporal_strategy,
     bool return_edge_id,
     bool return_sampled_info) {
-  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, return_sampled_info, node_types,
-                  edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict, seed_time_dict, csc,
-                  temporal_strategy);
+  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id,
+                  return_sampled_info, node_types, edge_types, rowptr_dict,
+                  col_dict, seed_dict, num_neighbors_dict, time_dict,
+                  seed_time_dict, csc, temporal_strategy);
 }
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {

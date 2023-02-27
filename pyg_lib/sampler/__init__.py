@@ -140,7 +140,7 @@ def hetero_neighbor_sample(
         return_sampled_info,
     )
 
-    out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict , edge_num_dict, node_num_dict = out
+    out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict, edge_num_dict, node_num_dict = out
     out_row_dict = {TO_EDGE_TYPE[k]: v for k, v in out_row_dict.items()}
     out_col_dict = {TO_EDGE_TYPE[k]: v for k, v in out_col_dict.items()}
     if out_edge_id_dict is not None:

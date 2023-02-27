@@ -8,7 +8,12 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>, c10::optional<at::Tensor>, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
+           c10::optional<at::Tensor>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
@@ -34,8 +39,8 @@ neighbor_sample(const at::Tensor& rowptr,
                        .findSchemaOrThrow("pyg::neighbor_sample", "")
                        .typed<decltype(neighbor_sample)>();
   return op.call(rowptr, col, seed, num_neighbors, time, seed_time, csc,
-                 replace, directed, disjoint, temporal_strategy,
-                 return_edge_id, return_sampled_info);
+                 replace, directed, disjoint, temporal_strategy, return_edge_id,
+                 return_sampled_info);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -60,7 +65,6 @@ hetero_neighbor_sample(
     std::string temporal_strategy,
     bool return_edge_id,
     bool return_sampled_info) {
-
   TORCH_CHECK(rowptr_dict.size() == col_dict.size(),
               "Number of edge types in 'rowptr_dict' and 'col_dict' must match")
 
@@ -86,7 +90,8 @@ hetero_neighbor_sample(
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, time_dict, seed_time_dict, csc, replace,
-                 directed, disjoint, temporal_strategy, return_edge_id, return_sampled_info);
+                 directed, disjoint, temporal_strategy, return_edge_id,
+                 return_sampled_info);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
@@ -94,7 +99,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
       "num_neighbors, Tensor? time = None, Tensor? seed_time = None, bool csc "
       "= False, bool replace = False, bool directed = True, bool disjoint = "
-      "False, str temporal_strategy = 'uniform', bool return_edge_id = True, bool return_sampled_info = False) "
+      "False, str temporal_strategy = 'uniform', bool return_edge_id = True, "
+      "bool return_sampled_info = False) "
       "-> (Tensor, Tensor, Tensor, Tensor?, Tensor?, Tensor?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
@@ -103,8 +109,10 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "Dict(str, Tensor)? time_dict = None, Dict(str, Tensor)? seed_time_dict "
       "= None, bool csc = False, bool replace = False, bool directed = True,"
       "bool disjoint = False, str temporal_strategy = 'uniform', bool "
-      "return_edge_id = True, bool return_sampled_info = False) -> (Dict(str, Tensor), Dict(str, Tensor), "
-      "Dict(str, Tensor), Dict(str, Tensor)?, Dict(str, Tensor)?, Dict(str, Tensor)?)"));
+      "return_edge_id = True, bool return_sampled_info = False) -> (Dict(str, "
+      "Tensor), Dict(str, Tensor), "
+      "Dict(str, Tensor), Dict(str, Tensor)?, Dict(str, Tensor)?, Dict(str, "
+      "Tensor)?)"));
 }
 
 }  // namespace sampler
