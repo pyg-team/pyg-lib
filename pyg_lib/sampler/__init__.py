@@ -64,7 +64,7 @@ def neighbor_sample(
             return the indices of edges of the original graph.
             (default: :obj: `True`)
         return_sampled_info (bool): If set to :obj:`True`, will return information about
-            amount of sampled nodes and edges per layer.
+            the amount of sampled nodes and edges per layer.
             (default: :obj: `False`)
     Returns:
         (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
@@ -72,7 +72,7 @@ def neighbor_sample(
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph,
-        as well as information about sampled amount of nodes and edges per layer.
+        as well as information about the sampled amount of nodes and edges per layer.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
                                          time, seed_time, csc, replace,
