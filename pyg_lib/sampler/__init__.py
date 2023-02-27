@@ -22,7 +22,7 @@ def neighbor_sample(
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
     return_sampled_info: bool = False,
-) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor],
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], Optional[List[int]],
            Optional[List[int]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
@@ -70,7 +70,7 @@ def neighbor_sample(
 
     Returns:
         (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
-        Optional[List[str]], Optional[List[str]]):
+        Optional[List[int]], Optional[List[int]]):
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph,

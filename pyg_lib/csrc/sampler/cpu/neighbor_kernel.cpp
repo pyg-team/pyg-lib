@@ -31,10 +31,7 @@ class NeighborSampler {
   NeighborSampler(const scalar_t* rowptr,
                   const scalar_t* col,
                   const std::string temporal_strategy)
-      : rowptr_(rowptr),
-        col_(col),
-        temporal_strategy_(temporal_strategy),
-        curr_hop(0) {
+      : rowptr_(rowptr), col_(col), temporal_strategy_(temporal_strategy) {
     TORCH_CHECK(temporal_strategy == "uniform" || temporal_strategy == "last",
                 "No valid temporal strategy found");
   }
@@ -175,7 +172,7 @@ class NeighborSampler {
     }
     if (save_edges) {
       if (return_sampled_info) {
-        num_sampled_edges_per_hop[curr_hop]++;
+        num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
       }
       sampled_rows_.push_back(local_src_node);
       sampled_cols_.push_back(res.first);
@@ -193,7 +190,6 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_edge_ids_;
 
  public:
-  scalar_t curr_hop;
   std::vector<int64_t> num_sampled_edges_per_hop;
 };
 
@@ -246,6 +242,7 @@ sample(const at::Tensor& rowptr,
         NeighborSamplerImpl;
 
     pyg::random::RandintEngine<scalar_t> generator;
+
     std::vector<node_t> sampled_nodes;
     auto mapper = Mapper<node_t, scalar_t>(/*num_nodes=*/rowptr.size(0) - 1);
     auto sampler =
@@ -289,8 +286,6 @@ sample(const at::Tensor& rowptr,
                                  /*local_src_node=*/i, count, mapper, generator,
                                  /*out_global_dst_nodes=*/sampled_nodes);
         }
-        if (return_sampled_info)
-          sampler.curr_hop++;
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
         const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
@@ -504,7 +499,6 @@ sample(const std::vector<node_type>& node_types,
                                    /*local_src_node=*/i, count, dst_mapper,
                                    generator, dst_sampled_nodes);
           }
-
         } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
           const at::Tensor& dst_time = time_dict.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<temporal_t>();
@@ -516,8 +510,6 @@ sample(const std::vector<node_type>& node_types,
                                     dst_mapper, generator, dst_sampled_nodes);
           }
         }
-        if constexpr (return_sampled_info)
-          sampler.curr_hop++;
       }
       for (const auto& k : node_types) {
         slice_dict[k] = {slice_dict.at(k).second,
@@ -542,12 +534,6 @@ sample(const std::vector<node_type>& node_types,
         if (return_edge_id) {
           out_edge_id_dict.value().insert(to_rel_type(k),
                                           std::get<2>(edges).value());
-        }
-        if constexpr (return_sampled_info) {
-          num_sampled_edges_dict.insert(
-              to_rel_type(k),
-              pyg::utils::from_vector(
-                  sampler_dict.at(k).num_sampled_edges_per_hop));
         }
       }
     }
