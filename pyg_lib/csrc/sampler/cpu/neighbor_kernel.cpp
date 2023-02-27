@@ -515,8 +515,7 @@ sample(const std::vector<node_type>& node_types,
                          num_sampled_edges_per_hop_dict);
 }
 
-// Dispatcher
-// //////////////////////////////////////////////////////////////////
+// Dispatcher //////////////////////////////////////////////////////////////////
 
 #define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, ...) \
   if (replace && directed && disjoint && return_edge_id)                  \

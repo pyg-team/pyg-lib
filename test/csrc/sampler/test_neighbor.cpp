@@ -24,6 +24,10 @@ TEST(FullNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
   auto expected_edges = at::tensor({4, 5, 6, 7, 2, 3, 8, 9}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+  std::vector<int64_t> expected_num_nodes = {2, 2, 2};
+  EXPECT_TRUE(std::get<4>(out) == expected_num_nodes);
+  std::vector<int64_t> expected_num_edges = {4, 4};
+  EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
 }
 
 TEST(WithoutReplacementNeighborTest, BasicAssertions) {
