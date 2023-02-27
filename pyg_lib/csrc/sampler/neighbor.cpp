@@ -12,8 +12,8 @@ std::tuple<at::Tensor,
            at::Tensor,
            at::Tensor,
            c10::optional<at::Tensor>,
-           c10::optional<at::Tensor>,
-           c10::optional<at::Tensor>>
+           c10::optional<std::vector<int64_t>>,
+           c10::optional<std::vector<int64_t>>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
@@ -47,8 +47,8 @@ std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
            c10::optional<c10::Dict<rel_type, at::Tensor>>,
-           c10::optional<c10::Dict<rel_type, at::Tensor>>,
-           c10::optional<c10::Dict<node_type, at::Tensor>>>
+           c10::optional<c10::Dict<node_type, std::vector<int64_t>>>,
+           c10::optional<c10::Dict<rel_type, std::vector<int64_t>>>>
 hetero_neighbor_sample(
     const std::vector<node_type>& node_types,
     const std::vector<edge_type>& edge_types,
@@ -101,7 +101,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "= False, bool replace = False, bool directed = True, bool disjoint = "
       "False, str temporal_strategy = 'uniform', bool return_edge_id = True, "
       "bool return_sampled_info = False) "
-      "-> (Tensor, Tensor, Tensor, Tensor?, Tensor?, Tensor?)"));
+      "-> (Tensor, Tensor, Tensor, Tensor?, List[int]?, List[int]?)"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
@@ -110,9 +110,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "= None, bool csc = False, bool replace = False, bool directed = True,"
       "bool disjoint = False, str temporal_strategy = 'uniform', bool "
       "return_edge_id = True, bool return_sampled_info = False) -> (Dict(str, "
-      "Tensor), Dict(str, Tensor), "
-      "Dict(str, Tensor), Dict(str, Tensor)?, Dict(str, Tensor)?, Dict(str, "
-      "Tensor)?)"));
+      "Tensor), Dict(str, Tensor), Dict(str, Tensor), Dict(str, Tensor)?, "
+      "Dict(str, List[int])?, Dict(str, List[int])?)"));
 }
 
 }  // namespace sampler

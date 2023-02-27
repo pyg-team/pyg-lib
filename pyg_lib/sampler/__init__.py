@@ -22,7 +22,8 @@ def neighbor_sample(
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
     return_sampled_info: bool = False,
-) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor]]:
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor],
+           Optional[List[int]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
 
@@ -63,21 +64,34 @@ def neighbor_sample(
         return_edge_id (bool, optional): If set to :obj:`False`, will not
             return the indices of edges of the original graph.
             (default: :obj: `True`)
-        return_sampled_info (bool): If set to :obj:`True`, will return information about
-            the amount of sampled nodes and edges per layer.
-            (default: :obj: `False`)
+        return_sampled_info (bool, optional): If set to :obj:`True`, will
+            return information about the amount of sampled nodes and edges per
+            layer. (default: :obj: `False`)
+
     Returns:
         (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
-        Optional[torch.Tensor], Optional[torch.Tensor]):
+        Optional[List[str]], Optional[List[str]]):
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph,
-        as well as information about the sampled amount of nodes and edges per layer.
+        as well as information about the sampled amount of nodes and edges per
+        layer.
     """
-    return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         time, seed_time, csc, replace,
-                                         directed, disjoint, temporal_strategy,
-                                         return_edge_id, return_sampled_info)
+    return torch.ops.pyg.neighbor_sample(
+        rowptr,
+        col,
+        seed,
+        num_neighbors,
+        time,
+        seed_time,
+        csc,
+        replace,
+        directed,
+        disjoint,
+        temporal_strategy,
+        return_edge_id,
+        return_sampled_info,
+    )
 
 
 def hetero_neighbor_sample(
@@ -95,7 +109,8 @@ def hetero_neighbor_sample(
     return_edge_id: bool = True,
     return_sampled_info: bool = False,
 ) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
-        NodeType, Tensor], Optional[Dict[EdgeType, Tensor]]]:
+        NodeType, Tensor], Optional[Dict[EdgeType, Tensor]], Optional[Dict[
+            NodeType, List[int]]], Optional[Dict[NodeType, List[int]]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed_dict`
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
@@ -140,16 +155,23 @@ def hetero_neighbor_sample(
         return_sampled_info,
     )
 
-    out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict, edge_num_dict, node_num_dict = out
-    out_row_dict = {TO_EDGE_TYPE[k]: v for k, v in out_row_dict.items()}
-    out_col_dict = {TO_EDGE_TYPE[k]: v for k, v in out_col_dict.items()}
-    if out_edge_id_dict is not None:
-        out_edge_id_dict = {
+    (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_dict,
+     num_edges_dict) = out
+
+    row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
+    col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
+
+    if edge_id_dict is not None:
+        edge_id_dict = {TO_EDGE_TYPE[k]: v for k, v in edge_id_dict.items()}
+
+    if num_edges_dict is not None:
+        num_edges_dict = {
             TO_EDGE_TYPE[k]: v
-            for k, v in out_edge_id_dict.items()
+            for k, v in num_edges_dict.items()
         }
 
-    return out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict, edge_num_dict, node_num_dict
+    return (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_dict,
+            num_edges_dict)
 
 
 def subgraph(
