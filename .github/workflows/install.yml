@@ -29,7 +29,7 @@ jobs:
       - name: Install package
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install --verbose -e .[triton]
+          pip install --verbose --no-use-pep517 -e .[triton]
 
       - name: Test imports
         run: |
