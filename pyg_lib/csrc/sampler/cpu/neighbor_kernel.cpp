@@ -363,6 +363,8 @@ sample(const std::vector<node_type>& node_types,
   } else {
     out_edge_id_dict = c10::nullopt;
   }
+  std::unordered_map<node_type, std::vector<int64_t>>
+      num_sampled_nodes_per_hop_map;
   c10::Dict<node_type, std::vector<int64_t>> num_sampled_nodes_per_hop_dict;
   c10::Dict<rel_type, std::vector<int64_t>> num_sampled_edges_per_hop_dict;
 
@@ -399,7 +401,7 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& k : node_types) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes_dict[k];  // Initialize empty vector.
-      num_sampled_nodes_per_hop_dict.insert(k, std::vector<int64_t>(1, 0));
+      num_sampled_nodes_per_hop_map.insert({k, std::vector<int64_t>(1, 0)});
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
     }
@@ -445,7 +447,7 @@ sample(const std::vector<node_type>& node_types,
         }
       }
 
-      num_sampled_nodes_per_hop_dict.at(kv.key())[0] =
+      num_sampled_nodes_per_hop_map.at(kv.key())[0] =
           sampled_nodes_dict.at(kv.key()).size();
     }
 
@@ -484,14 +486,16 @@ sample(const std::vector<node_type>& node_types,
       for (const auto& k : node_types) {
         slice_dict[k] = {slice_dict.at(k).second,
                          sampled_nodes_dict.at(k).size()};
-        num_sampled_nodes_per_hop_dict.at(k).push_back(slice_dict.at(k).second -
-                                                       slice_dict.at(k).first);
+        num_sampled_nodes_per_hop_map.at(k).push_back(slice_dict.at(k).second -
+                                                      slice_dict.at(k).first);
       }
     }
 
     for (const auto& k : node_types) {
       out_node_id_dict.insert(
           k, pyg::utils::from_vector(sampled_nodes_dict.at(k)));
+      num_sampled_nodes_per_hop_dict.insert(
+          k, num_sampled_nodes_per_hop_map.at(k));
     }
 
     TORCH_CHECK(directed, "Undirected heterogeneous graphs not yet supported");
