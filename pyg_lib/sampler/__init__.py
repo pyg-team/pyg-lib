@@ -70,7 +70,7 @@ def neighbor_sample(
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph.
         Lastly, returns information about the sampled amount of nodes and edges
-        per layer.
+        per hop.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
                                          time, seed_time, csc, replace,
@@ -137,8 +137,8 @@ def hetero_neighbor_sample(
         return_edge_id,
     )
 
-    (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_dict,
-     num_edges_dict) = out
+    (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_per_hop_dict,
+     num_edges_per_hop_dict) = out
 
     row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
     col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
@@ -146,10 +146,13 @@ def hetero_neighbor_sample(
     if edge_id_dict is not None:
         edge_id_dict = {TO_EDGE_TYPE[k]: v for k, v in edge_id_dict.items()}
 
-    num_edges_dict = {TO_EDGE_TYPE[k]: v for k, v in num_edges_dict.items()}
+    num_edges_per_hop_dict = {
+        TO_EDGE_TYPE[k]: v
+        for k, v in num_edges_per_hop_dict.items()
+    }
 
-    return (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_dict,
-            num_edges_dict)
+    return (row_dict, col_dict, node_id_dict, edge_id_dict,
+            num_nodes_per_hop_dict, num_edges_per_hop_dict)
 
 
 def subgraph(
