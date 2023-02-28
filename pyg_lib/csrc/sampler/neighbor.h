@@ -11,7 +11,12 @@ namespace sampler {
 // in the graph given by `(rowptr, col)`.
 // Returns: (row, col, node_id, edge_id)
 PYG_API
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           std::vector<int64_t>,
+           std::vector<int64_t>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
@@ -32,7 +37,9 @@ PYG_API
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
-           c10::optional<c10::Dict<rel_type, at::Tensor>>>
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::Dict<node_type, std::vector<int64_t>>,
+           c10::Dict<rel_type, std::vector<int64_t>>>
 hetero_neighbor_sample(
     const std::vector<node_type>& node_types,
     const std::vector<edge_type>& edge_types,

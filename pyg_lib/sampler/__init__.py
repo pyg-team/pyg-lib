@@ -21,7 +21,7 @@ def neighbor_sample(
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
-) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor]]:
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
 
@@ -64,10 +64,13 @@ def neighbor_sample(
             (default: :obj: `True`)
 
     Returns:
-        (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor]):
+        (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
+        List[int], List[int]):
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph.
+        Lastly, returns information about the sampled amount of nodes and edges
+        per hop.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
                                          time, seed_time, csc, replace,
@@ -89,7 +92,8 @@ def hetero_neighbor_sample(
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
 ) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
-        NodeType, Tensor], Optional[Dict[EdgeType, Tensor]]]:
+        NodeType, Tensor], Optional[Dict[EdgeType, Tensor]], Dict[
+            NodeType, List[int]], Dict[NodeType, List[int]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed_dict`
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
@@ -133,16 +137,22 @@ def hetero_neighbor_sample(
         return_edge_id,
     )
 
-    out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict = out
-    out_row_dict = {TO_EDGE_TYPE[k]: v for k, v in out_row_dict.items()}
-    out_col_dict = {TO_EDGE_TYPE[k]: v for k, v in out_col_dict.items()}
-    if out_edge_id_dict is not None:
-        out_edge_id_dict = {
-            TO_EDGE_TYPE[k]: v
-            for k, v in out_edge_id_dict.items()
-        }
+    (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_per_hop_dict,
+     num_edges_per_hop_dict) = out
 
-    return out_row_dict, out_col_dict, out_node_id_dict, out_edge_id_dict
+    row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
+    col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
+
+    if edge_id_dict is not None:
+        edge_id_dict = {TO_EDGE_TYPE[k]: v for k, v in edge_id_dict.items()}
+
+    num_edges_per_hop_dict = {
+        TO_EDGE_TYPE[k]: v
+        for k, v in num_edges_per_hop_dict.items()
+    }
+
+    return (row_dict, col_dict, node_id_dict, edge_id_dict,
+            num_nodes_per_hop_dict, num_edges_per_hop_dict)
 
 
 def subgraph(
