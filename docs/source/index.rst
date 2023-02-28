@@ -3,9 +3,9 @@
 PyG-lib Documentation
 =====================
 
-:pyg:`pyg-lib` is a **low-level Graph Neural Network library** for :pyg:`PyG` and :pytorch:`PyTorch`.
+:pyg:`null` **pyg-lib** is a **low-level Graph Neural Network library** for :pyg:`null` `PyG <https://pyg.org>`_ and :pytorch:`null` `PyTorch <https://pytorch.org>`_.
 
-.. slack::
+.. slack_button::
 
 .. toctree::
    :maxdepth: 1
