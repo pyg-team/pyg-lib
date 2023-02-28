@@ -170,6 +170,7 @@ class NeighborSampler {
       out_global_dst_nodes.push_back(global_dst_node);
     }
     if (save_edges) {
+      num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
       sampled_rows_.push_back(local_src_node);
       sampled_cols_.push_back(res.first);
       if (save_edge_ids) {
@@ -184,12 +185,20 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_rows_;
   std::vector<scalar_t> sampled_cols_;
   std::vector<scalar_t> sampled_edge_ids_;
+
+ public:
+  std::vector<int64_t> num_sampled_edges_per_hop;
 };
 
 // Homogeneous neighbor sampling ///////////////////////////////////////////////
 
 template <bool replace, bool directed, bool disjoint, bool return_edge_id>
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           std::vector<int64_t>,
+           std::vector<int64_t>>
 sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
@@ -214,6 +223,8 @@ sample(const at::Tensor& rowptr,
 
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
+  std::vector<int64_t> num_sampled_nodes_per_hop;
+  std::vector<int64_t> num_sampled_edges_per_hop;
 
   AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "sample_kernel", [&] {
     typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
@@ -255,10 +266,12 @@ sample(const at::Tensor& rowptr,
       }
     }
 
+    num_sampled_nodes_per_hop.push_back(seed.numel());
+
     size_t begin = 0, end = seed.size(0);
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
-
+      sampler.num_sampled_edges_per_hop.push_back(0);
       if (!time.has_value()) {
         for (size_t i = begin; i < end; ++i) {
           sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
@@ -277,18 +290,22 @@ sample(const at::Tensor& rowptr,
         }
       }
       begin = end, end = sampled_nodes.size();
+      num_sampled_nodes_per_hop.push_back(end - begin);
     }
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
-
     TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
     if (directed) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
     } else {
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
     }
+
+    num_sampled_edges_per_hop = sampler.num_sampled_edges_per_hop;
   });
-  return std::make_tuple(out_row, out_col, out_node_id, out_edge_id);
+
+  return std::make_tuple(out_row, out_col, out_node_id, out_edge_id,
+                         num_sampled_nodes_per_hop, num_sampled_edges_per_hop);
 }
 
 // Heterogeneous neighbor sampling /////////////////////////////////////////////
@@ -297,7 +314,9 @@ template <bool replace, bool directed, bool disjoint, bool return_edge_id>
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
-           c10::optional<c10::Dict<rel_type, at::Tensor>>>
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::Dict<node_type, std::vector<int64_t>>,
+           c10::Dict<rel_type, std::vector<int64_t>>>
 sample(const std::vector<node_type>& node_types,
        const std::vector<edge_type>& edge_types,
        const c10::Dict<rel_type, at::Tensor>& rowptr_dict,
@@ -344,6 +363,10 @@ sample(const std::vector<node_type>& node_types,
   } else {
     out_edge_id_dict = c10::nullopt;
   }
+  std::unordered_map<node_type, std::vector<int64_t>>
+      num_sampled_nodes_per_hop_map;
+  c10::Dict<node_type, std::vector<int64_t>> num_sampled_nodes_per_hop_dict;
+  c10::Dict<rel_type, std::vector<int64_t>> num_sampled_edges_per_hop_dict;
 
   const auto scalar_type = seed_dict.begin()->value().scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_sample_kernel", [&] {
@@ -378,6 +401,7 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& k : node_types) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes_dict[k];  // Initialize empty vector.
+      num_sampled_nodes_per_hop_map.insert({k, std::vector<int64_t>(1, 0)});
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
     }
@@ -422,6 +446,9 @@ sample(const std::vector<node_type>& node_types,
           }
         }
       }
+
+      num_sampled_nodes_per_hop_map.at(kv.key())[0] =
+          sampled_nodes_dict.at(kv.key()).size();
     }
 
     size_t begin, end;
@@ -435,6 +462,8 @@ sample(const std::vector<node_type>& node_types,
         auto& dst_mapper = mapper_dict.at(dst);
         auto& sampler = sampler_dict.at(k);
         std::tie(begin, end) = slice_dict.at(src);
+
+        sampler.num_sampled_edges_per_hop.push_back(0);
 
         if (!time_dict.has_value() || !time_dict.value().contains(dst)) {
           for (size_t i = begin; i < end; ++i) {
@@ -457,12 +486,16 @@ sample(const std::vector<node_type>& node_types,
       for (const auto& k : node_types) {
         slice_dict[k] = {slice_dict.at(k).second,
                          sampled_nodes_dict.at(k).size()};
+        num_sampled_nodes_per_hop_map.at(k).push_back(slice_dict.at(k).second -
+                                                      slice_dict.at(k).first);
       }
     }
 
     for (const auto& k : node_types) {
       out_node_id_dict.insert(
           k, pyg::utils::from_vector(sampled_nodes_dict.at(k)));
+      num_sampled_nodes_per_hop_dict.insert(
+          k, num_sampled_nodes_per_hop_map.at(k));
     }
 
     TORCH_CHECK(directed, "Undirected heterogeneous graphs not yet supported");
@@ -471,6 +504,8 @@ sample(const std::vector<node_type>& node_types,
         const auto edges = sampler_dict.at(k).get_sampled_edges(csc);
         out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
         out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
+        num_sampled_edges_per_hop_dict.insert(
+            to_rel_type(k), sampler_dict.at(k).num_sampled_edges_per_hop);
         if (return_edge_id) {
           out_edge_id_dict.value().insert(to_rel_type(k),
                                           std::get<2>(edges).value());
@@ -480,7 +515,8 @@ sample(const std::vector<node_type>& node_types,
   });
 
   return std::make_tuple(out_row_dict, out_col_dict, out_node_id_dict,
-                         out_edge_id_dict);
+                         out_edge_id_dict, num_sampled_nodes_per_hop_dict,
+                         num_sampled_edges_per_hop_dict);
 }
 
 // Dispatcher //////////////////////////////////////////////////////////////////
@@ -521,7 +557,12 @@ sample(const std::vector<node_type>& node_types,
 
 }  // namespace
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           std::vector<int64_t>,
+           std::vector<int64_t>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
                        const at::Tensor& seed,
@@ -541,7 +582,9 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
-           c10::optional<c10::Dict<rel_type, at::Tensor>>>
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::Dict<node_type, std::vector<int64_t>>,
+           c10::Dict<rel_type, std::vector<int64_t>>>
 hetero_neighbor_sample_kernel(
     const std::vector<node_type>& node_types,
     const std::vector<edge_type>& edge_types,
