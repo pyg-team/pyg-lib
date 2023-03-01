@@ -25,46 +25,34 @@ namespace {
 
 #if WITH_MKL_BLAS()
 
-void mkl_blas_gemm_batched(const int* m_array,
-                           const int* n_array,
-                           const int* k_array,
-                           const float* alpha_array,
-                           const float** a_array,
-                           const int* lda_array,
-                           const float** b_array,
-                           const int* ldb_array,
-                           const float* beta_array,
-                           float** c_array,
-                           const int* ldc_array,
-                           const int group_count,
-                           const int* group_size) {
+void mkl_blas_gemm_batched(const int *m_array, const int *n_array,
+                           const int *k_array, const float *alpha_array,
+                           const float **a_array, const int *lda_array,
+                           const float **b_array, const int *ldb_array,
+                           const float *beta_array, float **c_array,
+                           const int *ldc_array, const int group_count,
+                           const int *group_size) {
   std::vector<CBLAS_TRANSPOSE> transa(group_count, CblasNoTrans);
   std::vector<CBLAS_TRANSPOSE> transb(group_count, CblasNoTrans);
-  const CBLAS_TRANSPOSE* transa_array = transa.data();
-  const CBLAS_TRANSPOSE* transb_array = transb.data();
+  const CBLAS_TRANSPOSE *transa_array = transa.data();
+  const CBLAS_TRANSPOSE *transb_array = transb.data();
   cblas_sgemm_batch(CblasRowMajor, transa_array, transb_array, m_array, n_array,
                     k_array, alpha_array, a_array, lda_array, b_array,
                     ldb_array, beta_array, c_array, ldc_array, group_count,
                     group_size);
 }
 
-void mkl_blas_gemm_batched(const int* m_array,
-                           const int* n_array,
-                           const int* k_array,
-                           const double* alpha_array,
-                           const double** a_array,
-                           const int* lda_array,
-                           const double** b_array,
-                           const int* ldb_array,
-                           const double* beta_array,
-                           double** c_array,
-                           const int* ldc_array,
-                           const int group_count,
-                           const int* group_size) {
+void mkl_blas_gemm_batched(const int *m_array, const int *n_array,
+                           const int *k_array, const double *alpha_array,
+                           const double **a_array, const int *lda_array,
+                           const double **b_array, const int *ldb_array,
+                           const double *beta_array, double **c_array,
+                           const int *ldc_array, const int group_count,
+                           const int *group_size) {
   std::vector<CBLAS_TRANSPOSE> transa(group_count, CblasNoTrans);
   std::vector<CBLAS_TRANSPOSE> transb(group_count, CblasNoTrans);
-  const CBLAS_TRANSPOSE* transa_array = transa.data();
-  const CBLAS_TRANSPOSE* transb_array = transb.data();
+  const CBLAS_TRANSPOSE *transa_array = transa.data();
+  const CBLAS_TRANSPOSE *transb_array = transb.data();
   cblas_dgemm_batch(CblasRowMajor, transa_array, transb_array, m_array, n_array,
                     k_array, alpha_array, a_array, lda_array, b_array,
                     ldb_array, beta_array, c_array, ldc_array, group_count,
@@ -73,36 +61,24 @@ void mkl_blas_gemm_batched(const int* m_array,
 
 #else
 
-void mkl_blas_gemm_batched(const int* m_array,
-                           const int* n_array,
-                           const int* k_array,
-                           const float* alpha_array,
-                           const float** a_array,
-                           const int* lda_array,
-                           const float** b_array,
-                           const int* ldb_array,
-                           const float* beta_array,
-                           float** c_array,
-                           const int* ldc_array,
-                           const int group_count,
-                           const int* group_size) {
+void mkl_blas_gemm_batched(const int *m_array, const int *n_array,
+                           const int *k_array, const float *alpha_array,
+                           const float **a_array, const int *lda_array,
+                           const float **b_array, const int *ldb_array,
+                           const float *beta_array, float **c_array,
+                           const int *ldc_array, const int group_count,
+                           const int *group_size) {
   TORCH_INTERNAL_ASSERT(false,
                         "mkl_blas_gemm_batched: MKL BLAS is not supported");
 }
 
-void mkl_blas_gemm_batched(const int* m_array,
-                           const int* n_array,
-                           const int* k_array,
-                           const double* alpha_array,
-                           const double** a_array,
-                           const int* lda_array,
-                           const double** b_array,
-                           const int* ldb_array,
-                           const double* beta_array,
-                           double** c_array,
-                           const int* ldc_array,
-                           const int group_count,
-                           const int* group_size) {
+void mkl_blas_gemm_batched(const int *m_array, const int *n_array,
+                           const int *k_array, const double *alpha_array,
+                           const double **a_array, const int *lda_array,
+                           const double **b_array, const int *ldb_array,
+                           const double *beta_array, double **c_array,
+                           const int *ldc_array, const int group_count,
+                           const int *group_size) {
   TORCH_INTERNAL_ASSERT(false,
                         "mkl_blas_gemm_batched: MKL BLAS is not supported");
 }
@@ -111,17 +87,15 @@ void mkl_blas_gemm_batched(const int* m_array,
 
 template <typename scalar_t>
 using is_blas_library_type =
-    std::integral_constant<bool,
-                           std::is_same<scalar_t, float>::value ||
-                               std::is_same<scalar_t, double>::value>;
+    std::integral_constant<bool, std::is_same<scalar_t, float>::value ||
+                                     std::is_same<scalar_t, double>::value>;
 
-template <typename scalar_t>
-bool mkl_path_available() {
+template <typename scalar_t> bool mkl_path_available() {
   return (WITH_MKL_BLAS() && AT_MKL_ENABLED() &&
           is_blas_library_type<scalar_t>::value);
 }
 
-bool mkl_path_possible(const at::IntArrayRef& sizes, int64_t n, int64_t k) {
+bool mkl_path_possible(const at::IntArrayRef &sizes, int64_t n, int64_t k) {
   const int64_t limit = INT_MAX;
   const bool is_size_invalid =
       n > limit || k > limit ||
@@ -130,34 +104,29 @@ bool mkl_path_possible(const at::IntArrayRef& sizes, int64_t n, int64_t k) {
   return !is_size_invalid;
 }
 
-bool mkl_path_possible(const std::vector<at::Tensor>& left,
-                       const std::vector<at::Tensor>& right) {
+bool mkl_path_possible(const std::vector<at::Tensor> &left,
+                       const std::vector<at::Tensor> &right) {
   const int64_t limit = INT_MAX;
   const bool mk_invalid =
-      std::any_of(left.cbegin(), left.cend(), [limit](const at::Tensor& t) {
+      std::any_of(left.cbegin(), left.cend(), [limit](const at::Tensor &t) {
         return t.size(0) > limit || t.size(-1) > limit;
       });
   const bool n_invalid =
       std::any_of(right.cbegin(), right.cend(),
-                  [limit](const at::Tensor& t) { return t.size(-1) > limit; });
+                  [limit](const at::Tensor &t) { return t.size(-1) > limit; });
   const bool is_size_invalid = mk_invalid || n_invalid;
   return !is_size_invalid;
 }
 
 template <typename scalar_t>
-void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
-                                    const std::vector<int>& ns,
-                                    const std::vector<int>& ks,
-                                    const std::vector<scalar_t>& alpha,
-                                    const scalar_t** src0_ptrs,
-                                    const std::vector<int>& ld_src0,
-                                    const scalar_t** src1_ptrs,
-                                    const std::vector<int>& ld_src1,
-                                    const std::vector<scalar_t>& beta,
-                                    scalar_t** dst_ptrs,
-                                    const std::vector<int>& ld_dst,
-                                    const int group_count,
-                                    const std::vector<int>& group_sizes) {
+void parallel_mkl_blas_gemm_batched(
+    const std::vector<int> &ms, const std::vector<int> &ns,
+    const std::vector<int> &ks, const std::vector<scalar_t> &alpha,
+    const scalar_t **src0_ptrs, const std::vector<int> &ld_src0,
+    const scalar_t **src1_ptrs, const std::vector<int> &ld_src1,
+    const std::vector<scalar_t> &beta, scalar_t **dst_ptrs,
+    const std::vector<int> &ld_dst, const int group_count,
+    const std::vector<int> &group_sizes) {
   int64_t work_size = 0;
   for (size_t i = 0; i < group_count; ++i) {
     work_size += ks[i] * group_sizes[i];
@@ -169,9 +138,9 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
         const auto offset = (i) ? std::accumulate(group_sizes.begin(),
                                                   group_sizes.begin() + i, 0)
                                 : 0;
-        const scalar_t** src0_ptrs_local = src0_ptrs + offset;
-        const scalar_t** src1_ptrs_local = src1_ptrs + offset;
-        scalar_t** dst_ptrs_local = dst_ptrs + offset;
+        const scalar_t **src0_ptrs_local = src0_ptrs + offset;
+        const scalar_t **src1_ptrs_local = src1_ptrs + offset;
+        scalar_t **dst_ptrs_local = dst_ptrs + offset;
         mkl_blas_gemm_batched(&ms[i], &ns[i], &ks[i], &alpha[i],
                               src0_ptrs_local, &ld_src0[i], src1_ptrs_local,
                               &ld_src1[i], &beta[i], dst_ptrs_local, &ld_dst[i],
@@ -181,9 +150,9 @@ void parallel_mkl_blas_gemm_batched(const std::vector<int>& ms,
   } else {
     at::parallel_for(0, group_sizes.front(), 1, [&](size_t beg, size_t end) {
       for (size_t i = beg; i < end; ++i) {
-        const scalar_t** src0_ptrs_local = src0_ptrs + i;
-        const scalar_t** src1_ptrs_local = src1_ptrs + i;
-        scalar_t** dst_ptrs_local = dst_ptrs + i;
+        const scalar_t **src0_ptrs_local = src0_ptrs + i;
+        const scalar_t **src1_ptrs_local = src1_ptrs + i;
+        scalar_t **dst_ptrs_local = dst_ptrs + i;
         const int bs = 1;
         mkl_blas_gemm_batched(ms.data(), ns.data(), ks.data(), alpha.data(),
                               src0_ptrs_local, ld_src0.data(), src1_ptrs_local,
@@ -198,7 +167,7 @@ void grouped_matmul_out_kernel_at_impl(const std::vector<at::Tensor> input,
                                        const std::vector<at::Tensor> other,
                                        std::vector<at::Tensor> out) {
   for (size_t i = 0; i < out.size(); ++i) {
-    at::matmul_out(const_cast<at::Tensor&>(out[i]), input[i], other[i]);
+    at::matmul_out(const_cast<at::Tensor &>(out[i]), input[i], other[i]);
   }
 }
 
@@ -231,9 +200,9 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
         std::vector<int> ld_src1(group_count);
         std::vector<int> ld_dst(group_count);
         std::vector<int> group_sizes(group_count);
-        std::vector<scalar_t*> src0;
-        std::vector<scalar_t*> src1;
-        std::vector<scalar_t*> dst;
+        std::vector<scalar_t *> src0;
+        std::vector<scalar_t *> src1;
+        std::vector<scalar_t *> dst;
 
         size_t group_idx = 0;
         for (const auto group_kv : groups) {
@@ -259,8 +228,8 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
           }
         }
 
-        auto src0_ptrs = const_cast<const scalar_t**>(src0.data());
-        auto src1_ptrs = const_cast<const scalar_t**>(src1.data());
+        auto src0_ptrs = const_cast<const scalar_t **>(src0.data());
+        auto src1_ptrs = const_cast<const scalar_t **>(src1.data());
         auto dst_ptrs = dst.data();
 
 #if AT_MKL_SEQUENTIAL()
@@ -315,7 +284,7 @@ struct offset_params {
   int src1_offset;
   int dst_offset;
 
-  offset_params& operator+=(const offset_params& rhs) {
+  offset_params &operator+=(const offset_params &rhs) {
     this->src0_offset += rhs.src0_offset;
     this->src1_offset += rhs.src1_offset;
     this->dst_offset += rhs.dst_offset;
@@ -323,10 +292,10 @@ struct offset_params {
   }
 };
 
-void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
-                                        const at::Tensor& other,
-                                        at::Tensor& out,
-                                        const at::IntArrayRef& sizes) {
+void segment_matmul_out_kernel_mkl_impl(const at::Tensor &input,
+                                        const at::Tensor &other,
+                                        at::Tensor &out,
+                                        const at::IntArrayRef &sizes) {
   const int n = other.size(-1);
   const int k = input.size(-1);
   const int nk = n * k;
@@ -360,9 +329,9 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
 
         std::vector<int> ms(group_count);
         std::vector<int> group_sizes(group_count);
-        std::vector<scalar_t*> src0;
-        std::vector<scalar_t*> src1;
-        std::vector<scalar_t*> dst;
+        std::vector<scalar_t *> src0;
+        std::vector<scalar_t *> src1;
+        std::vector<scalar_t *> dst;
 
         const auto src0_base_ptr = input.data_ptr<scalar_t>();
         const auto src1_base_ptr = other.data_ptr<scalar_t>();
@@ -385,8 +354,8 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
           }
         }
 
-        auto src0_ptrs = const_cast<const scalar_t**>(src0.data());
-        auto src1_ptrs = const_cast<const scalar_t**>(src1.data());
+        auto src0_ptrs = const_cast<const scalar_t **>(src0.data());
+        auto src1_ptrs = const_cast<const scalar_t **>(src1.data());
         auto dst_ptrs = dst.data();
 
 #if AT_MKL_SEQUENTIAL()
@@ -404,9 +373,8 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
       });
 }
 
-at::Tensor segment_matmul_kernel(const at::Tensor& input,
-                                 const at::Tensor& ptr,
-                                 const at::Tensor& other) {
+at::Tensor segment_matmul_kernel(const at::Tensor &input, const at::Tensor &ptr,
+                                 const at::Tensor &other) {
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
   const auto input_contig = input.contiguous();
@@ -422,7 +390,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
                                              sizes);
         } else {
           auto outs = out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0);
-          for (auto& out_part : outs) {
+          for (auto &out_part : outs) {
             out_part.unsqueeze_(0);
           }
           grouped_matmul_out_kernel_at_impl(
@@ -434,7 +402,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   return out;
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
@@ -443,5 +411,5 @@ TORCH_LIBRARY_IMPL(pyg, CPU, m) {
          TORCH_FN(segment_matmul_kernel));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

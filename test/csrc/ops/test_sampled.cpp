@@ -59,8 +59,8 @@ TEST_P(MultipleDeviceTest, SampledOpTest) {
   out = pyg::ops::sampled_op(a, b, a_index, b_index, "div");
   out.backward(grad_out);
   grad_a = a.grad().clone(), grad_b = b.grad().clone();
-  EXPECT_TRUE(at::allclose(
-      out, a.index_select(0, a_index) / b.index_select(0, b_index)));
+  EXPECT_TRUE(at::allclose(out, a.index_select(0, a_index) /
+                                    b.index_select(0, b_index)));
   a.grad().fill_(0);
   b.grad().fill_(0);
   (a.index_select(0, a_index) / b.index_select(0, b_index)).backward(grad_out);
@@ -68,8 +68,7 @@ TEST_P(MultipleDeviceTest, SampledOpTest) {
   EXPECT_TRUE(at::allclose(grad_b, b.grad()));
 }
 
-INSTANTIATE_TEST_SUITE_P(OpsTest,
-                         MultipleDeviceTest,
+INSTANTIATE_TEST_SUITE_P(OpsTest, MultipleDeviceTest,
 #ifdef WITH_CUDA
                          testing::Values(at::kCPU, at::kCUDA));
 #else

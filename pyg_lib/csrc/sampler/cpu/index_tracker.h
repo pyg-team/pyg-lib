@@ -7,10 +7,9 @@
 namespace pyg {
 namespace sampler {
 
-template <typename scalar_t>
-class IndexTracker {
- public:
-  IndexTracker(const size_t& size) : size(size) {
+template <typename scalar_t> class IndexTracker {
+public:
+  IndexTracker(const size_t &size) : size(size) {
     // TODO: add better switching threshold value mechanism?
     use_vec = (size < 100000);
 
@@ -18,7 +17,7 @@ class IndexTracker {
       vec.resize(size, 0);
   }
 
-  bool try_insert(const scalar_t& index) {
+  bool try_insert(const scalar_t &index) {
     if (use_vec) {
       if (vec[index] == 0) {
         vec[index] = 1;
@@ -31,7 +30,7 @@ class IndexTracker {
     }
   }
 
-  void insert(const scalar_t& index) {
+  void insert(const scalar_t &index) {
     if (use_vec) {
       vec[index] = 1;
     } else {
@@ -39,13 +38,13 @@ class IndexTracker {
     }
   }
 
- private:
-  const size_t& size;
+private:
+  const size_t &size;
 
   bool use_vec;
   std::vector<char> vec;
   phmap::flat_hash_set<scalar_t> set;
 };
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

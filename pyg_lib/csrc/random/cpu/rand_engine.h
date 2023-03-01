@@ -20,7 +20,7 @@ const int RAND_PREFETCH_BITS = 64;
  *
  */
 class PrefetchedRandint {
- public:
+public:
   PrefetchedRandint()
       : PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS) {}
   PrefetchedRandint(int size, int bits) { prefetch(size, bits); }
@@ -34,8 +34,7 @@ class PrefetchedRandint {
    *
    * @returns the chosen number in that range
    */
-  template <typename T>
-  T next(T range) {
+  template <typename T> T next(T range) {
     unsigned needed = 64;
 
     // Mutiple levels of range to save prefetched bits.
@@ -57,8 +56,8 @@ class PrefetchedRandint {
     }
 
     // Currently torch could only make 64-bit signed random numbers.
-    uint64_t* prefetch_ptr =
-        reinterpret_cast<uint64_t*>(prefetched_randint_.data_ptr<int64_t>());
+    uint64_t *prefetch_ptr =
+        reinterpret_cast<uint64_t *>(prefetched_randint_.data_ptr<int64_t>());
 
     // Take the lower bits of current 64-bit number to fit in the range.
     uint64_t mask = (needed == 64) ? std::numeric_limits<uint64_t>::max()
@@ -71,7 +70,7 @@ class PrefetchedRandint {
     return (T)res;
   }
 
- private:
+private:
   // Prefetch random bits. In-place random if prefetching size is the same.
   void prefetch(int size, int bits) {
     if (prefetched_randint_.size(0) != size) {
@@ -96,9 +95,8 @@ class PrefetchedRandint {
  * Randint functor for uniform integer distribution.
  * Wrapped PrefetchedRandint as its efficient core implementation.
  */
-template <typename T>
-class RandintEngine {
- public:
+template <typename T> class RandintEngine {
+public:
   RandintEngine() : prefetched_(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS) {}
 
   // Uniform random number within range [beg, end)
@@ -109,7 +107,7 @@ class RandintEngine {
     return prefetched_.next(range) + beg;
   }
 
- private:
+private:
   PrefetchedRandint prefetched_;
 };
 
@@ -121,7 +119,7 @@ class RandintEngine {
  *
  */
 class PrefetchedRandreal {
- public:
+public:
   PrefetchedRandreal() : PrefetchedRandreal(RAND_PREFETCH_SIZE) {}
   PrefetchedRandreal(int size) { prefetch(size); }
 
@@ -132,8 +130,7 @@ class PrefetchedRandreal {
    *
    * @returns the chosen number in [0,1)
    */
-  template <typename T>
-  T next() {
+  template <typename T> T next() {
     // Consume some bits
     if (size_ > 0) {
       size_--;
@@ -143,7 +140,7 @@ class PrefetchedRandreal {
     }
 
     // torch::rand gives floats by default.
-    float* prefetch_ptr = prefetched_randreal_.data_ptr<float>();
+    float *prefetch_ptr = prefetched_randreal_.data_ptr<float>();
 
     float res = prefetch_ptr[size_];
 
@@ -151,7 +148,7 @@ class PrefetchedRandreal {
     return (T)res;
   }
 
- private:
+private:
   // Prefetch random real numbers. In-place random if prefetching size is the
   // same. FP32 precision is sufficient for all types of random real numbers.
   void prefetch(int size) {
@@ -171,17 +168,16 @@ class PrefetchedRandreal {
  * Randreal functor for uniform real distribution.
  * Wrapped PrefetchedRandreal as its efficient core implementation.
  */
-template <typename T>
-class RandrealEngine {
- public:
+template <typename T> class RandrealEngine {
+public:
   RandrealEngine() : prefetched_(RAND_PREFETCH_SIZE) {}
 
   // Uniform random number within range [beg, end)
   T operator()() { return prefetched_.next<T>(); }
 
- private:
+private:
   PrefetchedRandreal prefetched_;
 };
 
-}  // namespace random
-}  // namespace pyg
+} // namespace random
+} // namespace pyg

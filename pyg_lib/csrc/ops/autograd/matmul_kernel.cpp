@@ -21,8 +21,8 @@ std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
 }
 
 class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
- public:
-  static variable_list forward(torch::autograd::AutogradContext* ctx,
+public:
+  static variable_list forward(torch::autograd::AutogradContext *ctx,
                                const variable_list input,
                                const variable_list other) {
     at::AutoDispatchBelowADInplaceOrView g;
@@ -32,7 +32,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
     return out;
   }
 
-  static variable_list backward(torch::autograd::AutogradContext* ctx,
+  static variable_list backward(torch::autograd::AutogradContext *ctx,
                                 variable_list grad_outs) {
     auto input_and_other = ctx->get_saved_variables();
     int input_len = input_and_other.size() / 2;
@@ -67,18 +67,17 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 };
 
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
- public:
-  static variable_list forward(torch::autograd::AutogradContext* ctx,
-                               const Variable& input,
-                               const at::Tensor& ptr,
-                               const Variable& other) {
+public:
+  static variable_list forward(torch::autograd::AutogradContext *ctx,
+                               const Variable &input, const at::Tensor &ptr,
+                               const Variable &other) {
     at::AutoDispatchBelowADInplaceOrView g;
     Variable out = segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return {out};
   }
 
-  static variable_list backward(torch::autograd::AutogradContext* ctx,
+  static variable_list backward(torch::autograd::AutogradContext *ctx,
                                 variable_list grad_outs) {
     auto grad_out = grad_outs[0];
     auto saved = ctx->get_saved_variables();
@@ -111,18 +110,18 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
   }
 };
 
-at::Tensor segment_matmul_autograd(const at::Tensor& input,
-                                   const at::Tensor& ptr,
-                                   const at::Tensor& other) {
+at::Tensor segment_matmul_autograd(const at::Tensor &input,
+                                   const at::Tensor &ptr,
+                                   const at::Tensor &other) {
   return SegmentMatmul::apply(input, ptr, other)[0];
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_matmul"),
          TORCH_FN(segment_matmul_autograd));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

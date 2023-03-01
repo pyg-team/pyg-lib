@@ -9,9 +9,8 @@ namespace sampler {
 
 // TODO Implement `Mapper` as an interface/abstract class to allow for other
 // implementations as well.
-template <typename node_t, typename scalar_t>
-class Mapper {
- public:
+template <typename node_t, typename scalar_t> class Mapper {
+public:
   Mapper(const size_t num_nodes, const size_t num_entries = -1)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // We use some simple heuristic to determine whether we can use a vector
@@ -21,7 +20,7 @@ class Mapper {
     // expected that we sample a large amount of nodes.
     use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
 
-    if (num_nodes <= 0) {  // == `num_nodes` is undefined:
+    if (num_nodes <= 0) { // == `num_nodes` is undefined:
       use_vec = false;
     }
 
@@ -35,7 +34,7 @@ class Mapper {
     }
   }
 
-  std::pair<scalar_t, bool> insert(const node_t& node) {
+  std::pair<scalar_t, bool> insert(const node_t &node) {
     std::pair<scalar_t, bool> res;
     if (use_vec) {
       if constexpr (std::is_scalar<node_t>::value) {
@@ -54,17 +53,17 @@ class Mapper {
     return res;
   }
 
-  void fill(const node_t* nodes, const size_t size) {
+  void fill(const node_t *nodes, const size_t size) {
     for (size_t i = 0; i < size; ++i) {
       insert(nodes[i]);
     }
   }
 
-  void fill(const at::Tensor& nodes) {
+  void fill(const at::Tensor &nodes) {
     fill(nodes.data_ptr<node_t>(), nodes.numel());
   }
 
-  bool exists(const node_t& node) {
+  bool exists(const node_t &node) {
     if (use_vec) {
       return to_local_vec[node] >= 0;
     } else {
@@ -72,7 +71,7 @@ class Mapper {
     }
   }
 
-  scalar_t map(const node_t& node) {
+  scalar_t map(const node_t &node) {
     if (use_vec) {
       return to_local_vec[node];
     } else {
@@ -81,7 +80,7 @@ class Mapper {
     }
   }
 
- private:
+private:
   const size_t num_nodes, num_entries;
   scalar_t curr = 0;
 
@@ -90,5 +89,5 @@ class Mapper {
   phmap::flat_hash_map<node_t, scalar_t> to_local_map;
 };
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

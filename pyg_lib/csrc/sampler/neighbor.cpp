@@ -8,24 +8,15 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor,
-           at::Tensor,
-           at::Tensor,
-           c10::optional<at::Tensor>,
-           std::vector<int64_t>,
-           std::vector<int64_t>>
-neighbor_sample(const at::Tensor& rowptr,
-                const at::Tensor& col,
-                const at::Tensor& seed,
-                const std::vector<int64_t>& num_neighbors,
-                const c10::optional<at::Tensor>& time,
-                const c10::optional<at::Tensor>& seed_time,
-                bool csc,
-                bool replace,
-                bool directed,
-                bool disjoint,
-                std::string temporal_strategy,
-                bool return_edge_id) {
+std::tuple<at::Tensor, at::Tensor, at::Tensor, c10::optional<at::Tensor>,
+           std::vector<int64_t>, std::vector<int64_t>>
+neighbor_sample(const at::Tensor &rowptr, const at::Tensor &col,
+                const at::Tensor &seed,
+                const std::vector<int64_t> &num_neighbors,
+                const c10::optional<at::Tensor> &time,
+                const c10::optional<at::Tensor> &seed_time, bool csc,
+                bool replace, bool directed, bool disjoint,
+                std::string temporal_strategy, bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg seed_t{seed, "seed", 1};
@@ -42,27 +33,22 @@ neighbor_sample(const at::Tensor& rowptr,
                  return_edge_id);
 }
 
-std::tuple<c10::Dict<rel_type, at::Tensor>,
-           c10::Dict<rel_type, at::Tensor>,
+std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
            c10::optional<c10::Dict<rel_type, at::Tensor>>,
            c10::Dict<node_type, std::vector<int64_t>>,
            c10::Dict<rel_type, std::vector<int64_t>>>
 hetero_neighbor_sample(
-    const std::vector<node_type>& node_types,
-    const std::vector<edge_type>& edge_types,
-    const c10::Dict<rel_type, at::Tensor>& rowptr_dict,
-    const c10::Dict<rel_type, at::Tensor>& col_dict,
-    const c10::Dict<node_type, at::Tensor>& seed_dict,
-    const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
-    bool csc,
-    bool replace,
-    bool directed,
-    bool disjoint,
-    std::string temporal_strategy,
-    bool return_edge_id) {
+    const std::vector<node_type> &node_types,
+    const std::vector<edge_type> &edge_types,
+    const c10::Dict<rel_type, at::Tensor> &rowptr_dict,
+    const c10::Dict<rel_type, at::Tensor> &col_dict,
+    const c10::Dict<node_type, at::Tensor> &seed_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>> &num_neighbors_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>> &time_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>> &seed_time_dict,
+    bool csc, bool replace, bool directed, bool disjoint,
+    std::string temporal_strategy, bool return_edge_id) {
   TORCH_CHECK(rowptr_dict.size() == col_dict.size(),
               "Number of edge types in 'rowptr_dict' and 'col_dict' must match")
 
@@ -110,5 +96,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "Dict(str, int[]))"));
 }
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

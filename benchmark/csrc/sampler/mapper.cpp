@@ -13,8 +13,8 @@ class BenchmarkMapperCreationAndInsertion : public benchmark::Fixture {
                     std::is_integral<scalar_t>::value,
                 "Integral type required for both node_t and scalar_t");
 
- protected:
-  void SetUp(const benchmark::State& state) override {
+protected:
+  void SetUp(const benchmark::State &state) override {
     // deterministic draw, default seed is 5489u
     std::mt19937 gen;
     // fill nodes with whole range two times and shuffle it
@@ -26,7 +26,7 @@ class BenchmarkMapperCreationAndInsertion : public benchmark::Fixture {
     std::shuffle(nodes_.begin(), nodes_.end(), gen);
   }
 
-  void TearDown(const benchmark::State& state) override { nodes_.clear(); }
+  void TearDown(const benchmark::State &state) override { nodes_.clear(); }
 
   void PerformTest(size_t num_nodes, size_t num_entries, size_t samples) {
     insertion_fail_counter_ = 0;
@@ -37,7 +37,7 @@ class BenchmarkMapperCreationAndInsertion : public benchmark::Fixture {
     }
   }
 
-  void Loop(benchmark::State& state) {
+  void Loop(benchmark::State &state) {
     const auto num_nodes = state.range(0);
     const auto num_entries = state.range(1);
     const auto samples = num_entries > 0 ? num_entries : num_nodes;
@@ -53,7 +53,7 @@ class BenchmarkMapperCreationAndInsertion : public benchmark::Fixture {
   int64_t insertion_fail_counter_{0};
 };
 
-static void duplicated_range(benchmark::internal::Benchmark* benchmark) {
+static void duplicated_range(benchmark::internal::Benchmark *benchmark) {
   const auto range = benchmark::CreateDenseRange(1024E3, 2048E3, 128E3);
   for (const auto value : range) {
     benchmark->Args(std::vector<int64_t>(2, value));
@@ -61,24 +61,16 @@ static void duplicated_range(benchmark::internal::Benchmark* benchmark) {
 }
 
 BENCHMARK_TEMPLATE_DEFINE_F(BenchmarkMapperCreationAndInsertion,
-                            WithFlatHashMap,
-                            int64_t,
-                            int64_t)
-(benchmark::State& state) {
-  Loop(state);
-}
+                            WithFlatHashMap, int64_t, int64_t)
+(benchmark::State &state) { Loop(state); }
 BENCHMARK_REGISTER_F(BenchmarkMapperCreationAndInsertion, WithFlatHashMap)
     ->ArgsProduct({benchmark::CreateDenseRange(1024E3, 2048E3, 128E3), {-1}})
     ->ArgNames({"num_nodes", "num_entries"})
     ->Complexity(benchmark::oN);
 
-BENCHMARK_TEMPLATE_DEFINE_F(BenchmarkMapperCreationAndInsertion,
-                            WithVector,
-                            int64_t,
-                            int64_t)
-(benchmark::State& state) {
-  Loop(state);
-}
+BENCHMARK_TEMPLATE_DEFINE_F(BenchmarkMapperCreationAndInsertion, WithVector,
+                            int64_t, int64_t)
+(benchmark::State &state) { Loop(state); }
 BENCHMARK_REGISTER_F(BenchmarkMapperCreationAndInsertion, WithVector)
     ->Apply(duplicated_range)
     ->ArgNames({"num_nodes", "num_entries"})

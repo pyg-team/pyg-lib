@@ -14,8 +14,7 @@ const std::map<std::string, FnType> to_fn_type = {
     {"div", DIV},
 };
 
-at::Tensor sampled_op_kernel(const at::Tensor& left,
-                             const at::Tensor& right,
+at::Tensor sampled_op_kernel(const at::Tensor &left, const at::Tensor &right,
                              const at::optional<at::Tensor> left_index,
                              const at::optional<at::Tensor> right_index,
                              const std::string fn) {
@@ -45,11 +44,11 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
   return out;
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::sampled_op"), TORCH_FN(sampled_op_kernel));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

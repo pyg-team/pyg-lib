@@ -6,11 +6,8 @@
 namespace pyg {
 namespace sampler {
 
-at::Tensor random_walk(const at::Tensor& rowptr,
-                       const at::Tensor& col,
-                       const at::Tensor& seed,
-                       int64_t walk_length,
-                       double p,
+at::Tensor random_walk(const at::Tensor &rowptr, const at::Tensor &col,
+                       const at::Tensor &seed, int64_t walk_length, double p,
                        double q) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
@@ -32,5 +29,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "walk_length, float p, float q) -> Tensor"));
 }
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

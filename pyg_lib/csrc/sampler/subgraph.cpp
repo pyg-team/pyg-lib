@@ -6,11 +6,9 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
-    const at::Tensor& rowptr,
-    const at::Tensor& col,
-    const at::Tensor& nodes,
-    bool return_edge_id) {
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+subgraph(const at::Tensor &rowptr, const at::Tensor &col,
+         const at::Tensor &nodes, bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg nodes_t{nodes, "nodes", 1};
@@ -31,5 +29,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "nodes, bool return_edge_id) -> (Tensor, Tensor, Tensor?)"));
 }
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

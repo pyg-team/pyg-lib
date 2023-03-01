@@ -5,20 +5,19 @@
 namespace pyg {
 namespace random {
 
-c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
-                                        at::Tensor& bias,
-                                        bool inplace) {
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor &rowptr,
+                                        at::Tensor &bias, bool inplace) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(bias.is_cpu(), "'bias' must be a CPU tensor");
 
   auto cdf = at::empty_like(bias);
   // TODO: Also dispatch index type
   size_t rowptr_size = rowptr.size(0);
-  int64_t* rowptr_data = rowptr.data_ptr<int64_t>();
+  int64_t *rowptr_data = rowptr.data_ptr<int64_t>();
 
   AT_DISPATCH_FLOATING_TYPES(bias.scalar_type(), "biased_to_cdf", [&] {
     const auto bias_data = bias.data_ptr<scalar_t>();
-    scalar_t* cdf_data = nullptr;
+    scalar_t *cdf_data = nullptr;
     if (inplace) {
       cdf_data = bias.data_ptr<scalar_t>();
     } else {
@@ -32,17 +31,15 @@ c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
 
 // The implementation of coverting to CDF representation for biased sampling.
 template <typename scalar_t>
-void biased_to_cdf_helper(int64_t* rowptr_data,
-                          size_t rowptr_size,
-                          const scalar_t* bias,
-                          scalar_t* cdf) {
+void biased_to_cdf_helper(int64_t *rowptr_data, size_t rowptr_size,
+                          const scalar_t *bias, scalar_t *cdf) {
   at::parallel_for(0, rowptr_size - 1, at::internal::GRAIN_SIZE / rowptr_size,
                    [&](size_t _s, size_t _e) {
                      // CDF conversion for each row
                      for (size_t i = _s; i < _e; i++) {
-                       const scalar_t* beg = bias + rowptr_data[i];
+                       const scalar_t *beg = bias + rowptr_data[i];
                        size_t len = rowptr_data[i + 1] - rowptr_data[i];
-                       scalar_t* out_beg = cdf + rowptr_data[i];
+                       scalar_t *out_beg = cdf + rowptr_data[i];
 
                        // Remember sum and current element to
                        // enable the in-place option (bias == cdf).
@@ -70,12 +67,12 @@ std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
   at::Tensor out_bias = bias.clone();
 
   size_t rowptr_size = rowptr.size(0);
-  int64_t* rowptr_data = rowptr.data_ptr<int64_t>();
-  int64_t* alias_data = alias.data_ptr<int64_t>();
+  int64_t *rowptr_data = rowptr.data_ptr<int64_t>();
+  int64_t *alias_data = alias.data_ptr<int64_t>();
 
   AT_DISPATCH_FLOATING_TYPES(bias.scalar_type(), "biased_to_cdf_inplace", [&] {
-    scalar_t* bias_data = bias.data_ptr<scalar_t>();
-    scalar_t* out_bias_data = out_bias.data_ptr<scalar_t>();
+    scalar_t *bias_data = bias.data_ptr<scalar_t>();
+    scalar_t *out_bias_data = out_bias.data_ptr<scalar_t>();
     biased_to_alias_helper(rowptr_data, rowptr_size, bias_data, out_bias_data,
                            alias_data);
   });
@@ -84,21 +81,19 @@ std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
 }
 
 template <typename scalar_t>
-void biased_to_alias_helper(int64_t* rowptr_data,
-                            size_t rowptr_size,
-                            const scalar_t* bias,
-                            scalar_t* out_bias,
-                            int64_t* alias) {
+void biased_to_alias_helper(int64_t *rowptr_data, size_t rowptr_size,
+                            const scalar_t *bias, scalar_t *out_bias,
+                            int64_t *alias) {
   scalar_t eps = 1e-6;
   at::parallel_for(
       0, rowptr_size - 1, at::internal::GRAIN_SIZE / rowptr_size,
       [&](size_t _s, size_t _e) {
         // Calculate the average bias
         for (size_t i = _s; i < _e; i++) {
-          const scalar_t* beg = bias + rowptr_data[i];
+          const scalar_t *beg = bias + rowptr_data[i];
           size_t len = rowptr_data[i + 1] - rowptr_data[i];
-          scalar_t* out_beg = out_bias + rowptr_data[i];
-          int64_t* alias_beg = alias + rowptr_data[i];
+          scalar_t *out_beg = out_bias + rowptr_data[i];
+          int64_t *alias_beg = alias + rowptr_data[i];
           scalar_t avg = 0;
 
           for (size_t j = 0; j < len; j++) {
@@ -119,7 +114,7 @@ void biased_to_alias_helper(int64_t* rowptr_data,
               high.push_back(j);
             } else if (b < avg - eps) {
               low.push_back(j);
-            } else {  // if close to avg, make it a stable entry
+            } else { // if close to avg, make it a stable entry
               out_beg[j] = 1;
               alias_beg[j] = j;
             }
@@ -161,6 +156,6 @@ void biased_to_alias_helper(int64_t* rowptr_data,
       });
 }
 
-}  // namespace random
+} // namespace random
 
-}  // namespace pyg
+} // namespace pyg

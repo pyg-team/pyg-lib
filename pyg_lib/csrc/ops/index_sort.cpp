@@ -9,5 +9,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::index_sort(Tensor indices, int? max = None) -> (Tensor, Tensor)"));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

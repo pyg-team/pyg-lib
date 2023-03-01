@@ -40,10 +40,8 @@ namespace random {
  */
 
 template <typename index_t, typename scalar_t>
-index_t biased_random_cdf(const index_t* idx,
-                          const scalar_t* cdf,
-                          int len,
-                          RandrealEngine<scalar_t>& eng) {
+index_t biased_random_cdf(const index_t *idx, const scalar_t *cdf, int len,
+                          RandrealEngine<scalar_t> &eng) {
   scalar_t rand = eng();
   auto iter = std::lower_bound(cdf, cdf + len, rand);
   auto diff = std::distance(cdf, iter);
@@ -119,11 +117,9 @@ index_t biased_random_cdf(const index_t* idx,
  */
 
 template <typename index_t, typename scalar_t>
-index_t biased_random_alias(const index_t* idx,
-                            const index_t* alias,
-                            const scalar_t* bias,
-                            int len,
-                            RandrealEngine<scalar_t>& eng) {
+index_t biased_random_alias(const index_t *idx, const index_t *alias,
+                            const scalar_t *bias, int len,
+                            RandrealEngine<scalar_t> &eng) {
   scalar_t rand = eng();
   int choice = rand * len;
   bool is_alias = eng() > bias[choice];
@@ -149,16 +145,13 @@ index_t biased_random_alias(const index_t* idx,
  * The cdf of this group will be: {0.0, 0.125, 0.75}
  *
  */
-c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
-                                        at::Tensor& bias,
-                                        bool inplace);
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor &rowptr,
+                                        at::Tensor &bias, bool inplace);
 
 // The implementation of coverting to CDF representation for biased sampling.
 template <typename scalar_t>
-void biased_to_cdf_helper(int64_t* rowptr_data,
-                          size_t rowptr_size,
-                          const scalar_t* bias,
-                          scalar_t* cdf);
+void biased_to_cdf_helper(int64_t *rowptr_data, size_t rowptr_size,
+                          const scalar_t *bias, scalar_t *cdf);
 
 /**
  * Give the alias table of a biased CSR.
@@ -192,12 +185,10 @@ std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
 
 // The implementation of coverting to alias table for biased sampling.
 template <typename scalar_t>
-void biased_to_alias_helper(int64_t* rowptr_data,
-                            size_t rowptr_size,
-                            const scalar_t* bias,
-                            scalar_t* out_bias,
-                            int64_t* alias);
+void biased_to_alias_helper(int64_t *rowptr_data, size_t rowptr_size,
+                            const scalar_t *bias, scalar_t *out_bias,
+                            int64_t *alias);
 
-}  // namespace random
+} // namespace random
 
-}  // namespace pyg
+} // namespace pyg

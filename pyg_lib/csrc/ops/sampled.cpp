@@ -7,8 +7,7 @@ namespace pyg {
 namespace ops {
 
 // Performs the operation `op` at sampled left and right indices.
-PYG_API at::Tensor sampled_op(const at::Tensor& left,
-                              const at::Tensor& right,
+PYG_API at::Tensor sampled_op(const at::Tensor &left, const at::Tensor &right,
                               const at::optional<at::Tensor> left_index,
                               const at::optional<at::Tensor> right_index,
                               const std::string fn) {
@@ -59,5 +58,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "right_index, str op) -> Tensor"));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

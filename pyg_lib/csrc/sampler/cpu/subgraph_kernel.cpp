@@ -10,11 +10,9 @@ namespace sampler {
 
 namespace {
 
-std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
-    const at::Tensor& rowptr,
-    const at::Tensor& col,
-    const at::Tensor& nodes,
-    bool return_edge_id) {
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+subgraph_kernel(const at::Tensor &rowptr, const at::Tensor &col,
+                const at::Tensor &nodes, bool return_edge_id) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(nodes.is_cpu(), "'nodes' must be a CPU tensor");
@@ -56,7 +54,7 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
 
     out_col = col.new_empty({out_rowptr_data[nodes.size(0)]});
     auto out_col_data = out_col.data_ptr<scalar_t>();
-    scalar_t* out_edge_id_data;
+    scalar_t *out_edge_id_data;
     if (return_edge_id) {
       out_edge_id = col.new_empty({out_rowptr_data[nodes.size(0)]});
       out_edge_id_data = out_edge_id.value().data_ptr<scalar_t>();
@@ -88,11 +86,11 @@ std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
   return std::make_tuple(out_rowptr, out_col, out_edge_id);
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::subgraph"), TORCH_FN(subgraph_kernel));
 }
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg

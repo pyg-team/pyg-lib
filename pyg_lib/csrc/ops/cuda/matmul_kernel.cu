@@ -1,8 +1,3 @@
-#include <ATen/ATen.h>
-#include <ATen/cuda/CUDAContext.h>
-#include <cutlass/util/host_tensor.h>
-#include <torch/library.h>
-#include <torch/version.h>
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm/device/gemm_grouped.h"
 #include "cutlass/gemm/device/gemm_universal.h"
@@ -10,6 +5,11 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
+#include <ATen/ATen.h>
+#include <ATen/cuda/CUDAContext.h>
+#include <cutlass/util/host_tensor.h>
+#include <torch/library.h>
+#include <torch/version.h>
 
 namespace pyg {
 namespace ops {
@@ -17,14 +17,13 @@ namespace ops {
 namespace {
 
 template <typename GemmKernel>
-void run_grouped_gemm(const at::TensorList input,
-                      const at::TensorList other,
+void run_grouped_gemm(const at::TensorList input, const at::TensorList other,
                       const at::TensorList out) {
   const auto num_matrices = input.size();
   std::vector<at::Tensor> new_input, new_other, new_out;
-  std::vector<float*> ptr_A_host(num_matrices);
-  std::vector<float*> ptr_B_host(num_matrices);
-  std::vector<float*> ptr_C_host(num_matrices);
+  std::vector<float *> ptr_A_host(num_matrices);
+  std::vector<float *> ptr_B_host(num_matrices);
+  std::vector<float *> ptr_C_host(num_matrices);
 
   for (size_t i = 0; i < num_matrices; ++i) {
     new_input.push_back(input[i].contiguous());
@@ -37,15 +36,15 @@ void run_grouped_gemm(const at::TensorList input,
     ptr_C_host[i] = new_out[i].data_ptr<float>();
   }
 
-  cutlass::DeviceAllocation<float*> ptr_A;
+  cutlass::DeviceAllocation<float *> ptr_A;
   ptr_A.reset(num_matrices);
   ptr_A.copy_from_host(ptr_A_host.data());
 
-  cutlass::DeviceAllocation<float*> ptr_B;
+  cutlass::DeviceAllocation<float *> ptr_B;
   ptr_B.reset(num_matrices);
   ptr_B.copy_from_host(ptr_B_host.data());
 
-  cutlass::DeviceAllocation<float*> ptr_C;
+  cutlass::DeviceAllocation<float *> ptr_C;
   ptr_C.reset(num_matrices);
   ptr_C.copy_from_host(ptr_C_host.data());
 
@@ -96,8 +95,7 @@ void run_grouped_gemm(const at::TensorList input,
 
 // Returns the amount of shared memory required per threadblock in
 // `GroupedGemmKernel`
-template <typename GroupedGemmKernel>
-int shared_memory_for_kernel() {
+template <typename GroupedGemmKernel> int shared_memory_for_kernel() {
   return int(sizeof(typename GroupedGemmKernel::SharedStorage));
 }
 
@@ -131,28 +129,28 @@ void grouped_matmul_out_kernel(const at::TensorList input,
     // Compute capability less than that of Ampere. No TF32 available.
     // note: we only support Volta and onwards
     using GemmKernel_Volta = typename cutlass::gemm::kernel::DefaultGemmGrouped<
-        float,                                         // Element A
-        cutlass::layout::RowMajor,                     // Layout A
-        cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity A
-        float,                                         // Element B
-        cutlass::layout::RowMajor,                     // Layout B
-        cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity B
-        float,                                         // Element C&D
-        cutlass::layout::RowMajor,                     // Layout C&D
-        float,                                         // Element Accumulator
-        cutlass::arch::OpClassSimt,                    // Operator Class Tag
-        cutlass::arch::Sm70,                           // Architecture
-        cutlass::gemm::GemmShape<128, 64, 8>,          // Threadblock-level Tile
-        cutlass::gemm::GemmShape<64, 64, 8>,           // Warp-level Tile
-        cutlass::gemm::GemmShape<1, 1, 1>,             // Warp-level Tile
-        cutlass::epilogue::thread::LinearCombination<  // Epilogue
-            float, 1, float, float>,                   //
-        cutlass::gemm::threadblock::                   // Swizzling Operator
-        GemmIdentityThreadblockSwizzle<8>,             //
-        2,                                             // Stages
-        cutlass::arch::OpMultiplyAdd                   // Operation
+        float,                                        // Element A
+        cutlass::layout::RowMajor,                    // Layout A
+        cutlass::ComplexTransform::kNone,             //
+        1,                                            // Granularity A
+        float,                                        // Element B
+        cutlass::layout::RowMajor,                    // Layout B
+        cutlass::ComplexTransform::kNone,             //
+        1,                                            // Granularity B
+        float,                                        // Element C&D
+        cutlass::layout::RowMajor,                    // Layout C&D
+        float,                                        // Element Accumulator
+        cutlass::arch::OpClassSimt,                   // Operator Class Tag
+        cutlass::arch::Sm70,                          // Architecture
+        cutlass::gemm::GemmShape<128, 64, 8>,         // Threadblock-level Tile
+        cutlass::gemm::GemmShape<64, 64, 8>,          // Warp-level Tile
+        cutlass::gemm::GemmShape<1, 1, 1>,            // Warp-level Tile
+        cutlass::epilogue::thread::LinearCombination< // Epilogue
+            float, 1, float, float>,                  //
+        cutlass::gemm::threadblock::                  // Swizzling Operator
+        GemmIdentityThreadblockSwizzle<8>,            //
+        2,                                            // Stages
+        cutlass::arch::OpMultiplyAdd                  // Operation
         >::GemmKernel;
     run_grouped_gemm<GemmKernel_Volta>(input, other, out);
   } else {
@@ -168,28 +166,28 @@ void grouped_matmul_out_kernel(const at::TensorList input,
       // TF32 is enabled
       using DefaultGemmKernel_TF32 =
           typename cutlass::gemm::kernel::DefaultGemmGrouped<
-              float,                                   // Element A
-              cutlass::layout::RowMajor,               // Layout A
-              cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity A
-              float,                                   // Element B
-              cutlass::layout::RowMajor,               // Layout B
-              cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity B
-              float,                                   // Element C&D
-              cutlass::layout::RowMajor,               // Layout C&D
-              float,                                   // Element Accumulator
-              cutlass::arch::OpClassTensorOp,          // Operator Class Tag
-              cutlass::arch::Sm80,                     // Architecture
-              cutlass::gemm::GemmShape<256, 128, 32>,  // Threadblock-level Tile
-              cutlass::gemm::GemmShape<64, 64, 32>,    // Warp-level Tile
-              cutlass::gemm::GemmShape<16, 8, 8>,      // Warp-level Tile
-              cutlass::epilogue::thread::LinearCombination<  // Epilogue
-                  float, 1, float, float>,                   //
-              cutlass::gemm::threadblock::        // Swizzling Operator
-              GemmIdentityThreadblockSwizzle<8>,  //
-              3,                                  // Stages
-              cutlass::arch::OpMultiplyAdd        // Operation
+              float,                                  // Element A
+              cutlass::layout::RowMajor,              // Layout A
+              cutlass::ComplexTransform::kNone,       //
+              1,                                      // Granularity A
+              float,                                  // Element B
+              cutlass::layout::RowMajor,              // Layout B
+              cutlass::ComplexTransform::kNone,       //
+              1,                                      // Granularity B
+              float,                                  // Element C&D
+              cutlass::layout::RowMajor,              // Layout C&D
+              float,                                  // Element Accumulator
+              cutlass::arch::OpClassTensorOp,         // Operator Class Tag
+              cutlass::arch::Sm80,                    // Architecture
+              cutlass::gemm::GemmShape<256, 128, 32>, // Threadblock-level Tile
+              cutlass::gemm::GemmShape<64, 64, 32>,   // Warp-level Tile
+              cutlass::gemm::GemmShape<16, 8, 8>,     // Warp-level Tile
+              cutlass::epilogue::thread::LinearCombination< // Epilogue
+                  float, 1, float, float>,                  //
+              cutlass::gemm::threadblock::       // Swizzling Operator
+              GemmIdentityThreadblockSwizzle<8>, //
+              3,                                 // Stages
+              cutlass::arch::OpMultiplyAdd       // Operation
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_TF32>();
@@ -200,29 +198,29 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         // Smaller GPU
         using SmallGemmKernel_TF32 =
             typename cutlass::gemm::kernel::DefaultGemmGrouped<
-                float,                                  // Element A
-                cutlass::layout::RowMajor,              // Layout A
-                cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity A
-                float,                                  // Element B
-                cutlass::layout::RowMajor,              // Layout B
-                cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity B
-                float,                                  // Element C&D
-                cutlass::layout::RowMajor,              // Layout C&D
-                float,                                  // Element Accumulator
-                cutlass::arch::OpClassTensorOp,         // Operator Class Tag
-                cutlass::arch::Sm80,                    // Architecture
-                cutlass::gemm::GemmShape<128, 64, 32>,  // Threadblock-level
-                                                        // Tile
-                cutlass::gemm::GemmShape<64, 64, 32>,   // Warp-level Tile
-                cutlass::gemm::GemmShape<16, 8, 8>,     // Warp-level Tile
-                cutlass::epilogue::thread::LinearCombination<  // Epilogue
-                    float, 1, float, float>,                   //
-                cutlass::gemm::threadblock::        // Swizzling Operator
-                GemmIdentityThreadblockSwizzle<8>,  //
-                3,                                  // Stages
-                cutlass::arch::OpMultiplyAdd        // Operation
+                float,                                 // Element A
+                cutlass::layout::RowMajor,             // Layout A
+                cutlass::ComplexTransform::kNone,      //
+                1,                                     // Granularity A
+                float,                                 // Element B
+                cutlass::layout::RowMajor,             // Layout B
+                cutlass::ComplexTransform::kNone,      //
+                1,                                     // Granularity B
+                float,                                 // Element C&D
+                cutlass::layout::RowMajor,             // Layout C&D
+                float,                                 // Element Accumulator
+                cutlass::arch::OpClassTensorOp,        // Operator Class Tag
+                cutlass::arch::Sm80,                   // Architecture
+                cutlass::gemm::GemmShape<128, 64, 32>, // Threadblock-level
+                                                       // Tile
+                cutlass::gemm::GemmShape<64, 64, 32>,  // Warp-level Tile
+                cutlass::gemm::GemmShape<16, 8, 8>,    // Warp-level Tile
+                cutlass::epilogue::thread::LinearCombination< // Epilogue
+                    float, 1, float, float>,                  //
+                cutlass::gemm::threadblock::       // Swizzling Operator
+                GemmIdentityThreadblockSwizzle<8>, //
+                3,                                 // Stages
+                cutlass::arch::OpMultiplyAdd       // Operation
                 >::GemmKernel;
         run_grouped_gemm<SmallGemmKernel_TF32>(input, other, out);
       }
@@ -230,28 +228,28 @@ void grouped_matmul_out_kernel(const at::TensorList input,
       // TF32 is manually disabled
       using DefaultGemmKernel_FP32 =
           typename cutlass::gemm::kernel::DefaultGemmGrouped<
-              float,                                 // Element A
-              cutlass::layout::RowMajor,             // Layout A
-              cutlass::ComplexTransform::kNone,      //
-              1,                                     // Granularity A
-              float,                                 // Element B
-              cutlass::layout::RowMajor,             // Layout B
-              cutlass::ComplexTransform::kNone,      //
-              1,                                     // Granularity B
-              float,                                 // Element C&D
-              cutlass::layout::RowMajor,             // Layout C&D
-              float,                                 // Element Accumulator
-              cutlass::arch::OpClassSimt,            // Operator Class Tag
-              cutlass::arch::Sm80,                   // Architecture
-              cutlass::gemm::GemmShape<128, 64, 8>,  // Threadblock-level Tile
-              cutlass::gemm::GemmShape<64, 64, 8>,   // Warp-level Tile
-              cutlass::gemm::GemmShape<1, 1, 1>,     // Warp-level Tile
-              cutlass::epilogue::thread::LinearCombination<  // Epilogue
-                  float, 1, float, float>,                   //
-              cutlass::gemm::threadblock::        // Swizzling Operator
-              GemmIdentityThreadblockSwizzle<8>,  //
-              3,                                  // Stages
-              cutlass::arch::OpMultiplyAdd        // Operation
+              float,                                // Element A
+              cutlass::layout::RowMajor,            // Layout A
+              cutlass::ComplexTransform::kNone,     //
+              1,                                    // Granularity A
+              float,                                // Element B
+              cutlass::layout::RowMajor,            // Layout B
+              cutlass::ComplexTransform::kNone,     //
+              1,                                    // Granularity B
+              float,                                // Element C&D
+              cutlass::layout::RowMajor,            // Layout C&D
+              float,                                // Element Accumulator
+              cutlass::arch::OpClassSimt,           // Operator Class Tag
+              cutlass::arch::Sm80,                  // Architecture
+              cutlass::gemm::GemmShape<128, 64, 8>, // Threadblock-level Tile
+              cutlass::gemm::GemmShape<64, 64, 8>,  // Warp-level Tile
+              cutlass::gemm::GemmShape<1, 1, 1>,    // Warp-level Tile
+              cutlass::epilogue::thread::LinearCombination< // Epilogue
+                  float, 1, float, float>,                  //
+              cutlass::gemm::threadblock::       // Swizzling Operator
+              GemmIdentityThreadblockSwizzle<8>, //
+              3,                                 // Stages
+              cutlass::arch::OpMultiplyAdd       // Operation
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_FP32>();
@@ -262,29 +260,29 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         // Smaller GPU
         using SmallGemmKernel_FP32 =
             typename cutlass::gemm::kernel::DefaultGemmGrouped<
-                float,                                // Element A
-                cutlass::layout::RowMajor,            // Layout A
-                cutlass::ComplexTransform::kNone,     //
-                1,                                    // Granularity A
-                float,                                // Element B
-                cutlass::layout::RowMajor,            // Layout B
-                cutlass::ComplexTransform::kNone,     //
-                1,                                    // Granularity B
-                float,                                // Element C&D
-                cutlass::layout::RowMajor,            // Layout C&D
-                float,                                // Element Accumulator
-                cutlass::arch::OpClassSimt,           // Operator Class Tag
-                cutlass::arch::Sm80,                  // Architecture
-                cutlass::gemm::GemmShape<64, 64, 8>,  // Threadblock-level
-                                                      // Tile
-                cutlass::gemm::GemmShape<64, 64, 8>,  // Warp-level Tile
-                cutlass::gemm::GemmShape<1, 1, 1>,    // Warp-level Tile
-                cutlass::epilogue::thread::LinearCombination<  // Epilogue
-                    float, 1, float, float>,                   //
-                cutlass::gemm::threadblock::        // Swizzling Operator
-                GemmIdentityThreadblockSwizzle<8>,  //
-                3,                                  // Stages
-                cutlass::arch::OpMultiplyAdd        // Operation
+                float,                               // Element A
+                cutlass::layout::RowMajor,           // Layout A
+                cutlass::ComplexTransform::kNone,    //
+                1,                                   // Granularity A
+                float,                               // Element B
+                cutlass::layout::RowMajor,           // Layout B
+                cutlass::ComplexTransform::kNone,    //
+                1,                                   // Granularity B
+                float,                               // Element C&D
+                cutlass::layout::RowMajor,           // Layout C&D
+                float,                               // Element Accumulator
+                cutlass::arch::OpClassSimt,          // Operator Class Tag
+                cutlass::arch::Sm80,                 // Architecture
+                cutlass::gemm::GemmShape<64, 64, 8>, // Threadblock-level
+                                                     // Tile
+                cutlass::gemm::GemmShape<64, 64, 8>, // Warp-level Tile
+                cutlass::gemm::GemmShape<1, 1, 1>,   // Warp-level Tile
+                cutlass::epilogue::thread::LinearCombination< // Epilogue
+                    float, 1, float, float>,                  //
+                cutlass::gemm::threadblock::       // Swizzling Operator
+                GemmIdentityThreadblockSwizzle<8>, //
+                3,                                 // Stages
+                cutlass::arch::OpMultiplyAdd       // Operation
                 >::GemmKernel;
         run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out);
       }
@@ -302,9 +300,8 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
   return out;
 }
 
-at::Tensor segment_matmul_kernel(const at::Tensor& input,
-                                 const at::Tensor& ptr,
-                                 const at::Tensor& other) {
+at::Tensor segment_matmul_kernel(const at::Tensor &input, const at::Tensor &ptr,
+                                 const at::Tensor &other) {
   const auto size = pyg::utils::size_from_ptr(ptr).cpu();
   // TODO (matthias) Allow for other types than `int64_t`.
   const auto sizes = at::IntArrayRef(size.data_ptr<int64_t>(), size.numel());
@@ -319,7 +316,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   return out;
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::grouped_matmul"),
@@ -328,5 +325,5 @@ TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
          TORCH_FN(segment_matmul_kernel));
 }
 
-}  // namespace ops
-}  // namespace pyg
+} // namespace ops
+} // namespace pyg

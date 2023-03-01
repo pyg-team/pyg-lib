@@ -15,11 +15,9 @@
 // For PyMODINIT_FUNC to work, we need to include Python.h
 #ifdef _WIN32
 #ifdef USE_PYTHON
-PyMODINIT_FUNC PyInit__C(void) {
-  return NULL;
-}
-#endif  // USE_PYTHON
-#endif  // _WIN32
+PyMODINIT_FUNC PyInit__C(void) { return NULL; }
+#endif // USE_PYTHON
+#endif // _WIN32
 
 namespace pyg {
 
@@ -31,8 +29,6 @@ int64_t cuda_version() {
 #endif
 }
 
-TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.def("cuda_version", &cuda_version);
-}
+TORCH_LIBRARY_FRAGMENT(pyg, m) { m.def("cuda_version", &cuda_version); }
 
-}  // namespace pyg
+} // namespace pyg

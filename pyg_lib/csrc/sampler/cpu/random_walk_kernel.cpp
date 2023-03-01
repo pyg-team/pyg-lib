@@ -9,12 +9,9 @@ namespace sampler {
 
 namespace {
 
-at::Tensor random_walk_kernel(const at::Tensor& rowptr,
-                              const at::Tensor& col,
-                              const at::Tensor& seed,
-                              int64_t walk_length,
-                              double p,
-                              double q) {
+at::Tensor random_walk_kernel(const at::Tensor &rowptr, const at::Tensor &col,
+                              const at::Tensor &seed, int64_t walk_length,
+                              double p, double q) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
   TORCH_CHECK(col.is_cpu(), "'col' must be a CPU tensor");
   TORCH_CHECK(seed.is_cpu(), "'seed' must be a CPU tensor");
@@ -33,7 +30,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
       pyg::random::RandintEngine<scalar_t> eng;
       for (auto i = _s; i < _e; ++i) {
         auto v = seed_data[i];
-        out_data[i * (walk_length + 1) + 0] = v;  // Set seed node.
+        out_data[i * (walk_length + 1) + 0] = v; // Set seed node.
 
         for (auto j = 1; j < walk_length + 1; ++j) {
           auto row_start = rowptr_data[v], row_end = rowptr_data[v + 1];
@@ -50,12 +47,12 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
   return out;
 }
 
-}  // namespace
+} // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::random_walk"),
          TORCH_FN(random_walk_kernel));
 }
 
-}  // namespace sampler
-}  // namespace pyg
+} // namespace sampler
+} // namespace pyg
