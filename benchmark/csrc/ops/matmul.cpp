@@ -9,7 +9,7 @@
 #include <pyg_lib/csrc/utils/cpu/convert.h>
 
 template <typename scalar_t>
-void BenchmarkSegmentMatmul(benchmark::State &state) {
+void BenchmarkSegmentMatmul(benchmark::State& state) {
   const int64_t mn = state.range(0);
   const int64_t k = state.range(1);
   const auto equal_chunks = static_cast<bool>(state.range(2));

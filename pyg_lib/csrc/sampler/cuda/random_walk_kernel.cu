@@ -20,16 +20,19 @@ int blocks(int numel) {
   return std::min(max_blocks, (numel + max_threads - 1) / max_threads);
 }
 
-#define CUDA_1D_KERNEL_LOOP(scalar_t, i, n)                                    \
-  for (scalar_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n);          \
+#define CUDA_1D_KERNEL_LOOP(scalar_t, i, n)                           \
+  for (scalar_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); \
        i += (blockDim.x * gridDim.x))
 
 template <typename scalar_t>
 __global__ void random_walk_kernel_impl(
-    const scalar_t *__restrict__ rowptr_data,
-    const scalar_t *__restrict__ col_data,
-    const scalar_t *__restrict__ seed_data, const float *__restrict__ rand_data,
-    scalar_t *__restrict__ out_data, int64_t num_seeds, int64_t walk_length) {
+    const scalar_t* __restrict__ rowptr_data,
+    const scalar_t* __restrict__ col_data,
+    const scalar_t* __restrict__ seed_data,
+    const float* __restrict__ rand_data,
+    scalar_t* __restrict__ out_data,
+    int64_t num_seeds,
+    int64_t walk_length) {
   CUDA_1D_KERNEL_LOOP(scalar_t, i, num_seeds) {
     auto v = seed_data[i];
     out_data[i] = v;
@@ -47,9 +50,12 @@ __global__ void random_walk_kernel_impl(
   }
 }
 
-at::Tensor random_walk_kernel(const at::Tensor &rowptr, const at::Tensor &col,
-                              const at::Tensor &seed, int64_t walk_length,
-                              double p, double q) {
+at::Tensor random_walk_kernel(const at::Tensor& rowptr,
+                              const at::Tensor& col,
+                              const at::Tensor& seed,
+                              int64_t walk_length,
+                              double p,
+                              double q) {
   TORCH_CHECK(rowptr.is_cuda(), "'rowptr' must be a CUDA tensor");
   TORCH_CHECK(col.is_cuda(), "'col' must be a CUDA tensor");
   TORCH_CHECK(seed.is_cuda(), "'seed' must be a CUDA tensor");
@@ -76,12 +82,12 @@ at::Tensor random_walk_kernel(const at::Tensor &rowptr, const at::Tensor &col,
   return out.t().contiguous();
 }
 
-} // namespace
+}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::random_walk"),
          TORCH_FN(random_walk_kernel));
 }
 
-} // namespace sampler
-} // namespace pyg
+}  // namespace sampler
+}  // namespace pyg

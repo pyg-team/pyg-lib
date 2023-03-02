@@ -11,9 +11,10 @@ using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 class SampledOp : public torch::autograd::Function<SampledOp> {
-public:
-  static variable_list forward(torch::autograd::AutogradContext *ctx,
-                               const Variable &left, const Variable &right,
+ public:
+  static variable_list forward(torch::autograd::AutogradContext* ctx,
+                               const Variable& left,
+                               const Variable& right,
                                const at::optional<at::Tensor> left_index,
                                const at::optional<at::Tensor> right_index,
                                const std::string fn) {
@@ -24,13 +25,13 @@ public:
     ctx->saved_data["fn"] = fn;
     ctx->save_for_backward({
         left, right,
-        left_index.has_value() ? left_index.value() : left,    // dummy
-        right_index.has_value() ? right_index.value() : right, // dummy
+        left_index.has_value() ? left_index.value() : left,     // dummy
+        right_index.has_value() ? right_index.value() : right,  // dummy
     });
     return {out};
   }
 
-  static variable_list backward(torch::autograd::AutogradContext *ctx,
+  static variable_list backward(torch::autograd::AutogradContext* ctx,
                                 variable_list grad_outs) {
     auto grad_out = grad_outs[0];
     auto saved = ctx->get_saved_variables();
@@ -94,19 +95,20 @@ public:
   }
 };
 
-at::Tensor sampled_op_autograd(const at::Tensor &left, const at::Tensor &right,
+at::Tensor sampled_op_autograd(const at::Tensor& left,
+                               const at::Tensor& right,
                                const at::optional<at::Tensor> left_index,
                                const at::optional<at::Tensor> right_index,
                                const std::string fn) {
   return SampledOp::apply(left, right, left_index, right_index, fn)[0];
 }
 
-} // namespace
+}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::sampled_op"),
          TORCH_FN(sampled_op_autograd));
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg

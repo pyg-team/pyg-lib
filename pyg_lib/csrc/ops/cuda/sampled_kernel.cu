@@ -19,12 +19,16 @@ const std::map<std::string, FnType> to_fn_type = {
 };
 
 template <typename scalar_t>
-__global__ void sampled_op_kernel_impl(
-    const scalar_t *__restrict__ left, const scalar_t *__restrict__ right,
-    scalar_t *__restrict__ out, const int64_t *__restrict__ left_index,
-    const int64_t *__restrict__ right_index, const FnType fn_type,
-    const bool has_left_index, const bool has_right_index,
-    const int64_t num_feats, const int64_t numel) {
+__global__ void sampled_op_kernel_impl(const scalar_t* __restrict__ left,
+                                       const scalar_t* __restrict__ right,
+                                       scalar_t* __restrict__ out,
+                                       const int64_t* __restrict__ left_index,
+                                       const int64_t* __restrict__ right_index,
+                                       const FnType fn_type,
+                                       const bool has_left_index,
+                                       const bool has_right_index,
+                                       const int64_t num_feats,
+                                       const int64_t numel) {
   int64_t thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (thread_idx >= numel)
@@ -59,7 +63,8 @@ __global__ void sampled_op_kernel_impl(
   out[thread_idx] = c;
 }
 
-at::Tensor sampled_op_kernel(const at::Tensor &left, const at::Tensor &right,
+at::Tensor sampled_op_kernel(const at::Tensor& left,
+                             const at::Tensor& right,
                              const at::optional<at::Tensor> left_index,
                              const at::optional<at::Tensor> right_index,
                              const std::string fn) {
@@ -80,11 +85,11 @@ at::Tensor sampled_op_kernel(const at::Tensor &left, const at::Tensor &right,
     const auto right_data = right.data_ptr<scalar_t>();
     auto out_data = out.data_ptr<scalar_t>();
 
-    int64_t *left_index_data = NULL;
+    int64_t* left_index_data = NULL;
     if (left_index.has_value()) {
       left_index_data = left_index.value().data_ptr<int64_t>();
     }
-    int64_t *right_index_data = NULL;
+    int64_t* right_index_data = NULL;
     if (right_index.has_value()) {
       right_index_data = right_index.value().data_ptr<int64_t>();
     }
@@ -98,11 +103,11 @@ at::Tensor sampled_op_kernel(const at::Tensor &left, const at::Tensor &right,
   return out;
 }
 
-} // namespace
+}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::sampled_op"), TORCH_FN(sampled_op_kernel));
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg

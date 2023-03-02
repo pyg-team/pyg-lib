@@ -16,20 +16,24 @@
 namespace pyg {
 namespace ops {
 
-bool inline is_radix_sort_available() { return false; }
+bool inline is_radix_sort_available() {
+  return false;
+}
 
 template <typename K, typename V>
-std::pair<K *, V *> radix_sort_parallel(K *inp_key_buf, V *inp_value_buf,
-                                        K *tmp_key_buf, V *tmp_value_buf,
-                                        int64_t elements_count,
-                                        int64_t max_value) {
+std::pair<K*, V*> radix_sort_parallel(K* inp_key_buf,
+                                      V* inp_value_buf,
+                                      K* tmp_key_buf,
+                                      V* tmp_value_buf,
+                                      int64_t elements_count,
+                                      int64_t max_value) {
   TORCH_CHECK(
       false,
       "radix_sort_parallel: pyg-lib is not compiled with OpenMP support");
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg
 
 #else
 
@@ -52,15 +56,20 @@ namespace {
 constexpr int RDX_HIST_SIZE = 256;
 
 template <typename K, typename V>
-void radix_sort_kernel(K *input_keys, V *input_values, K *output_keys,
-                       V *output_values, int elements_count, int *histogram,
-                       int *histogram_ps, int pass) {
+void radix_sort_kernel(K* input_keys,
+                       V* input_values,
+                       K* output_keys,
+                       V* output_values,
+                       int elements_count,
+                       int* histogram,
+                       int* histogram_ps,
+                       int pass) {
   int tid = omp_get_thread_num();
   int nthreads = omp_get_num_threads();
   int elements_count_4 = elements_count / 4 * 4;
 
-  int *local_histogram = &histogram[RDX_HIST_SIZE * tid];
-  int *local_histogram_ps = &histogram_ps[RDX_HIST_SIZE * tid];
+  int* local_histogram = &histogram[RDX_HIST_SIZE * tid];
+  int* local_histogram_ps = &histogram_ps[RDX_HIST_SIZE * tid];
 
   // Step 1: compute histogram
   for (int i = 0; i < RDX_HIST_SIZE; i++) {
@@ -138,21 +147,25 @@ void radix_sort_kernel(K *input_keys, V *input_values, K *output_keys,
   }
 }
 
-} // namespace
+}  // namespace
 
-bool inline is_radix_sort_available() { return true; }
+bool inline is_radix_sort_available() {
+  return true;
+}
 
 template <typename K, typename V>
-std::pair<K *, V *> radix_sort_parallel(K *inp_key_buf, V *inp_value_buf,
-                                        K *tmp_key_buf, V *tmp_value_buf,
-                                        int64_t elements_count,
-                                        int64_t max_value) {
+std::pair<K*, V*> radix_sort_parallel(K* inp_key_buf,
+                                      V* inp_value_buf,
+                                      K* tmp_key_buf,
+                                      V* tmp_value_buf,
+                                      int64_t elements_count,
+                                      int64_t max_value) {
   int maxthreads = omp_get_max_threads();
   std::unique_ptr<int[]> histogram_tmp(new int[RDX_HIST_SIZE * maxthreads]);
   std::unique_ptr<int[]> histogram_ps_tmp(
       new int[RDX_HIST_SIZE * maxthreads + 1]);
-  int *histogram = histogram_tmp.get();
-  int *histogram_ps = histogram_ps_tmp.get();
+  int* histogram = histogram_tmp.get();
+  int* histogram_ps = histogram_ps_tmp.get();
   if (max_value == 0) {
     return std::make_pair(inp_key_buf, inp_value_buf);
   }
@@ -160,15 +173,15 @@ std::pair<K *, V *> radix_sort_parallel(K *inp_key_buf, V *inp_value_buf,
   // __builtin_clz is not portable
   int num_bits =
       sizeof(K) * 8 - c10::llvm::countLeadingZeros(
-                          static_cast<std::make_unsigned_t<K>>(max_value));
+                          static_cast<std::make_unsigned_t<K> >(max_value));
   unsigned int num_passes = (num_bits + 7) / 8;
 
 #pragma omp parallel
   {
-    K *input_keys = inp_key_buf;
-    V *input_values = inp_value_buf;
-    K *output_keys = tmp_key_buf;
-    V *output_values = tmp_value_buf;
+    K* input_keys = inp_key_buf;
+    V* input_values = inp_value_buf;
+    K* output_keys = tmp_key_buf;
+    V* output_values = tmp_value_buf;
 
     for (unsigned int pass = 0; pass < num_passes; pass++) {
       radix_sort_kernel(input_keys, input_values, output_keys, output_values,
@@ -183,7 +196,7 @@ std::pair<K *, V *> radix_sort_parallel(K *inp_key_buf, V *inp_value_buf,
                               : std::make_pair(tmp_key_buf, tmp_value_buf));
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg
 
 #endif

@@ -11,8 +11,9 @@ namespace ops {
 
 namespace {
 
-std::tuple<at::Tensor, at::Tensor>
-index_sort_kernel(const at::Tensor &input, const at::optional<int64_t> max) {
+std::tuple<at::Tensor, at::Tensor> index_sort_kernel(
+    const at::Tensor& input,
+    const at::optional<int64_t> max) {
   TORCH_CHECK(input.is_contiguous(), "Input should be contiguous.")
   TORCH_CHECK(input.dim() == 1, "Input should be 1-dimensional.");
   if (input.numel() > at::internal::GRAIN_SIZE && is_radix_sort_available()) {
@@ -24,12 +25,12 @@ index_sort_kernel(const at::Tensor &input, const at::optional<int64_t> max) {
 
     AT_DISPATCH_INTEGRAL_TYPES(
         out_vals.scalar_type(), "index_sort_kernel", [&] {
-          scalar_t *vals = out_vals.data_ptr<scalar_t>();
-          int64_t *indices = out_indices.data_ptr<int64_t>();
+          scalar_t* vals = out_vals.data_ptr<scalar_t>();
+          int64_t* indices = out_indices.data_ptr<int64_t>();
           std::vector<scalar_t> tmp_vals(elements);
           std::vector<int64_t> tmp_indices(elements);
-          scalar_t *sorted_vals = nullptr;
-          int64_t *sorted_indices = nullptr;
+          scalar_t* sorted_vals = nullptr;
+          int64_t* sorted_indices = nullptr;
           std::tie(sorted_vals, sorted_indices) =
               radix_sort_parallel(vals, indices, tmp_vals.data(),
                                   tmp_indices.data(), elements, maximum);
@@ -57,11 +58,11 @@ index_sort_kernel(const at::Tensor &input, const at::optional<int64_t> max) {
   }
 }
 
-} // namespace
+}  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::index_sort"), TORCH_FN(index_sort_kernel));
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "pyg_lib/csrc/macros.h"
 #include <ATen/ATen.h>
 #include <torch/script.h>
+#include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
 namespace ops {
@@ -14,9 +14,9 @@ PYG_API std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
 
 // Performs matrix multiplication according to segments.
 // TODO (matthias) Support `out` argument.
-PYG_API at::Tensor segment_matmul(const at::Tensor &input,
-                                  const at::Tensor &ptr,
-                                  const at::Tensor &other);
+PYG_API at::Tensor segment_matmul(const at::Tensor& input,
+                                  const at::Tensor& ptr,
+                                  const at::Tensor& other);
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg

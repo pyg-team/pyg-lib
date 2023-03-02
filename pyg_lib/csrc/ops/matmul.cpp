@@ -38,8 +38,9 @@ std::vector<at::Tensor> grouped_matmul(const at::TensorList input,
 }
 
 // Performs matrix multiplication according to segments.
-at::Tensor segment_matmul(const at::Tensor &input, const at::Tensor &ptr,
-                          const at::Tensor &other) {
+at::Tensor segment_matmul(const at::Tensor& input,
+                          const at::Tensor& ptr,
+                          const at::Tensor& other) {
   at::TensorArg input_arg{input, "input", 0};
   at::TensorArg ptr_arg{ptr, "ptr", 1};
   at::TensorArg other_arg{other, "other", 2};
@@ -66,5 +67,5 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::segment_matmul(Tensor input, Tensor ptr, Tensor other) -> Tensor"));
 }
 
-} // namespace ops
-} // namespace pyg
+}  // namespace ops
+}  // namespace pyg

@@ -57,7 +57,8 @@ TEST_P(MultipleDeviceTest, SegmentMatmulBackward) {
   EXPECT_TRUE(other.grad().numel() == other.numel());
 }
 
-INSTANTIATE_TEST_SUITE_P(OpsTest, MultipleDeviceTest,
+INSTANTIATE_TEST_SUITE_P(OpsTest,
+                         MultipleDeviceTest,
 #ifdef WITH_CUDA
                          testing::Values(at::kCPU, at::kCUDA));
 #else
