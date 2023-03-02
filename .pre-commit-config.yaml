@@ -48,3 +48,4 @@ repos:
     hooks:
       - id: clang-format
         name: Format C++ code
+        args: [--style=file]
