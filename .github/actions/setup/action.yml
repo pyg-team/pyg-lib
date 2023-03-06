@@ -19,6 +19,10 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
+        check-latest: true
+        cache: pip
+        cache-dependency-path: |
+          setup.py
 
     - name: Free up disk space
       if: ${{ runner.os == 'Linux' }}
@@ -30,6 +34,11 @@ runs:
       if: ${{ inputs.cuda-version != 'cpu' }}
       run: |
         bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ inputs.cuda-version }}
+      shell: bash
+
+    - name: Update pip setuptools and wheel
+      run: |
+        pip install -U pip setuptools wheel
       shell: bash
 
     - name: Install PyTorch ${{ inputs.torch-version }}+${{ inputs.cuda-version }}

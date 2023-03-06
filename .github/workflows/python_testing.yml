@@ -22,7 +22,7 @@ jobs:
 
       - name: Install package
         run: |
-          pip install --verbose --no-use-pep517 -e .[triton,test]
+          pip install --verbose -e .[triton,test]
 
       - name: Run tests
         run: |
