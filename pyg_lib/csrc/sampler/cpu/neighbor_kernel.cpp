@@ -31,7 +31,9 @@ class NeighborSampler {
                   const scalar_t* col,
                   const std::string temporal_strategy)
       : rowptr_(rowptr), col_(col), temporal_strategy_(temporal_strategy) {
-    TORCH_CHECK(temporal_strategy == "uniform" || temporal_strategy == "last",
+    TORCH_CHECK(temporal_strategy == "uniform" ||
+                temporal_strategy == "last" ||
+                temporal_strategy == "exponential",
                 "No valid temporal strategy found");
   }
 
@@ -64,8 +66,27 @@ class NeighborSampler {
         [&](const scalar_t& a, const scalar_t& b) { return a < time[b]; });
     row_end = it - col_;
 
+    int64_t sample_count = count;
+
     if (temporal_strategy_ == "last" && count >= 0) {
       row_start = std::max(row_start, (scalar_t)(row_end - count));
+    }
+
+    if (temporal_strategy_ == "exponential") {
+      // Temporal sampling strategy that samples with respect to
+      // exponential distribution where median of samples is the
+      // "last" count number of samples
+      if (count > 0) {
+        pyg::random::RandrealEngine<float> real_generator;
+        // Calculate exponential distribution lambda value where
+        // the median value is count
+        auto lambda = log(2.0) / count;
+        // Inverse transform sampling with exponential distribution
+        auto rnd_real = real_generator();
+        sample_count = round(-log(1.0 - rnd_real) / lambda);
+        auto value = -log(1.0 - rnd_real) / lambda;
+        row_start = std::max(row_start, (scalar_t)(row_end - sample_count));
+      }
     }
 
     if (row_end - row_start > 1) {
@@ -73,7 +94,7 @@ class NeighborSampler {
                   "Found invalid non-sorted temporal neighborhood");
     }
 
-    _sample(global_src_node, local_src_node, row_start, row_end, count,
+    _sample(global_src_node, local_src_node, row_start, row_end, sample_count,
             dst_mapper, generator, out_global_dst_nodes);
   }
 

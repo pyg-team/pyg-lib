@@ -139,6 +139,17 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<1>(out1), std::get<1>(out2)));
   EXPECT_TRUE(at::equal(std::get<2>(out1), std::get<2>(out2)));
   EXPECT_TRUE(at::equal(std::get<3>(out1).value(), std::get<3>(out2).value()));
+
+  auto out3 = pyg::sampler::neighbor_sample(
+      rowptr, col, seed, /*num_neighbors=*/{1, 2}, /*time=*/time,
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
+      /*directed=*/true, /*disjoint=*/true,
+      /*temporal_strategy=*/"exponential");
+
+  EXPECT_TRUE(std::get<0>(out3).numel() >= 0);
+  EXPECT_TRUE(std::get<1>(out3).numel() >= 0);
+  EXPECT_TRUE(std::get<2>(out3).numel() >= 0);
+  EXPECT_TRUE(std::get<3>(out3).value().numel() >= 0);
 }
 
 TEST(HeteroNeighborTest, BasicAssertions) {
