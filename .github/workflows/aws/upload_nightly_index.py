@@ -18,6 +18,7 @@ for obj in bucket.objects.filter(Prefix='whl/nightly'):
     if obj.key[-3:] != 'whl':
         continue
     torch_version, wheel = obj.key.split('/')[-2:]
+    wheel = f'{torch_version}/{wheel}'
     wheels_dict[torch_version].append(wheel)
 
     if '1.12.0' in torch_version:
@@ -36,9 +37,8 @@ bucket.Object('whl/nightly/index.html').upload_file('index.html', args)
 
 for torch_version, wheel_names in wheels_dict.items():
     torch_version_html = html.format('\n'.join([
-        href.format(
-            f'{ROOT_URL}/{torch_version}/{wheel_name}'.replace('+', '%2B'),
-            wheel_name) for wheel_name in wheel_names
+        href.format(f'{ROOT_URL}/{wheel_name}'.replace('+', '%2B'), wheel_name)
+        for wheel_name in wheel_names
     ]))
 
     with open(f'{torch_version}.html', 'w') as f:
