@@ -14,12 +14,12 @@ def test_fused_scatter_reduce():
                                reduce_list=['sum', 'mean', 'max'])
 
     assert out.size() == (2, 12)
-    # assert torch.allclose(out[0, 0:4], x[index == 0].sum(dim=0))
-    # assert torch.allclose(out[1, 0:4], x[index == 1].sum(dim=0))
-    # assert torch.allclose(out[0, 4:8], x[index == 0].mean(dim=0))
-    # assert torch.allclose(out[1, 4:8], x[index == 1].mean(dim=0))
-    # assert torch.allclose(out[0, 8:12], x[index == 0].max(dim=0)[0])
-    # assert torch.allclose(out[1, 8:12], x[index == 1].max(dim=0)[0])
+    assert torch.allclose(out[0, 0:4], x[index == 0].sum(dim=0))
+    assert torch.allclose(out[1, 0:4], x[index == 1].sum(dim=0))
+    assert torch.allclose(out[0, 4:8], x[index == 0].mean(dim=0))
+    assert torch.allclose(out[1, 4:8], x[index == 1].mean(dim=0))
+    assert torch.allclose(out[0, 8:12], x[index == 0].max(dim=0)[0])
+    assert torch.allclose(out[1, 8:12], x[index == 1].max(dim=0)[0])
 
 
 if __name__ == '__main__':  # Benchmarking

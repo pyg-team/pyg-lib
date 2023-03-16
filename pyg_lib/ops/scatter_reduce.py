@@ -63,10 +63,10 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
         elif REDUCE2 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        # elif REDUCE2 == 3:  # min
-        #     tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        # elif REDUCE2 == 4:  # max
-        #     tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
+        elif REDUCE2 == 3:  # min
+            tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
+        elif REDUCE2 == 4:  # max
+            tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
     if REDUCE3 > 0:
         out_offsets = (num_feats * num_reductions) * index
@@ -76,10 +76,10 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
         elif REDUCE3 == 2:  # mean
             tl.atomic_add(out_ptr + out_offsets, inputs, mask=mask)
-        # elif REDUCE3 == 3:  # min
-        #     tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
-        # elif REDUCE3 == 4:  # max
-        #     tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
+        elif REDUCE3 == 3:  # min
+            tl.atomic_min(out_ptr + out_offsets, inputs, mask=mask)
+        elif REDUCE3 == 4:  # max
+            tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
 
 def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
