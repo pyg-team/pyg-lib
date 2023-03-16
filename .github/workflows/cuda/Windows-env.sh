@@ -1,6 +1,10 @@
 #!/bin/bash
 
 case ${1} in
+  cu118)
+    export FORCE_CUDA=1
+    export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.8/bin:${PATH}
+    ;;
   cu117)
     export FORCE_CUDA=1
     export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v11.7/bin:${PATH}
