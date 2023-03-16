@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `sampled_op` implementation ([#156](https://github.com/pyg-team/pyg-lib/pull/156), [#159](https://github.com/pyg-team/pyg-lib/pull/159), [#160](https://github.com/pyg-team/pyg-lib/pull/160))
 ### Changed
 - Improved `[segment|grouped]_matmul` GPU implementation by reducing launch overheads ([#213](https://github.com/pyg-team/pyg-lib/pull/213))
+- Enable hetero neighbor sampler to work in parallel ([#211](https://github.com/pyg-team/pyg-lib/pull/211))
 - Sample the nodes with the same timestamp as seed nodes ([#187](https://github.com/pyg-team/pyg-lib/pull/187))
 - Added `write-csv` (saves benchmark results as csv file) and `libraries` (determines which libraries will be used in benchmark) parameters ([#167](https://github.com/pyg-team/pyg-lib/pull/167))
 - Enable benchmarking of neighbor sampler on temporal graphs ([#165](https://github.com/pyg-team/pyg-lib/pull/165))
