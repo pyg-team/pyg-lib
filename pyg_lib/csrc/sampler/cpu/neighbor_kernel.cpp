@@ -10,6 +10,7 @@
 #include "pyg_lib/csrc/sampler/subgraph.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
+#include "pyg_lib/csrc/config.h"
 
 namespace pyg {
 namespace sampler {
@@ -133,26 +134,52 @@ class NeighborSampler {
     }
 
     // Case 2: Sample with replacement:
+    // Case 2: Sample with replacement:
     else if (replace) {
-      for (size_t i = 0; i < count; ++i) {
-        const auto edge_id = generator(row_start, row_end);
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
+      if (row_end < (1 << 16) && WITH_MKL_BLAS()) {
+        int arr[count];
+        generator.generate_ints(row_start, row_end, count, &arr[0]);
+        for (size_t i = 0; i < count; ++i) {
+          const auto edge_id = arr[i];
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
+      } else {
+        for (size_t i = 0; i < count; ++i) {
+          const auto edge_id = generator(row_start, row_end);
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
       }
     }
 
     // Case 3: Sample without replacement:
     else {
       auto index_tracker = IndexTracker<scalar_t>(population);
-      for (size_t i = population - count; i < population; ++i) {
-        auto rnd = generator(0, i + 1);
-        if (!index_tracker.try_insert(rnd)) {
-          rnd = i;
-          index_tracker.insert(i);
+      if (population < (1 << 16) && WITH_MKL_BLAS()) {
+        int arr[count];
+        generator.generate_ints(0, population-count, count, &arr[0]);
+        for (size_t i = 0; i < count; ++i) {
+          auto rnd = arr[i];
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = population - count + i;
+            index_tracker.insert(i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
         }
-        const auto edge_id = row_start + rnd;
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
+      } else {
+        for (size_t i = population - count; i < population; ++i) {
+          auto rnd = generator(0, i + 1);
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = i;
+            index_tracker.insert(i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
       }
     }
   }

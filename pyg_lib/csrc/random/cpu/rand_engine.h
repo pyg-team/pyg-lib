@@ -3,6 +3,10 @@
 #include <ATen/ATen.h>
 
 #include <limits.h>
+#include "pyg_lib/csrc/config.h"
+#if WITH_MKL_BLAS()
+#include "mkl_vsl.h"
+#endif
 
 namespace pyg {
 namespace random {
@@ -99,18 +103,41 @@ class PrefetchedRandint {
 template <typename T>
 class RandintEngine {
  public:
-  RandintEngine() : prefetched_(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS) {}
+  RandintEngine() {
+    #if WITH_MKL_BLAS()
+    vslNewStream(&stream, VSL_BRNG_MT19937, 1);
+    #endif
+  }
+  ~RandintEngine() {
+    #if WITH_MKL_BLAS()
+    vslDeleteStream(&stream);
+    #endif
+  }
 
   // Uniform random number within range [beg, end)
   T operator()(T beg, T end) {
     TORCH_CHECK(beg < end, "Randint engine illegal range");
 
     T range = end - beg;
+    if(!start_prefetch) {
+      new (&prefetched_) PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS);
+      start_prefetch = true;
+    }
     return prefetched_.next(range) + beg;
+  }
+
+  void generate_ints(T beg, T end, T count, int* arr) {
+    #if WITH_MKL_BLAS()
+    viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, count, arr, beg, end);
+    #endif
   }
 
  private:
   PrefetchedRandint prefetched_;
+  bool start_prefetch = false;
+  #if WITH_MKL_BLAS()
+  VSLStreamStatePtr stream;
+  #endif
 };
 
 /**
