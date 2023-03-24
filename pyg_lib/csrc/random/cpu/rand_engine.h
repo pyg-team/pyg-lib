@@ -119,22 +119,27 @@ class RandintEngine {
     TORCH_CHECK(beg < end, "Randint engine illegal range");
 
     T range = end - beg;
-    if(!start_prefetch) {
-      new (&prefetched_) PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS);
-      start_prefetch = true;
+    if(!prefetch_initialized) {
+      prefetched_ = PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS);
+      prefetch_initialized = true;
     }
     return prefetched_.next(range) + beg;
   }
 
-  void generate_ints(T beg, T end, T count, int* arr) {
+  void fill_with_ints(T beg, T end, T count, int* ptr) {
     #if WITH_MKL_BLAS()
-    viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, count, arr, beg, end);
+    viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, count, ptr, beg, end);
+    #else
+    for(size_t i = 0; i < count; ++i){
+      *ptr = (*this)(beg, end);
+      ++ptr;
+    }
     #endif
   }
 
  private:
   PrefetchedRandint prefetched_;
-  bool start_prefetch = false;
+  bool prefetch_initialized = false;
   #if WITH_MKL_BLAS()
   VSLStreamStatePtr stream;
   #endif
