@@ -104,14 +104,14 @@ template <typename T>
 class RandintEngine {
  public:
   RandintEngine() {
-    #if WITH_MKL_BLAS()
+#if WITH_MKL_BLAS()
     vslNewStream(&stream, VSL_BRNG_MT19937, 1);
-    #endif
+#endif
   }
   ~RandintEngine() {
-    #if WITH_MKL_BLAS()
+#if WITH_MKL_BLAS()
     vslDeleteStream(&stream);
-    #endif
+#endif
   }
 
   // Uniform random number within range [beg, end)
@@ -119,7 +119,7 @@ class RandintEngine {
     TORCH_CHECK(beg < end, "Randint engine illegal range");
 
     T range = end - beg;
-    if(!prefetch_initialized) {
+    if (!prefetch_initialized) {
       prefetched_ = PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS);
       prefetch_initialized = true;
     }
@@ -127,22 +127,22 @@ class RandintEngine {
   }
 
   void fill_with_ints(T beg, T end, T count, int* ptr) {
-    #if WITH_MKL_BLAS()
+#if WITH_MKL_BLAS()
     viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, count, ptr, beg, end);
-    #else
-    for(size_t i = 0; i < count; ++i){
+#else
+    for (size_t i = 0; i < count; ++i) {
       *ptr = (*this)(beg, end);
       ++ptr;
     }
-    #endif
+#endif
   }
 
  private:
   PrefetchedRandint prefetched_;
   bool prefetch_initialized = false;
-  #if WITH_MKL_BLAS()
+#if WITH_MKL_BLAS()
   VSLStreamStatePtr stream;
-  #endif
+#endif
 };
 
 /**
