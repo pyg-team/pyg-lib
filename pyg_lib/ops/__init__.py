@@ -38,20 +38,20 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 
     if int(major_vers) >= 2 or int(minor_vers) >= 14:
-        inputs = torch.nested.as_nested_tensor(inputs).contiguous()
-        others = torch.nested.as_nested_tensor(others).contiguous()
-        if inputs.dim() == 4 or others.dim() == 4:
+        input = torch.nested.as_nested_tensor(inputs).contiguous()
+        other = torch.nested.as_nested_tensor(others).contiguous()
+        if input.dim() == 4 or other.dim() == 4:
             # bmm only works on lists of 2D tensors
-            outs = torch.matmul(inputs, others).contiguous()
+            out = torch.matmul(input, other).contiguous()
         else:
-            outs = torch.bmm(inputs, others).contiguous()
-        outs = list(outs.unbind())
+            out = torch.bmm(input, other).contiguous()
+        outs = list(out.unbind())
     else:
         input_req_grad = any([i.requires_grad for i in inputs])
         other_req_grad = any([i.requires_grad for i in others])
         if input_req_grad or other_req_grad:
             raise ValueError("Autograd is not supported in `grouped_matmul` "
-                             "for PyTorch < 1.14. Please `detach()` your "
+                             "for PyTorch <= 1.13. Please `detach()` your "
                              "input tensors before calling this function.")
 
         outs = torch.ops.pyg.grouped_matmul(inputs, others)

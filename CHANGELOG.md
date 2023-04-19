@@ -3,9 +3,15 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-
-## [0.2.0] - 2023-MM-DD
+## [0.3.0] - 2023-MM-DD
 ### Added
+### Changed
+- Fixed TorchScript support in `grouped_matmul` ([#220](https://github.com/pyg-team/pyg-lib/pull/220))
+### Removed
+
+## [0.2.0] - 2023-03-22
+### Added
+- Added PyTorch 2.0 support ([#214](https://github.com/pyg-team/pyg-lib/pull/214))
 - `neighbor_sample` routines now also return information about the number of sampled nodes/edges per layer ([#197](https://github.com/pyg-team/pyg-lib/pull/197))
 - Added `index_sort` implementation ([#181](https://github.com/pyg-team/pyg-lib/pull/181), [#192](https://github.com/pyg-team/pyg-lib/pull/192))
 - Added `triton>=2.0` support ([#171](https://github.com/pyg-team/pyg-lib/pull/171))
