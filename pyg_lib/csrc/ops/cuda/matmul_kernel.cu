@@ -20,78 +20,78 @@ template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out) {
-  const auto num_matrices = input.size();
-  std::vector<at::Tensor> new_input, new_other, new_out;
-  std::vector<float*> ptr_A_host(num_matrices);
-  std::vector<float*> ptr_B_host(num_matrices);
-  std::vector<float*> ptr_C_host(num_matrices);
+  using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
 
+  const int64_t num_matrices = input.size();
+  const int64_t gemm_coord_size =
+      num_matrices * ((int64_t)sizeof(cutlass::gemm::GemmCoord));
+  // Number of gemm args not including *problem_sizes
+  at::Tensor gemm_args =
+      at::empty({num_matrices * 6 + gemm_coord_size},
+                at::TensorOptions().dtype(at::kLong).pinned_memory(true));
+
+  // Obtain pointers for each argument (on host)
+  int64_t* ld_A_data = gemm_args.data_ptr<int64_t>();  // Base pointer
+  int64_t* ld_B_data = ld_A_data + num_matrices;
+  int64_t* ld_C_data = ld_A_data + 2 * num_matrices;
+  int64_t* ptr_A_data = ld_A_data + 3 * num_matrices;
+  int64_t* ptr_B_data = ld_A_data + 4 * num_matrices;
+  int64_t* ptr_C_data = ld_A_data + 5 * num_matrices;
+  cutlass::gemm::GemmCoord* problem_sizes_data =
+      reinterpret_cast<cutlass::gemm::GemmCoord*>(ld_A_data + 6 * num_matrices);
+
+  // Set arguments into gemm_args from input args
   for (size_t i = 0; i < num_matrices; ++i) {
-    new_input.push_back(input[i].contiguous());
-    ptr_A_host[i] = new_input[i].data_ptr<float>();
+    auto new_in = input[i].contiguous();
+    auto new_other = other[i].contiguous();
+    auto new_out = out[i].contiguous();
+    auto m = new_in.size(0), k = new_other.size(1), n = new_out.size(1);
 
-    new_other.push_back(other[i].contiguous());
-    ptr_B_host[i] = new_other[i].data_ptr<float>();
+    problem_sizes_data[i] = cutlass::gemm::GemmCoord(m, n, k);
 
-    new_out.push_back(out[i].contiguous());
-    ptr_C_host[i] = new_out[i].data_ptr<float>();
+    ld_A_data[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
+    ld_B_data[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
+    ld_C_data[i] = GemmKernel::LayoutC::packed({m, n}).stride(0);
+
+    ptr_A_data[i] = reinterpret_cast<int64_t>(new_in.data_ptr<float>());
+    ptr_B_data[i] = reinterpret_cast<int64_t>(new_other.data_ptr<float>());
+    ptr_C_data[i] = reinterpret_cast<int64_t>(new_out.data_ptr<float>());
   }
 
-  cutlass::DeviceAllocation<float*> ptr_A;
-  ptr_A.reset(num_matrices);
-  ptr_A.copy_from_host(ptr_A_host.data());
+  // Transfer arguments to GPU
+  gemm_args = gemm_args.to(out[0].device(), true);
 
-  cutlass::DeviceAllocation<float*> ptr_B;
-  ptr_B.reset(num_matrices);
-  ptr_B.copy_from_host(ptr_B_host.data());
-
-  cutlass::DeviceAllocation<float*> ptr_C;
-  ptr_C.reset(num_matrices);
-  ptr_C.copy_from_host(ptr_C_host.data());
-
-  std::vector<cutlass::gemm::GemmCoord> all_problems(num_matrices);
-  std::vector<int64_t> ld_A_host(num_matrices);
-  std::vector<int64_t> ld_B_host(num_matrices);
-  std::vector<int64_t> ld_C_host(num_matrices);
-  for (size_t i = 0; i < num_matrices; ++i) {
-    auto m = new_input[i].size(0), k = new_input[i].size(1),
-         n = new_out[i].size(1);
-    all_problems[i] = cutlass::gemm::GemmCoord(m, n, k);
-    ld_A_host[i] = GemmKernel::LayoutA::packed({m, k}).stride(0);
-    ld_B_host[i] = GemmKernel::LayoutB::packed({k, n}).stride(0);
-    ld_C_host[i] = GemmKernel::LayoutC::packed({m, n}).stride(0);
-  }
-
-  cutlass::DeviceAllocation<cutlass::gemm::GemmCoord> all_problems_device;
-  all_problems_device.reset(num_matrices);
-  all_problems_device.copy_from_host(all_problems.data());
-
-  cutlass::DeviceAllocation<int64_t> ld_A;
-  ld_A.reset(num_matrices);
-  ld_A.copy_from_host(ld_A_host.data());
-
-  cutlass::DeviceAllocation<int64_t> ld_B;
-  ld_B.reset(num_matrices);
-  ld_B.copy_from_host(ld_B_host.data());
-
-  cutlass::DeviceAllocation<int64_t> ld_C;
-  ld_C.reset(num_matrices);
-  ld_C.copy_from_host(ld_C_host.data());
+  // Obtain pointers for each of arguments (on GPU)
+  ld_A_data = gemm_args.data_ptr<int64_t>();  // Base pointer
+  ld_B_data = ld_A_data + num_matrices;
+  ld_C_data = ld_A_data + 2 * num_matrices;
+  ptr_A_data = ld_A_data + 3 * num_matrices;
+  ptr_B_data = ld_A_data + 4 * num_matrices;
+  ptr_C_data = ld_A_data + 5 * num_matrices;
+  problem_sizes_data =
+      reinterpret_cast<cutlass::gemm::GemmCoord*>(ld_A_data + 6 * num_matrices);
 
   using EpilogueOutputOp = typename GemmKernel::Epilogue::OutputOp;
   typename EpilogueOutputOp::Params epilogue_op(1.0, 0.0);
 
-  using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
-  typename GemmGrouped::Arguments args(
-      all_problems_device.get(), num_matrices, /*threadblock_count=*/1024,
-      epilogue_op, ptr_A.get(), ptr_B.get(), ptr_C.get(), ptr_C.get(),
-      ld_A.get(), ld_B.get(), ld_C.get(), ld_C.get());
+  // Create GemmGrouped::Arguments using the arguments prepared above
+  typename GemmGrouped::Arguments args(problem_sizes_data, num_matrices,
+                                       /*threadblock_count=*/1024, epilogue_op,
+                                       reinterpret_cast<float**>(ptr_A_data),
+                                       reinterpret_cast<float**>(ptr_B_data),
+                                       reinterpret_cast<float**>(ptr_C_data),
+                                       reinterpret_cast<float**>(ptr_C_data),
+                                       ld_A_data, ld_B_data, ld_C_data,
+                                       ld_C_data);
 
   GemmGrouped gemm;
-  auto status = gemm.initialize(args);
+  auto status =
+      gemm.initialize(args, nullptr, at::cuda::getCurrentCUDAStream());
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM init failed");
-  status = gemm.run();
+  status = gemm.run(at::cuda::getCurrentCUDAStream());
   TORCH_CHECK(status == cutlass::Status::kSuccess, "GroupedGEMM run failed");
+
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 // Returns the amount of shared memory required per threadblock in
@@ -106,15 +106,8 @@ int shared_memory_for_kernel() {
 cudaDeviceProp get_dev_prop() {
   cudaDeviceProp properties;
   int device_idx;
-  cudaError_t result = cudaGetDevice(&device_idx);
-  if (result != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(result));
-  }
-
-  result = cudaGetDeviceProperties(&properties, device_idx);
-  if (result != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(result));
-  }
+  C10_CUDA_CHECK(cudaGetDevice(&device_idx));
+  C10_CUDA_CHECK(cudaGetDeviceProperties(&properties, device_idx));
   return properties;
 }
 cudaDeviceProp props;
