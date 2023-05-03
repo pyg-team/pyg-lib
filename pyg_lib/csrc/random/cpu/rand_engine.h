@@ -5,7 +5,7 @@
 #include <limits.h>
 #include "pyg_lib/csrc/config.h"
 #if WITH_MKL_BLAS()
-#include "mkl_vsl.h"
+#include "mkl.h"
 #endif
 
 namespace pyg {
