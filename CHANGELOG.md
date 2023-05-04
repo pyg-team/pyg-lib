@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.3.0] - 2023-MM-DD
 ### Added
+- Enable `hetero_neighbor_samplee` to work in parallel ([#211](https://github.com/pyg-team/pyg-lib/pull/211))
 ### Changed
 - Added `fill_with_ints` function (it uses MKL library in order to generate ints) to RandintEngine class [#222](https://github.com/pyg-team/pyg-lib/pull/222)
 - Fixed TorchScript support in `grouped_matmul` ([#220](https://github.com/pyg-team/pyg-lib/pull/220))
