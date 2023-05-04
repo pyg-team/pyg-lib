@@ -435,8 +435,7 @@ sample(const std::vector<node_type>& node_types,
           threads_edge_types.push_back({k});
       }
     }
-    if (!parallel) {
-      // If not parallel then one thread handles all edge types
+    if (!parallel) {  // If not parallel then one thread handles all edge types.
       threads_edge_types.push_back({edge_types});
     }
 
@@ -483,10 +482,8 @@ sample(const std::vector<node_type>& node_types,
       phmap::flat_hash_map<node_type, std::vector<node_t>>
           dst_sampled_nodes_dict;
       if (parallel) {
-        for (const auto& k : threads_edge_types) {
-          dst_sampled_nodes_dict[!csc ? std::get<2>(k[0])
-                                      : std::get<0>(
-                                            k[0])];  // initialize empty vector
+        for (const auto& k : threads_edge_types) {  // Intialize empty vectors.
+          dst_sampled_nodes_dict[!csc ? std::get<2>(k[0]) : std::get<0>(k[0])];
         }
       }
       at::parallel_for(
