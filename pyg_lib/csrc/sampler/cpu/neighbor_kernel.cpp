@@ -538,15 +538,12 @@ sample(const std::vector<node_type>& node_types,
                     std::back_inserter(sampled_nodes_dict[dst_sampled.first]));
         }
       }
-      at::parallel_for(0, node_types.size(), 1, [&](size_t _s, size_t _e) {
-        for (auto j = _s; j < _e; j++) {
-          const auto& k = node_types[j];
-          slice_dict[k] = {slice_dict.at(k).second,
-                           sampled_nodes_dict.at(k).size()};
-          num_sampled_nodes_per_hop_map.at(k).push_back(
-              slice_dict.at(k).second - slice_dict.at(k).first);
-        }
-      });
+      for (const auto& k : node_types) {
+        slice_dict[k] = {slice_dict.at(k).second,
+                         sampled_nodes_dict.at(k).size()};
+        num_sampled_nodes_per_hop_map.at(k).push_back(slice_dict.at(k).second -
+                                                      slice_dict.at(k).first);
+      }
     }
 
     for (const auto& k : node_types) {
