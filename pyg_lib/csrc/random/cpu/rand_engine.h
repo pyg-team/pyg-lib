@@ -1,9 +1,7 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include <ATen/Config.h>
 #include <limits.h>
-#include <torch/library.h>
 
 #include "pyg_lib/csrc/config.h"
 #if WITH_MKL_BLAS()
