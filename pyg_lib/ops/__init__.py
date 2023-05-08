@@ -55,8 +55,10 @@ def pytreeify(cls):
 @pytreeify
 class GroupedMatmul(Function):
     @staticmethod
-    def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
-        ctx.save_for_backward(*(inputs + others))
+    def forward(ctx, inputs_and_others: List[Tensor]):
+        ctx.save_for_backward(*(inputs_and_others))
+        inputs = inputs_and_others[:int(len(inputs_and_others)/2)]
+        others = inputs_and_others[int(len(inputs_and_others)/2):]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
@@ -68,8 +70,8 @@ class GroupedMatmul(Function):
     @staticmethod
     def backward(ctx, outs_grad: List[Tensor]):
         inputs_and_others = list(ctx.saved_tensors)
-        inputs = inputs_and_others[:int(len(outs_grad) / 2)]
-        others = inputs_and_others[int(len(outs_grad) / 2):]
+        inputs = inputs_and_others[:int(len(outs_grad))]
+        others = inputs_and_others[int(len(outs_grad)):]
 
         inputs_grad = None
         if all([x.requires_grad for x in inputs]):
@@ -115,7 +117,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    outs = GroupedMatmul.apply(inputs, others)
+    outs = GroupedMatmul.apply(inputs + others)
     if biases is not None:
         for i in range(len(biases)):
             outs[i] = outs[i] + biases[i]
