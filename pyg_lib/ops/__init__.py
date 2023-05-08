@@ -58,8 +58,8 @@ class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs_and_others: List[Tensor]):
         ctx.save_for_backward(*(inputs_and_others))
-        inputs = inputs_and_others[:int(len(inputs_and_others)/2)]
-        others = inputs_and_others[int(len(inputs_and_others)/2):]
+        inputs = inputs_and_others[:int(len(inputs_and_others) / 2)]
+        others = inputs_and_others[int(len(inputs_and_others) / 2):]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
