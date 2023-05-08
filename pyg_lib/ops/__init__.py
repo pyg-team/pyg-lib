@@ -6,6 +6,40 @@ from torch import Tensor
 from .scatter_reduce import fused_scatter_reduce
 
 
+class GroupedMatmul(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
+        for x, other in zip(inputs, others):
+            assert x.is_cuda
+            assert other.is_cuda
+        ctx.save_for_backward(inputs, others)
+        outs = torch.ops.pyg.grouped_matmul(inputs, others)
+
+        # NOTE Autograd doesnt set out[i].requires_grad = True automatically
+        for i in range(len(outs)):
+            outs[i].requires_grad = True
+
+        return outs
+
+    @staticmethod
+    def backward(ctx, outs_grad: List[Tensor]):
+        inputs, others = ctx.saved_tensors
+
+        inputs_grad = None
+        if all([x.requires_grad for x in inputs]):
+            for i in range(len(others)):
+                others[i] = others[i].t()
+            inputs_grad = torch.ops.pyg.grouped_matmul(inputs, others)
+
+        others_grad = None
+        if all([other.requires_grad for other in others]):
+            for i in range(len(inputs)):
+                inputs[i] = inputs[i].t()
+            others_grad = torch.ops.pyg.grouped_matmul(inputs, others)
+
+        return inputs_grad, others_grad
+
+
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
                    biases: Optional[List[Tensor]] = None) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
@@ -35,7 +69,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    outs = torch.ops.pyg.grouped_matmul(inputs, others)
+    outs = GroupedMatmul.apply(inputs, others)
     if biases is not None:
         for i in range(len(biases)):
             outs[i] = outs[i] + biases[i]
