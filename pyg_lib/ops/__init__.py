@@ -36,7 +36,8 @@ def pytreeify(cls):
     def new_backward(ctx, *flat_grad_outputs):
         grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
                                              ctx._out_struct)
-        if not isinstance(grad_outputs, tuple) or isinstance(grad_outputs, list):
+        if not isinstance(grad_outputs, tuple) or isinstance(
+                grad_outputs, list):
             grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
