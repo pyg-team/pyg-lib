@@ -55,7 +55,7 @@ def pytreeify(cls):
 class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
-        ctx.save_for_backward(inputs, others)
+        ctx.save_for_backward(*(inputs + others))
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
@@ -66,19 +66,21 @@ class GroupedMatmul(Function):
 
     @staticmethod
     def backward(ctx, outs_grad: List[Tensor]):
-        inputs, others = ctx.saved_tensors
+        inputs_and_others = ctx.saved_tensors
+        inputs = inputs_and_others[:len(outs_grad)/2]
+        others = inputs_and_others[len(outs_grad)/2:]
 
         inputs_grad = None
         if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
                 others[i] = others[i].t()
-            inputs_grad = torch.ops.pyg.grouped_matmul(inputs, others)
+            inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
 
         others_grad = None
         if all([other.requires_grad for other in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].t()
-            others_grad = torch.ops.pyg.grouped_matmul(inputs, others)
+            others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
 
         return inputs_grad, others_grad
 
