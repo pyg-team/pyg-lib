@@ -74,19 +74,19 @@ class GroupedMatmul(Function):
         inputs = inputs_and_others[:int(len(outs_grad))]
         others = inputs_and_others[int(len(outs_grad)):]
 
-        inputs_grad = None
+        inputs_grad = []
         if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
                 others[i] = others[i].t()
             inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
 
-        others_grad = None
+        others_grad = []
         if all([other.requires_grad for other in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].t()
             others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
 
-        return inputs_grad, others_grad
+        return inputs_grad + others_grad
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
