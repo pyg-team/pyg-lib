@@ -13,8 +13,8 @@ class GroupedMatmul(torch.autograd.Function):
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
-        # for i in range(len(outs)):
-        #     outs[i].requires_grad = True
+        for i in range(len(outs)):
+            outs[i].requires_grad = True
 
         return outs
 
