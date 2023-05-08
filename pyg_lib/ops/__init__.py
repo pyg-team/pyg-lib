@@ -8,7 +8,8 @@ from .scatter_reduce import fused_scatter_reduce
 import torch.utils._pytree as pytree
 
 
-# Basically wraps things in and out before passing it to the real function that the user defined.
+# Basically wraps things in and out before passing
+# it to the real function that the user defined.
 def pytreeify(cls):
     assert issubclass(cls, Function)
 
