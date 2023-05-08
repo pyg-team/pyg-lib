@@ -6,6 +6,7 @@ from torch import Tensor
 from .scatter_reduce import fused_scatter_reduce
 import torch.utils._pytree as pytree
 
+
 # Basically wraps things in and out before passing it to the real function that the user defined.
 def pytreeify(cls):
     assert issubclass(cls, Function)
@@ -31,20 +32,23 @@ def pytreeify(cls):
         return tuple(flat_out)
 
     def new_backward(ctx, *flat_grad_outputs):
-        grad_outputs = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
+        grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
+                                             ctx._out_struct)
         if not isinstance(grad_outputs, tuple):
-            grad_outputs = (grad_outputs,)
+            grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
         if grad_inputs_struct != ctx._inp_struct:
-            raise RuntimeError("The backward generated an arg structure that doesn't "
-                               "match the forward's input.")
+            raise RuntimeError(
+                "The backward generated an arg structure that doesn't "
+                "match the forward's input.")
         return (None, None) + tuple(flat_grad_inputs)
 
     cls.apply = new_apply
     cls.forward = new_forward
     cls.backward = new_backward
     return cls
+
 
 @pytreeify
 class GroupedMatmul(torch.autograd.Function):
