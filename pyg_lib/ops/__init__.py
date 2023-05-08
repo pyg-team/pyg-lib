@@ -9,15 +9,12 @@ from .scatter_reduce import fused_scatter_reduce
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
-        for x, other in zip(inputs, others):
-            assert x.is_cuda
-            assert other.is_cuda
         ctx.save_for_backward(inputs, others)
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
-        # NOTE Autograd doesnt set out[i].requires_grad = True automatically
-        for i in range(len(outs)):
-            outs[i].requires_grad = True
+        # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
+        # for i in range(len(outs)):
+        #     outs[i].requires_grad = True
 
         return outs
 
