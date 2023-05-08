@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 
 import torch
 from torch import Tensor
+from torch.autograd import Function
 
 from .scatter_reduce import fused_scatter_reduce
 import torch.utils._pytree as pytree
@@ -47,7 +48,7 @@ def pytreeify(cls):
     return cls
 
 @pytreeify
-class GroupedMatmul(torch.autograd.Function):
+class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs: List[Tensor], others: List[Tensor]):
         ctx.save_for_backward(inputs, others)
