@@ -67,9 +67,9 @@ class GroupedMatmul(Function):
 
     @staticmethod
     def backward(ctx, outs_grad: List[Tensor]):
-        inputs_and_others = ctx.saved_tensors
-        inputs = inputs_and_others[:len(outs_grad) / 2]
-        others = inputs_and_others[len(outs_grad) / 2:]
+        inputs_and_others = list(ctx.saved_tensors)
+        inputs = inputs_and_others[:int(len(outs_grad) / 2)]
+        others = inputs_and_others[int(len(outs_grad) / 2):]
 
         inputs_grad = None
         if all([x.requires_grad for x in inputs]):
