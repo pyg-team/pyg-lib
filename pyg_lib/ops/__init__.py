@@ -51,7 +51,7 @@ def pytreeify(cls):
 class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs_and_others):
-        ctx.save_for_backward(inputs_and_others)
+        ctx.save_for_backward(*inputs_and_others)
         # autograd complains about list(...) constructor
         inputs: List[Tensor] = [
             i for i in inputs_and_others[:int(len(inputs_and_others) / 2)]
@@ -69,7 +69,7 @@ class GroupedMatmul(Function):
 
     @staticmethod
     def backward(ctx, *outs_grad):
-        inputs_and_others = list(ctx.saved_tensors)
+        inputs_and_others = list(tuple(ctx.saved_tensors))
         inputs: List[Tensor] = [
             i for i in inputs_and_others[:int(len(outs_grad))]
         ]
