@@ -41,14 +41,14 @@ def pytreeify(cls):
             grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
-        print("flat_grad_inputs=",flat_grad_inputs)
-        print("grad_inputs_struct=", grad_inputs_struct)
-        print("ctx._inp_struct=", ctx._inp_struct)
+        print("len(flat_grad_inputs)=",len(flat_grad_inputs))
+        print("len(grad_inputs_struct=", len(grad_inputs_struct))
+        print("len(ctx._inp_struct)=", len(ctx._inp_struct))
         # if grad_inputs_struct != ctx._inp_struct:
         #     raise RuntimeError(
         #         "The backward generated an arg structure that doesn't "
         #         "match the forward's input.")
-        # return (None, None) + tuple(flat_grad_inputs)
+        return (None, None) + tuple(flat_grad_inputs)
 
     cls.apply = new_apply
     cls.forward = new_forward
