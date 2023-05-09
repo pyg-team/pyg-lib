@@ -6,6 +6,7 @@ from torch.autograd import Function
 
 from .scatter_reduce import fused_scatter_reduce
 
+
 class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, *inputs_and_others):
