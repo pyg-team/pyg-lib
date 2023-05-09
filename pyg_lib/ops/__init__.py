@@ -71,7 +71,7 @@ class GroupedMatmul(Function):
         inputs = inputs_and_others[:int(len(outs_grad))]
         others = inputs_and_others[int(len(outs_grad)):]
         # explicit typing needed
-        outs_grad: List[Tensor] = list(outs_grad)
+        outs_grad: List[Tensor] = [i for i in outs_grad]
         inputs_grad = []
         if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
