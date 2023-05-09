@@ -12,6 +12,12 @@ class GroupedMatmul(Function):
     def forward(ctx, inputs_and_others):
         ctx.save_for_backward(inputs_and_others)
         # autograd complains about list(...) constructor
+<<<<<<< HEAD
+=======
+        print("len(inputs_and_others)=", len(inputs_and_others))
+        print("inputs_and_others[0]=", inputs_and_others[0])
+        print("len(inputs_and_others[0]))=", len(inputs_and_others[0]))
+>>>>>>> 5b4dd8340e38f709f5bff5d8c279bb23b468e2de
         inputs: List[Tensor] = [
             i for i in inputs_and_others[:int(len(inputs_and_others) / 2)]
         ]
