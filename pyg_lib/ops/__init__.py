@@ -7,9 +7,16 @@ from torch.autograd import Function
 from .scatter_reduce import fused_scatter_reduce
 # import torch.utils._pytree as pytree
 
+<<<<<<< HEAD
 # # Basically wraps things in and out before passing it to the real function that the user defined.
 # def pytreeify(cls):
 #     assert issubclass(cls, Function)
+=======
+
+# Basically wraps things in and out before passing it to the real function that the user defined.
+def pytreeify(cls):
+    assert issubclass(cls, Function)
+>>>>>>> 6d93d72689eb7fdeea1af8af1d9595a9b357e9e4
 
 #     orig_fw = cls.forward
 #     orig_bw = cls.backward
@@ -31,6 +38,7 @@ from .scatter_reduce import fused_scatter_reduce
 #         out_struct_holder.append(out_struct)
 #         return tuple(flat_out)
 
+<<<<<<< HEAD
 #     def new_backward(ctx, *flat_grad_outputs):
 #         grad_outputs = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
 #         if not isinstance(grad_outputs, tuple):
@@ -41,13 +49,32 @@ from .scatter_reduce import fused_scatter_reduce
 #             raise RuntimeError("The backward generated an arg structure that doesn't "
 #                                "match the forward's input.")
 #         return (None, None) + tuple(flat_grad_inputs)
+=======
+    def new_backward(ctx, *flat_grad_outputs):
+        grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
+                                             ctx._out_struct)
+        if not isinstance(grad_outputs, tuple):
+            grad_outputs = (grad_outputs, )
+        grad_inputs = orig_bw(ctx, *grad_outputs)
+        flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
+        if grad_inputs_struct != ctx._inp_struct:
+            raise RuntimeError(
+                "The backward generated an arg structure that doesn't "
+                "match the forward's input.")
+        return (None, None) + tuple(flat_grad_inputs)
+>>>>>>> 6d93d72689eb7fdeea1af8af1d9595a9b357e9e4
 
 #     cls.apply = new_apply
 #     cls.forward = new_forward
 #     cls.backward = new_backward
 #     return cls
 
+<<<<<<< HEAD
 # @pytreeify
+=======
+
+@pytreeify
+>>>>>>> 6d93d72689eb7fdeea1af8af1d9595a9b357e9e4
 class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs_and_others):
