@@ -86,7 +86,7 @@ class GroupedMatmul(Function):
                 inputs[i] = inputs[i].t()
             others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
 
-        return inputs_grad + others_grad
+        return *(inputs_grad + others_grad)
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
