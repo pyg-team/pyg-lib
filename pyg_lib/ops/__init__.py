@@ -56,8 +56,8 @@ class GroupedMatmul(Function):
     def forward(ctx, *inputs_and_others):
         ctx.save_for_backward(*(inputs_and_others))
         # autograd complains about list(...) constructor
-        inputs: List[Tensor]  = [i for i in inputs_and_others[:int(len(inputs_and_others) / 2)]]
-        others: List[Tensor]  = [i for i in inputs_and_others[int(len(inputs_and_others) / 2):]]
+        inputs: List[Tensor]  = [Tensor(i) for i in inputs_and_others[:int(len(inputs_and_others) / 2)]]
+        others: List[Tensor]  = [Tensor(i) for i in inputs_and_others[int(len(inputs_and_others) / 2):]]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # # NOTE Autograd doesnt set out[i].requires_grad = True automatically
@@ -69,10 +69,8 @@ class GroupedMatmul(Function):
     @staticmethod
     def backward(ctx, *outs_grad):
         inputs_and_others = list(ctx.saved_tensors)
-        inputs: List[Tensor]  = [i for i in inputs_and_others[:int(len(outs_grad))]]
-        others: List[Tensor]  = [i for i in inputs_and_others[int(len(outs_grad)):]]
-        inputs = inputs_and_others[:int(len(outs_grad))]
-        others = inputs_and_others[int(len(outs_grad)):]
+        inputs: List[Tensor]  = [Tensor(i) for i in inputs_and_others[:int(len(outs_grad))]]
+        others: List[Tensor]  = [Tensor(i) for i in inputs_and_others[int(len(outs_grad)):]]
         # explicit typing needed
         outs_grad: List[Tensor] = [i for i in outs_grad]
         inputs_grad = []
