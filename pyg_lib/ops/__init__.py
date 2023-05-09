@@ -36,18 +36,14 @@ def pytreeify(cls):
     def new_backward(ctx, *flat_grad_outputs):
         grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
                                              ctx._out_struct)
-        if not isinstance(grad_outputs, tuple) or isinstance(
-                grad_outputs, list):
+        if not isinstance(grad_outputs, tuple):
             grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
-        print("len(flat_grad_inputs)=",len(flat_grad_inputs))
-        print("len(grad_inputs_struct=", len(grad_inputs_struct))
-        print("len(ctx._inp_struct)=", len(ctx._inp_struct))
-        # if grad_inputs_struct != ctx._inp_struct:
-        #     raise RuntimeError(
-        #         "The backward generated an arg structure that doesn't "
-        #         "match the forward's input.")
+        if grad_inputs_struct != ctx._inp_struct:
+            raise RuntimeError(
+                "The backward generated an arg structure that doesn't "
+                "match the forward's input.")
         return (None, None) + tuple(flat_grad_inputs)
 
     cls.apply = new_apply
@@ -56,10 +52,10 @@ def pytreeify(cls):
     return cls
 
 
-@pytreeify
+# @pytreeify
 class GroupedMatmul(Function):
     @staticmethod
-    def forward(ctx, inputs_and_others: List[Tensor]):
+    def forward(ctx, *inputs_and_others):
         ctx.save_for_backward(*(inputs_and_others))
         inputs = inputs_and_others[:int(len(inputs_and_others) / 2)]
         others = inputs_and_others[int(len(inputs_and_others) / 2):]
@@ -69,10 +65,10 @@ class GroupedMatmul(Function):
         for i in range(len(outs)):
             outs[i].requires_grad = True
 
-        return outs
+        return tuple(outs)
 
     @staticmethod
-    def backward(ctx, outs_grad: List[Tensor]):
+    def backward(ctx, *outs_grad):
         inputs_and_others = list(ctx.saved_tensors)
         inputs = inputs_and_others[:int(len(outs_grad))]
         others = inputs_and_others[int(len(outs_grad)):]
@@ -89,7 +85,7 @@ class GroupedMatmul(Function):
                 inputs[i] = inputs[i].t()
             others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
 
-        return (inputs_grad + others_grad)
+        return tuple(inputs_grad + others_grad)
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
@@ -121,7 +117,7 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    outs = GroupedMatmul.apply(inputs + others)
+    outs = list(GroupedMatmul.apply(inputs + others))
     if biases is not None:
         for i in range(len(biases)):
             outs[i] = outs[i] + biases[i]
