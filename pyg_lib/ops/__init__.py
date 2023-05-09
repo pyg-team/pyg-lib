@@ -41,7 +41,7 @@ def pytreeify(cls):
             grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
-        print("flat_grad_inputs=",flat_grad_inputs)
+        print("flat_grad_inputs=", flat_grad_inputs)
         print("grad_inputs_struct=", grad_inputs_struct)
         print("ctx._inp_struct=", ctx._inp_struct)
         # if grad_inputs_struct != ctx._inp_struct:
