@@ -70,7 +70,7 @@ class GroupedMatmul(Function):
         inputs_and_others = list(ctx.saved_tensors)
         inputs = inputs_and_others[:int(len(outs_grad))]
         others = inputs_and_others[int(len(outs_grad)):]
-
+        outs_grad= list(outs_grad)
         inputs_grad = []
         if all([x.requires_grad for x in inputs]):
             for i in range(len(others)):
