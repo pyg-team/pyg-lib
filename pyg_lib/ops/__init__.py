@@ -39,10 +39,12 @@ def pytreeify(cls):
         return tuple(flat_out)
 
     def new_backward(ctx, *flat_grad_outputs):
+        # unflatten gradient outputs
         grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
                                              ctx._out_struct)
         if not isinstance(grad_outputs, tuple):
             grad_outputs = (grad_outputs, )
+        # get gradient inputs and flatten them
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
         return (None, None) + tuple(flat_grad_inputs)
