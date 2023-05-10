@@ -89,12 +89,16 @@ class GroupedMatmul(Function):
             for i in range(len(others)):
                 others[i] = others[i].t()
             inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
+        else:
+            inputs_grad = [None for i in range(len(outs_grad))]
 
         others_grad = []
         if all([other.requires_grad for other in others]):
             for i in range(len(inputs)):
                 inputs[i] = inputs[i].t()
             others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
+        else:
+            others_grad = [None for i in range(len(outs_grad))]
 
         return tuple(inputs_grad + others_grad)
 
