@@ -43,6 +43,8 @@ def pytreeify(cls):
         #     raise RuntimeError(
         #         "The backward generated an arg structure that doesn't "
         #         "match the forward's input.")
+        print("len(flat_grad_inputs)=", len(flat_grad_inputs))
+        print("flat_grad_inputs=", flat_grad_inputs)
         return (None, None) + tuple(flat_grad_inputs)
 
     cls.apply = new_apply
