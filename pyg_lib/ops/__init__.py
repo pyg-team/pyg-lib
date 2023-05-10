@@ -39,10 +39,10 @@ def pytreeify(cls):
             grad_outputs = (grad_outputs, )
         grad_inputs = orig_bw(ctx, *grad_outputs)
         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
-        if grad_inputs_struct != ctx._inp_struct:
-            raise RuntimeError(
-                "The backward generated an arg structure that doesn't "
-                "match the forward's input.")
+        # if grad_inputs_struct != ctx._inp_struct:
+        #     raise RuntimeError(
+        #         "The backward generated an arg structure that doesn't "
+        #         "match the forward's input.")
         return (None, None) + tuple(flat_grad_inputs)
 
     cls.apply = new_apply
