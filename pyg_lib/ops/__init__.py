@@ -5,56 +5,56 @@ from torch import Tensor
 from torch.autograd import Function
 
 from .scatter_reduce import fused_scatter_reduce
-# import torch.utils._pytree as pytree
+import torch.utils._pytree as pytree
 
 
-# # Basically wraps things in and out before passing
-# # it to the real function that the user defined.
-# def pytreeify(cls):
-#     assert issubclass(cls, Function)
+# Basically wraps things in and out before passing
+# it to the real function that the user defined.
+def pytreeify(cls):
+    assert issubclass(cls, Function)
 
-#     # original functions we will replace with flattened versions
-#     orig_fw = cls.forward
-#     orig_bw = cls.backward
-#     orig_apply = cls.apply
+    # original functions we will replace with flattened versions
+    orig_fw = cls.forward
+    orig_bw = cls.backward
+    orig_apply = cls.apply
 
-#     def new_apply(*inp):
-#         # flatten input structure
-#         flat_inp, struct = pytree.tree_flatten(inp)
-#         out_struct_holder = []
-#         # get flattened output
-#         flat_out = orig_apply(struct, out_struct_holder, *flat_inp)
-#         assert len(out_struct_holder) == 1
-#         return pytree.tree_unflatten(flat_out, out_struct_holder[0])
+    def new_apply(*inp):
+        # flatten input structure
+        flat_inp, struct = pytree.tree_flatten(inp)
+        out_struct_holder = []
+        # get flattened output
+        flat_out = orig_apply(struct, out_struct_holder, *flat_inp)
+        assert len(out_struct_holder) == 1
+        return pytree.tree_unflatten(flat_out, out_struct_holder[0])
 
-#     def new_forward(ctx, struct, out_struct_holder, *flat_inp):
-#         # unflatten input
-#         inp = pytree.tree_unflatten(flat_inp, struct)
-#         out = orig_fw(ctx, *inp)
-#         # flatten output
-#         flat_out, out_struct = pytree.tree_flatten(out)
-#         ctx._inp_struct = struct
-#         ctx._out_struct = out_struct
-#         # store structure of output
-#         out_struct_holder.append(out_struct)
-#         return tuple(flat_out)
+    def new_forward(ctx, struct, out_struct_holder, *flat_inp):
+        # unflatten input
+        inp = pytree.tree_unflatten(flat_inp, struct)
+        out = orig_fw(ctx, *inp)
+        # flatten output
+        flat_out, out_struct = pytree.tree_flatten(out)
+        ctx._inp_struct = struct
+        ctx._out_struct = out_struct
+        # store structure of output
+        out_struct_holder.append(out_struct)
+        return tuple(flat_out)
 
-#     def new_backward(ctx, *flat_grad_outputs):
-#         grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
-#                                              ctx._out_struct)
-#         if not isinstance(grad_outputs, tuple):
-#             grad_outputs = (grad_outputs, )
-#         grad_inputs = orig_bw(ctx, *grad_outputs)
-#         flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
-#         return (None, None) + tuple(flat_grad_inputs)
+    def new_backward(ctx, *flat_grad_outputs):
+        grad_outputs = pytree.tree_unflatten(flat_grad_outputs,
+                                             ctx._out_struct)
+        if not isinstance(grad_outputs, tuple):
+            grad_outputs = (grad_outputs, )
+        grad_inputs = orig_bw(ctx, *grad_outputs)
+        flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
+        return (None, None) + tuple(flat_grad_inputs)
 
-#     cls.apply = new_apply
-#     cls.forward = new_forward
-#     cls.backward = new_backward
-#     return cls
+    cls.apply = new_apply
+    cls.forward = new_forward
+    cls.backward = new_backward
+    return cls
 
 
-# @pytreeify
+@pytreeify
 class GroupedMatmul(Function):
     @staticmethod
     def forward(ctx, inputs_and_others):
