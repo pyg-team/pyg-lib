@@ -1,11 +1,7 @@
-from typing import Tuple, Optional
+from typing import Optional
 
 import torch
 from torch import Tensor
-
-NodeType = str
-RelType = str
-EdgeType = Tuple[str, str, str]
 
 
 def metis(
@@ -18,8 +14,8 @@ def metis(
 ) -> Tensor:
     r"""Clusters/partitions a graph into multiple partitions via :obj:`METIS`,
     as motivated by the `"Cluster-GCN: An Efficient Algorithm for Training Deep
-    and Large Graph Convolutional Networks"<https://arxiv.org/abs/1905.07953>`_
-    paper.
+    and Large Graph Convolutional Networks"
+    <https://arxiv.org/abs/1905.07953>`_ paper.
 
     Args:
         rowptr (torch.Tensor): Compressed source node indices.
