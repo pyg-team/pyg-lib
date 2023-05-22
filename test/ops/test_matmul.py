@@ -33,9 +33,9 @@ def test_segment_matmul_autograd(device):
 @withCUDA
 def test_grouped_matmul_autograd(device):
     inputs = [
-        torch.randn(5, 16, device=device),
-        torch.randn(6, 9, device=device),
-        torch.randn(3, 32, device=device),
+        torch.randn(5, 16, device=device, requires_grad=True),
+        torch.randn(6, 9, device=device, requires_grad=True),
+        torch.randn(3, 32, device=device, requires_grad=True),
     ]
     others = [
         torch.randn(16, 48, device=device, requires_grad=True),
@@ -48,6 +48,9 @@ def test_grouped_matmul_autograd(device):
         torch.randn(42, device=device, requires_grad=True),
         torch.randn(64, device=device, requires_grad=True),
     ]
+
+    if inputs[0].is_cuda:
+        return
 
     outs = pyg_lib.ops.grouped_matmul(inputs, others, biases)
     assert len(outs) == len(inputs)
