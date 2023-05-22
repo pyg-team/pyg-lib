@@ -49,9 +49,6 @@ def test_grouped_matmul_autograd(device):
         torch.randn(64, device=device, requires_grad=True),
     ]
 
-    if inputs[0].is_cuda:
-        return
-
     outs = pyg_lib.ops.grouped_matmul(inputs, others, biases)
     assert len(outs) == len(inputs)
 
