@@ -65,6 +65,17 @@ else()
   target_include_directories(${PROJECT_NAME} PRIVATE ${PHMAP_DIR})
 endif()
 
+set(METIS_DIR third_party/METIS)
+target_include_directories(${PROJECT_NAME} PRIVATE ${METIS_DIR}/include)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
+set(GKLIB_PATH "${METIS_DIR}/GKlib")
+include(${GKLIB_PATH}/GKlibSystem.cmake)
+include_directories(${GKLIB_PATH})
+include_directories("${METIS_DIR}/include")
+add_subdirectory("${METIS_DIR}/libmetis")
+target_link_libraries(${PROJECT_NAME} PRIVATE metis)
+
 find_package(Torch REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
