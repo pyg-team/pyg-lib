@@ -40,7 +40,7 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         &num_partitions, NULL, NULL, NULL, &objval, part_data);
   }
 
-  return rowptr;
+  return part;
 }
 
 }  // namespace

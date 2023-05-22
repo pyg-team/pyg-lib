@@ -6,12 +6,11 @@
 
 TEST(MetisTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
-
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  std::cout << std::get<0>(graph) << std::endl;
-  std::cout << std::get<1>(graph) << std::endl;
 
   auto out = pyg::partition::metis(std::get<0>(graph), std::get<1>(graph),
                                    /*num_partitions=*/2);
-  std::cout << out << std::endl;
+  EXPECT_EQ(out.numel(), 6);
+  EXPECT_EQ(out.min().item<int64_t>(), 0);
+  EXPECT_EQ(out.max().item<int64_t>(), 1);
 }
