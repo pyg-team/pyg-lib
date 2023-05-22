@@ -12,8 +12,8 @@ def metis(
     rowptr: Tensor,
     col: Tensor,
     num_partitions: int,
-    node_weight: Optional[Tensor],
-    edge_weight: Optional[Tensor],
+    node_weight: Optional[Tensor] = None,
+    edge_weight: Optional[Tensor] = None,
     recursive: bool = False,
 ) -> Tensor:
     r"""Clusters/partitions a graph into multiple partitions via :obj:`METIS`,
