@@ -13,7 +13,7 @@ os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
 torch.backends.cuda.matmul.allow_tf32 = False
 
 major_vers, minor_vers = str(torch.__version__).split('.')[:2]
-REQ_GRAD = int(major_vers) >= 2 or int(minor_vers) >= 14
+REQ_GRAD = False
 
 if int(minor_vers) >= 12 or int(major_vers) > 1:  # This only exists after 1.12
     torch.set_float32_matmul_precision('highest')  # Enforce FP32
