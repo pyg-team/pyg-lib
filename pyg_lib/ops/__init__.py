@@ -37,24 +37,14 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
     """
     major_vers, minor_vers = str(torch.__version__).split('.')[:2]
 
-    if int(major_vers) >= 2 or int(minor_vers) >= 14:
-        input = torch.nested.as_nested_tensor(inputs).contiguous()
-        other = torch.nested.as_nested_tensor(others).contiguous()
-        if input.dim() == 4 or other.dim() == 4:
-            # bmm only works on lists of 2D tensors
-            out = torch.matmul(input, other).contiguous()
-        else:
-            out = torch.bmm(input, other).contiguous()
-        outs = list(out.unbind())
-    else:
-        input_req_grad = any([i.requires_grad for i in inputs])
-        other_req_grad = any([i.requires_grad for i in others])
-        if input_req_grad or other_req_grad:
-            raise ValueError("Autograd is not supported in `grouped_matmul` "
-                             "for PyTorch <= 1.13. Please `detach()` your "
-                             "input tensors before calling this function.")
+    input_req_grad = any([i.requires_grad for i in inputs])
+    other_req_grad = any([i.requires_grad for i in others])
+    if input_req_grad or other_req_grad:
+        raise ValueError("Autograd is not supported in `grouped_matmul` "
+                         "for PyTorch <= 1.13. Please `detach()` your "
+                         "input tensors before calling this function.")
 
-        outs = torch.ops.pyg.grouped_matmul(inputs, others)
+    outs = torch.ops.pyg.grouped_matmul(inputs, others)
     if biases is not None:
         for i in range(len(biases)):
             outs[i] = outs[i] + biases[i]
