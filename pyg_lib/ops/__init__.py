@@ -70,7 +70,7 @@ class GroupedMatmul(torch.autograd.Function):
 
         # NOTE Autograd doesnt set `out[i].requires_grad = True` automatically
         for x, other, out in zip(inputs, others, outs):
-            if x.requires_grad or other.requres_grad:
+            if x.requires_grad or other.requires_grad:
                 out.requires_grad = True
 
         return tuple(outs)
