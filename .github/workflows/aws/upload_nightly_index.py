@@ -25,6 +25,8 @@ for obj in bucket.objects.filter(Prefix='whl/nightly'):
         wheels_dict[torch_version.replace('1.12.0', '1.12.1')].append(wheel)
     if '1.13.0' in torch_version:
         wheels_dict[torch_version.replace('1.13.0', '1.13.1')].append(wheel)
+    if '2.0.0' in torch_version:
+        wheels_dict[torch_version.replace('2.0.0', '2.0.1')].append(wheel)
 
 index_html = html.format('\n'.join([
     href.format(f'{version}.html'.replace('+', '%2B'), version)
