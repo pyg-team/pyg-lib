@@ -4,6 +4,98 @@ import torch
 from torch import Tensor
 
 from .scatter_reduce import fused_scatter_reduce
+import torch.utils._pytree as pytree
+
+
+def pytreeify(cls):
+    r"""A pytree is Python nested data structure. It is a tree in the sense
+    that nodes are Python collections (e.g., list, tuple, dict) and the leaves
+    are Python values.
+    pytrees are useful for working with nested collections of Tensors. For
+    example, one can use `tree_map` to map a function over all Tensors inside
+    some nested collection of Tensors and `tree_unflatten` to get a flat list
+    of all Tensors inside some nested collection.
+    """
+    assert issubclass(cls, torch.autograd.Function)
+
+    # The original functions we will replace with flattened versions:
+    orig_fw = cls.forward
+    orig_bw = cls.backward
+    orig_apply = cls.apply
+
+    def new_apply(*inputs):
+        flat_inputs, struct = pytree.tree_flatten(inputs)
+        out_struct_holder = []
+        flat_out = orig_apply(struct, out_struct_holder, *flat_inputs)
+        assert len(out_struct_holder) == 1
+        return pytree.tree_unflatten(flat_out, out_struct_holder[0])
+
+    def new_forward(ctx, struct, out_struct_holder, *flat_inputs):
+        inputs = pytree.tree_unflatten(flat_inputs, struct)
+
+        out = orig_fw(ctx, *inputs)
+
+        flat_out, out_struct = pytree.tree_flatten(out)
+        ctx._inp_struct = struct
+        ctx._out_struct = out_struct
+        out_struct_holder.append(out_struct)
+        return tuple(flat_out)
+
+    def new_backward(ctx, *flat_grad_outputs):
+        outs_grad = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
+        if not isinstance(outs_grad, tuple):
+            outs_grad = (outs_grad, )
+
+        grad_inputs = orig_bw(ctx, *outs_grad)
+
+        flat_grad_inputs, grad_inputs_struct = pytree.tree_flatten(grad_inputs)
+        return (None, None) + tuple(flat_grad_inputs)
+
+    cls.apply = new_apply
+    cls.forward = new_forward
+    cls.backward = new_backward
+
+    return cls
+
+
+@pytreeify
+class GroupedMatmul(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
+        ctx.save_for_backward(*args)
+
+        inputs: List[Tensor] = [x for x in args[:int(len(args) / 2)]]
+        others: List[Tensor] = [other for other in args[int(len(args) / 2):]]
+        outs = torch.ops.pyg.grouped_matmul(inputs, others)
+
+        # NOTE Autograd doesnt set `out[i].requires_grad = True` automatically
+        for x, other, out in zip(inputs, others, outs):
+            if x.requires_grad or other.requires_grad:
+                out.requires_grad = True
+
+        return tuple(outs)
+
+    @staticmethod
+    def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
+        args = ctx.saved_tensors
+        inputs: List[Tensor] = [x for x in args[:int(len(outs_grad))]]
+        others: List[Tensor] = [other for other in args[int(len(outs_grad)):]]
+
+        inputs_grad = []
+        if any([x.requires_grad for x in inputs]):
+            others = [other.t() for other in others]
+            inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
+        else:
+            inputs_grad = [None for i in range(len(outs_grad))]
+
+        others_grad = []
+        if any([other.requires_grad for other in others]):
+            inputs = [x.t() for x in inputs]
+            others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
+        else:
+            others_grad = [None for i in range(len(outs_grad))]
+
+        return tuple(inputs_grad + others_grad)
 
 
 def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
@@ -35,29 +127,13 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
         List[torch.Tensor]: List of 2D output matrices of shapes
         :obj:`[N_i, M_i]`.
     """
-    major_vers, minor_vers = str(torch.__version__).split('.')[:2]
+    # Combine inputs into a single tuple for autograd:
+    outs = list(GroupedMatmul.apply(tuple(inputs + others)))
 
-    if int(major_vers) >= 2 or int(minor_vers) >= 14:
-        input = torch.nested.as_nested_tensor(inputs).contiguous()
-        other = torch.nested.as_nested_tensor(others).contiguous()
-        if input.dim() == 4 or other.dim() == 4:
-            # bmm only works on lists of 2D tensors
-            out = torch.matmul(input, other).contiguous()
-        else:
-            out = torch.bmm(input, other).contiguous()
-        outs = list(out.unbind())
-    else:
-        input_req_grad = any([i.requires_grad for i in inputs])
-        other_req_grad = any([i.requires_grad for i in others])
-        if input_req_grad or other_req_grad:
-            raise ValueError("Autograd is not supported in `grouped_matmul` "
-                             "for PyTorch <= 1.13. Please `detach()` your "
-                             "input tensors before calling this function.")
-
-        outs = torch.ops.pyg.grouped_matmul(inputs, others)
     if biases is not None:
         for i in range(len(biases)):
             outs[i] = outs[i] + biases[i]
+
     return outs
 
 
