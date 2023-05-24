@@ -45,7 +45,7 @@ void run_grouped_gemm(const at::TensorList input,
     auto new_in = input[i].contiguous();
     auto new_other = other[i].contiguous();
     auto new_out = out[i].contiguous();
-    auto m = new_in.size(0), k = new_other.size(1), n = new_out.size(1);
+    auto m = new_in.size(0), k = new_other.size(0), n = new_out.size(1);
 
     problem_sizes_data[i] = cutlass::gemm::GemmCoord(m, n, k);
 
