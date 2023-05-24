@@ -46,7 +46,8 @@ void run_grouped_gemm(const at::TensorList input,
     auto new_in = input[i].contiguous();
     auto new_other = other[i].contiguous();
     auto new_out = out[i].contiguous();
-    auto m = new_in.size(0), k = new_other.size((int)(segment)), n = new_out.size(1);
+    auto m = new_in.size(0), k = new_other.size((int)(segment)),
+         n = new_out.size(1);
 
     problem_sizes_data[i] = cutlass::gemm::GemmCoord(m, n, k);
 
@@ -309,8 +310,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   grouped_matmul_out_kernel(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
       other.contiguous().split(/*split_size=*/1, /*dim=*/0),
-      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
-      true);
+      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0), true);
 
   return out;
 }
