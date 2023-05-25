@@ -19,7 +19,8 @@ namespace {
 template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
-                      const at::TensorList out) {
+                      const at::TensorList out,
+                      bool segment) {
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
 
   const int64_t num_matrices = input.size();
@@ -45,7 +46,8 @@ void run_grouped_gemm(const at::TensorList input,
     auto new_in = input[i].contiguous();
     auto new_other = other[i].contiguous();
     auto new_out = out[i].contiguous();
-    auto m = new_in.size(0), k = new_other.size(1), n = new_out.size(1);
+    auto m = new_in.size(0), k = new_other.size((int)(segment)),
+         n = new_out.size(1);
 
     problem_sizes_data[i] = cutlass::gemm::GemmCoord(m, n, k);
 
@@ -115,7 +117,8 @@ bool props_queried = false;
 
 void grouped_matmul_out_kernel(const at::TensorList input,
                                const at::TensorList other,
-                               const at::TensorList out) {
+                               const at::TensorList out,
+                               bool segment) {
   if (!props_queried) {
     props = get_dev_prop();
     props_queried = true;
@@ -147,7 +150,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         2,                                             // Stages
         cutlass::arch::OpMultiplyAdd                   // Operation
         >::GemmKernel;
-    run_grouped_gemm<GemmKernel_Volta>(input, other, out);
+    run_grouped_gemm<GemmKernel_Volta>(input, other, out, segment);
   } else {
     // Compute capability at or beyond that of Ampere. TF32 is available.
     bool use_tf32;
@@ -188,7 +191,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
           shared_memory_for_kernel<DefaultGemmKernel_TF32>();
       if (grouped_shared_mem < props.sharedMemPerBlockOptin) {
         // full size GPU
-        run_grouped_gemm<DefaultGemmKernel_TF32>(input, other, out);
+        run_grouped_gemm<DefaultGemmKernel_TF32>(input, other, out, segment);
       } else {
         // Smaller GPU
         using SmallGemmKernel_TF32 =
@@ -217,7 +220,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                 3,                                  // Stages
                 cutlass::arch::OpMultiplyAdd        // Operation
                 >::GemmKernel;
-        run_grouped_gemm<SmallGemmKernel_TF32>(input, other, out);
+        run_grouped_gemm<SmallGemmKernel_TF32>(input, other, out, segment);
       }
     } else {
       // TF32 is manually disabled
@@ -250,7 +253,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
           shared_memory_for_kernel<DefaultGemmKernel_FP32>();
       if (grouped_shared_mem < props.sharedMemPerBlockOptin) {
         // full size GPU
-        run_grouped_gemm<DefaultGemmKernel_FP32>(input, other, out);
+        run_grouped_gemm<DefaultGemmKernel_FP32>(input, other, out, segment);
       } else {
         // Smaller GPU
         using SmallGemmKernel_FP32 =
@@ -279,7 +282,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                 3,                                  // Stages
                 cutlass::arch::OpMultiplyAdd        // Operation
                 >::GemmKernel;
-        run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out);
+        run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out, segment);
       }
     }
   }
@@ -290,7 +293,7 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
   std::vector<at::Tensor> out(input.size());
   for (size_t i = 0; i < input.size(); ++i)
     out[i] = input[i].new_empty({input[i].size(0), other[i].size(-1)});
-  grouped_matmul_out_kernel(input, other, out);
+  grouped_matmul_out_kernel(input, other, out, false);
 
   return out;
 }
@@ -307,7 +310,7 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   grouped_matmul_out_kernel(
       input.contiguous().split_with_sizes(/*split_size=*/sizes, /*dim=*/0),
       other.contiguous().split(/*split_size=*/1, /*dim=*/0),
-      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0));
+      out.split_with_sizes(/*split_size=*/sizes, /*dim=*/0), true);
 
   return out;
 }
