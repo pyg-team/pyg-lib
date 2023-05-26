@@ -10,12 +10,26 @@
 #include "cutlass/gemm/kernel/default_gemm_grouped.h"
 #include "cutlass/gemm/kernel/gemm_grouped.h"
 #include "pyg_lib/csrc/utils/convert.h"
+#include <torch/library.h>
+#include <torch/nn/functional/padding.h>
 
 namespace pyg {
 namespace ops {
 
 namespace {
 
+namespace F = torch::nn::functional;
+
+at::Tensor pad_dim(const at::Tensor& input, int dim) {
+  int pad = (ceil(input.size(dim) / 4.0) * 4) - input.size(dim);
+  if (dim == -1) {
+    auto options = F::PadFuncOptions({0, pad, 0, 0}).mode(torch::kConstant);
+    return F::pad(input, options);
+  } else {
+    auto options = F::PadFuncOptions({0, 0, 0, pad}).mode(torch::kConstant);
+    return F::pad(input, options);
+  }
+}
 template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
@@ -43,7 +57,11 @@ void run_grouped_gemm(const at::TensorList input,
 
   // Set arguments into gemm_args from input args
   for (size_t i = 0; i < num_matrices; ++i) {
-    auto new_in = input[i].contiguous();
+    if (input[i].size(-1) % 4 != 0) {
+      auto new_in = pad_dim(input[i], 0).contiguous()
+    } else {
+      auto new_in = input[i].contiguous();
+    }
     auto new_other = other[i].contiguous();
     auto new_out = out[i].contiguous();
     auto m = new_in.size(0), k = new_other.size((int)(segment)),
@@ -130,11 +148,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         float,                                         // Element A
         cutlass::layout::RowMajor,                     // Layout A
         cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity A
+        4,                                             // Granularity A
         float,                                         // Element B
         cutlass::layout::RowMajor,                     // Layout B
         cutlass::ComplexTransform::kNone,              //
-        1,                                             // Granularity B
+        4,                                             // Granularity B
         float,                                         // Element C&D
         cutlass::layout::RowMajor,                     // Layout C&D
         float,                                         // Element Accumulator
@@ -167,11 +185,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
               float,                                   // Element A
               cutlass::layout::RowMajor,               // Layout A
               cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity A
+              4,                                       // Granularity A
               float,                                   // Element B
               cutlass::layout::RowMajor,               // Layout B
               cutlass::ComplexTransform::kNone,        //
-              1,                                       // Granularity B
+              4,                                       // Granularity B
               float,                                   // Element C&D
               cutlass::layout::RowMajor,               // Layout C&D
               float,                                   // Element Accumulator
@@ -199,11 +217,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                 float,                                  // Element A
                 cutlass::layout::RowMajor,              // Layout A
                 cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity A
+                4,                                      // Granularity A
                 float,                                  // Element B
                 cutlass::layout::RowMajor,              // Layout B
                 cutlass::ComplexTransform::kNone,       //
-                1,                                      // Granularity B
+                4,                                      // Granularity B
                 float,                                  // Element C&D
                 cutlass::layout::RowMajor,              // Layout C&D
                 float,                                  // Element Accumulator
@@ -229,11 +247,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
               float,                                 // Element A
               cutlass::layout::RowMajor,             // Layout A
               cutlass::ComplexTransform::kNone,      //
-              1,                                     // Granularity A
+              4,                                     // Granularity A
               float,                                 // Element B
               cutlass::layout::RowMajor,             // Layout B
               cutlass::ComplexTransform::kNone,      //
-              1,                                     // Granularity B
+              4,                                     // Granularity B
               float,                                 // Element C&D
               cutlass::layout::RowMajor,             // Layout C&D
               float,                                 // Element Accumulator
@@ -261,11 +279,11 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                 float,                                // Element A
                 cutlass::layout::RowMajor,            // Layout A
                 cutlass::ComplexTransform::kNone,     //
-                1,                                    // Granularity A
+                4,                                    // Granularity A
                 float,                                // Element B
                 cutlass::layout::RowMajor,            // Layout B
                 cutlass::ComplexTransform::kNone,     //
-                1,                                    // Granularity B
+                4,                                    // Granularity B
                 float,                                // Element C&D
                 cutlass::layout::RowMajor,            // Layout C&D
                 float,                                // Element Accumulator
