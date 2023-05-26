@@ -57,7 +57,7 @@ void run_grouped_gemm(const at::TensorList input,
   // Set arguments into gemm_args from input args
   for (size_t i = 0; i < num_matrices; ++i) {
     if (input[i].size(-1) % 4 != 0) {
-      auto new_in = pad_dim(input[i], 0).contiguous()
+      auto new_in = pad_dim(input[i], 0).contiguous();
     } else {
       auto new_in = input[i].contiguous();
     }
