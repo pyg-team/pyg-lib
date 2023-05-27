@@ -1,6 +1,6 @@
 import torch
 
-from pyg_lib.ops import fused_scatter_reduce
+from pyg_lib.ops.scatter_reduce import fused_scatter_reduce
 from pyg_lib.testing import onlyCUDA, onlyTriton
 
 
