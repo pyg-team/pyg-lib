@@ -147,8 +147,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
             float, 1, float, float>,                   //
         cutlass::gemm::threadblock::                   // Swizzling Operator
         GemmIdentityThreadblockSwizzle<8>,             //
-        2,                                             // Stages
-        cutlass::arch::OpMultiplyAdd                   // Operation
+        2                                              // Stages
         >::GemmKernel;
     run_grouped_gemm<GemmKernel_Volta>(input, other, out, segment);
   } else {
@@ -184,8 +183,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                   float, 1, float, float>,                   //
               cutlass::gemm::threadblock::        // Swizzling Operator
               GemmIdentityThreadblockSwizzle<8>,  //
-              3,                                  // Stages
-              cutlass::arch::OpMultiplyAdd        // Operation
+              3                                   // Stages
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_TF32>();
@@ -217,8 +215,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                     float, 1, float, float>,                   //
                 cutlass::gemm::threadblock::        // Swizzling Operator
                 GemmIdentityThreadblockSwizzle<8>,  //
-                3,                                  // Stages
-                cutlass::arch::OpMultiplyAdd        // Operation
+                3                                   // Stages
                 >::GemmKernel;
         run_grouped_gemm<SmallGemmKernel_TF32>(input, other, out, segment);
       }
@@ -246,8 +243,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                   float, 1, float, float>,                   //
               cutlass::gemm::threadblock::        // Swizzling Operator
               GemmIdentityThreadblockSwizzle<8>,  //
-              3,                                  // Stages
-              cutlass::arch::OpMultiplyAdd        // Operation
+              3                                   // Stages
               >::GemmKernel;
       int grouped_shared_mem =
           shared_memory_for_kernel<DefaultGemmKernel_FP32>();
@@ -279,8 +275,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                     float, 1, float, float>,                   //
                 cutlass::gemm::threadblock::        // Swizzling Operator
                 GemmIdentityThreadblockSwizzle<8>,  //
-                3,                                  // Stages
-                cutlass::arch::OpMultiplyAdd        // Operation
+                3                                   // Stages
                 >::GemmKernel;
         run_grouped_gemm<SmallGemmKernel_FP32>(input, other, out, segment);
       }

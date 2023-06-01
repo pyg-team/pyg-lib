@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 import torch
 from torch import Tensor
 
-from .scatter_reduce import fused_scatter_reduce
 import torch.utils._pytree as pytree
 
 
@@ -341,5 +340,4 @@ __all__ = [
     'sampled_mul',
     'sampled_div',
     'index_sort',
-    'fused_scatter_reduce',
 ]
