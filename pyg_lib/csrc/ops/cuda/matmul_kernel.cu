@@ -78,7 +78,7 @@ void run_grouped_gemm(const at::TensorList input,
 
   // Create GemmGrouped::Arguments using the arguments prepared above
   typename GemmGrouped::Arguments args(problem_sizes_data, num_matrices,
-                                       /*threadblock_count=*/1024, epilogue_op,
+                                       /*threadblock_count=*/num_threadblocks, epilogue_op,
                                        reinterpret_cast<float**>(ptr_A_data),
                                        reinterpret_cast<float**>(ptr_B_data),
                                        reinterpret_cast<float**>(ptr_C_data),
@@ -113,6 +113,7 @@ cudaDeviceProp get_dev_prop() {
   return properties;
 }
 cudaDeviceProp props;
+int num_threadblocks;
 bool props_queried = false;
 
 void grouped_matmul_out_kernel(const at::TensorList input,
@@ -121,6 +122,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                                bool segment) {
   if (!props_queried) {
     props = get_dev_prop();
+    num_threadblocks = GemmGrouped::sufficient();
     props_queried = true;
   }
   if (props.major < 8) {
