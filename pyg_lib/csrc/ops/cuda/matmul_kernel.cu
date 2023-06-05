@@ -15,7 +15,7 @@ namespace pyg {
 namespace ops {
 
 namespace {
-
+int num_threadblocks;
 template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
@@ -113,7 +113,6 @@ cudaDeviceProp get_dev_prop() {
   return properties;
 }
 cudaDeviceProp props;
-int num_threadblocks;
 bool props_queried = false;
 
 void grouped_matmul_out_kernel(const at::TensorList input,
