@@ -15,14 +15,16 @@ namespace pyg {
 namespace ops {
 
 namespace {
-int num_threadblocks;
+int num_threadblocks = -1;
 template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out,
                       bool segment) {
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
-
+  if (num_threadblocks == -1) {
+    num_threadblocks = GemmGrouped::sufficient();
+  }
   const int64_t num_matrices = input.size();
   const int64_t gemm_coord_size =
       num_matrices * ((int64_t)sizeof(cutlass::gemm::GemmCoord));
@@ -121,7 +123,6 @@ void grouped_matmul_out_kernel(const at::TensorList input,
                                bool segment) {
   if (!props_queried) {
     props = get_dev_prop();
-    num_threadblocks = GemmGrouped::sufficient();
     props_queried = true;
   }
   if (props.major < 8) {
