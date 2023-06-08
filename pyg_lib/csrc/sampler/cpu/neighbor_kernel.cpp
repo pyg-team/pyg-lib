@@ -93,13 +93,11 @@ class NeighborSampler {
       //1 first duplicate rows and cols concatenating cols to rows, and rows to cols, like in to_bidirectional
       if (save_edges) {
         _mutuallyExtendVectors(sampled_rows_, sampled_cols_ );
-        std::cout << "bidir_sampling_opt2 TRUE, and save_edges TRUE"
       }
       //2 if edge_id is not none, use the same edge_id for both (not clear why but it is like this in pyg)
       // and duplicate edge_id vector 
       if (save_edge_ids){
         _extendVector(sampled_edge_ids_, sampled_edge_ids_);
-        std::cout << "bidir_sampling_opt2 TRUE, and save_edges_ids TRUE"
       }
       //3 What above covers what it is done in utils.py:to_bidirectional. 
       // Now, do all is done in coalesce.py. See first how much it takes to reorder
