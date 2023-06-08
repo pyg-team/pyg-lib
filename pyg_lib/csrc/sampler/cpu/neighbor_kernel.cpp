@@ -86,16 +86,6 @@ class NeighborSampler {
             dst_mapper, generator, out_global_dst_nodes);
   }
 
-  void _mutuallyExtendVectors(std::vector<scalar_t>& avector, std::vector<scalar_t>& bvector) {
-    std::vector ttemp(avector.begin(), avector.end()); //maybe useless
-    avector.insert(avector.end(), bvector.begin(), bvector.end());
-    bvector.insert(bvector.end(), ttemp.begin(), ttemp.end());
-  }
-
-  void _extendVector(std::vector<scalar_t>& avector, const std::vector<scalar_t>& bvector) {
-    avector.insert(avector.end(), bvector.begin(), bvector.end());
-  }
-
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
   get_sampled_edges(bool csc = false) {
     TORCH_CHECK(save_edges, "No edges have been stored")
@@ -112,11 +102,12 @@ class NeighborSampler {
         std::cout << "bidir_sampling_opt2 TRUE, and save_edges_ids TRUE"
       }
       //3 What above covers what it is done in utils.py:to_bidirectional. 
-      // Now do all is done in coalesce.py. See first how much it takes to reorder
-       // The following call reorders links AND removes duplicates. 
-       // Note that does that on a link structure
-       // and does not use a smart sequence and then a mask as in coalesce.py. Also it does not suport any reduction function 
-       // just keep the first linkID found for that link.
+      // Now, do all is done in coalesce.py. See first how much it takes to reorder
+       // The following call _removeDuplicateLinks() reorders links AND removes duplicates. 
+       // Note that does that on a link structure and
+       // does not use a smart sequence and then a mask as in coalesce.py. 
+       // Also it does not suport any reduction function 
+       // It just keeps the first linkID found for that link.
        //_removeDuplicateLinks();
     }
     const auto row = pyg::utils::from_vector(sampled_rows_);
@@ -145,7 +136,6 @@ class NeighborSampler {
       std::cout << "removeDuplicateLinks duration: " << duration.count() << std::endl;
     }
   }
-
 
  private:
   inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
@@ -211,21 +201,6 @@ class NeighborSampler {
     }
   }
   
-//  use to check link existence as it gets added: to slow approach
-//  inline int checkLinkExistence(const std::vector<scalar_t>& source, 
-//                                 const std::vector<scalar_t>& destination, 
-//                                 const std::tuple<scalar_t, scalar_t>& newLink) {
-//     scalar_t newSource = std::get<0>(newLink);
-//     scalar_t newDestination = std::get<1>(newLink);
-
-//     for (int i = 0; i < source.size(); ++i) {
-//         if (source[i] == newSource && destination[i] == newDestination) {
-//             return 1;  // Link already exists
-//         }
-//     }
-//     return 0;  // Link does not exist
-//  }
-
   inline void add(const scalar_t edge_id,
                   const node_t global_src_node,
                   const scalar_t local_src_node,
@@ -254,6 +229,31 @@ class NeighborSampler {
         }
       }
     }
+  }
+
+//  use to check link existence as it gets added: to slow approach
+//  inline int checkLinkExistence(const std::vector<scalar_t>& source, 
+//                                 const std::vector<scalar_t>& destination, 
+//                                 const std::tuple<scalar_t, scalar_t>& newLink) {
+//     scalar_t newSource = std::get<0>(newLink);
+//     scalar_t newDestination = std::get<1>(newLink);
+
+//     for (int i = 0; i < source.size(); ++i) {
+//         if (source[i] == newSource && destination[i] == newDestination) {
+//             return 1;  // Link already exists
+//         }
+//     }
+//     return 0;  // Link does not exist
+//  }
+
+  void _mutuallyExtendVectors(std::vector<scalar_t>& avector, std::vector<scalar_t>& bvector) {
+    std::vector ttemp(avector.begin(), avector.end()); //maybe useless
+    avector.insert(avector.end(), bvector.begin(), bvector.end());
+    bvector.insert(bvector.end(), ttemp.begin(), ttemp.end());
+  }
+
+  void _extendVector(std::vector<scalar_t>& avector, const std::vector<scalar_t>& bvector) {
+    avector.insert(avector.end(), bvector.begin(), bvector.end());
   }
 
   void _removeDuplicateLinks(){
