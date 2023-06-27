@@ -12,14 +12,49 @@
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
 
+#include <chrono>
+
 namespace pyg {
 namespace sampler {
 
+// with bidir_sampling_opt1 true (and bidir_sampling_opt2 false):
+//// bidir_sampling_opt1_full_online false: reverse edges are added on the fly,
+/// but duplicates are removed after the / edge_index has been fully populated
+/// (2 times in lenght) / bidir_sampling_opt1_full_online true: duplicates
+/// checked via asymm hash done on the fly as edges are sampled. / if the
+/// reverse link is not present, it gets added
+
+// with bidir_sampling_opt2 true (and bidir_sampling_opt1 false)
+// reverse edges are added as a post processing of the sampling process (so not
+// on the fly but at the end of sampling)
+//// with u_ordering true: duplicates are removed via sorting and additional for
+/// loop to look for duplicates now easy to spot / with u_ordering false:
+/// duplicates are removed via hashing
+
+// bidir_sampling_opt2 true AND u_ordering true: it is the closest approach to
+// what is being done in PYG master opt2 mostly happens in 'get_sampled_edges'
+// function opt1 mostly happens in 'add' function either bidir_sampling_opt1 or
+// bidir_sampling_opt2 can be true at the same time, so only one but not both
+// could be replaced by one bool but left like that to be more explicit
+
+bool bidir_sampling_opt1{false};  // option1 adds reverse links as links are
+                                  // sampled and added (so in add function)
+bool bidir_sampling_opt1_full_online{
+    false};  // if true, check for duplicates when adding, otherwise once are
+             // all duplicated
+bool bidir_sampling_opt2{true};  // option2 adds reverse links at the end of
+                                 // sampling (in get_sampled_edges)
+bool u_ordering{true};  // true: unique links obtained via re-ordering, false
+                        // via hashing function
+
+// to print out durations of interest
+bool get_durations{false};
 namespace {
 
 // Helper classes for bipartite neighbor sampling //////////////////////////////
 
 // `node_t` is either a scalar or a pair of scalars (example_id, node_id):
+
 template <typename node_t,
           typename scalar_t,
           typename temporal_t,
@@ -27,6 +62,8 @@ template <typename node_t,
           bool save_edges,
           bool save_edge_ids>
 class NeighborSampler {
+  typedef std::tuple<std::pair<scalar_t, scalar_t>, scalar_t>
+      link;  // added to support bidirectional sampling
  public:
   NeighborSampler(const scalar_t* rowptr,
                   const scalar_t* col,
@@ -81,16 +118,52 @@ class NeighborSampler {
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
   get_sampled_edges(bool csc = false) {
     TORCH_CHECK(save_edges, "No edges have been stored")
+    if (bidir_sampling_opt2) {
+      // 1 first duplicate rows and cols concatenating cols to rows, and rows to
+      // cols, like in to_bidirectional (pyg)
+      if (save_edges) {
+        _mutuallyExtendVectors(sampled_rows_, sampled_cols_);
+      }
+      // 2 if edge_id is not none, use the same edge_id for both (like in pyg)
+      //  and duplicate edge_id vector
+      if (save_edge_ids) {
+        _extendVector(sampled_edge_ids_, sampled_edge_ids_);
+      }
+      // 3 What above covers what it is done in utils.py:to_bidirectional.
+      //  Now, do 'all' is done in coalesce.py.
+      //  _removeDuplicateLinks() may reorder links and removes duplicates.
+      //  Note that does that on a link structure and
+      //  does not use a smart sequence and then a mask as in coalesce.py.
+      //  Also it does not suport any reduction function excluding the one
+      //  implicitly enforced that depends on the strategy used to remove
+      //  duplicates
+      _removeDuplicateLinks();
+    }
     const auto row = pyg::utils::from_vector(sampled_rows_);
     const auto col = pyg::utils::from_vector(sampled_cols_);
     c10::optional<at::Tensor> edge_id = c10::nullopt;
     if (save_edge_ids) {
       edge_id = pyg::utils::from_vector(sampled_edge_ids_);
     }
+    // if (bidir_sampling_opt2){..} could be placed here, *with the idea of
+    // using torch C++API to use optimized sort and scatter*
     if (!csc) {
       return std::make_tuple(row, col, edge_id);
     } else {
       return std::make_tuple(col, row, edge_id);
+    }
+  }
+
+  void removeDuplicateLinks() {
+    // set time init in case of logging
+    auto startRD = std::chrono::high_resolution_clock::now();
+    _removeDuplicateLinks();
+    if (get_durations) {
+      auto stopRD = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopRD - startRD);
+      std::cout << "removeDuplicateLinks duration: " << duration.count()
+                << std::endl;
     }
   }
 
@@ -167,6 +240,7 @@ class NeighborSampler {
     const auto global_dst_node =
         to_node_t(global_dst_node_value, global_src_node);
     const auto res = dst_mapper.insert(global_dst_node);
+
     if (res.second) {  // not yet sampled.
       out_global_dst_nodes.push_back(global_dst_node);
     }
@@ -174,10 +248,239 @@ class NeighborSampler {
       num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
       sampled_rows_.push_back(local_src_node);
       sampled_cols_.push_back(res.first);
+
+      bool reverse_to_add{false};
+      if (pyg::sampler::bidir_sampling_opt1) {
+        if (pyg::sampler::bidir_sampling_opt1_full_online) {
+          std::pair<scalar_t, scalar_t> link_dir =
+              std::make_pair(local_src_node, res.first);
+          class_linkMap[link_dir];
+          std::pair<scalar_t, scalar_t> link_rev =
+              std::make_pair(res.first, local_src_node);
+
+          // adding reverse link if not present
+          if (class_linkMap.count(link_rev) == 0) {
+            class_linkMap[link_rev];
+            sampled_rows_.push_back(res.first);
+            sampled_cols_.push_back(local_src_node);
+            reverse_to_add = true;
+          }
+        } else {
+          sampled_rows_.push_back(res.first);
+          sampled_cols_.push_back(local_src_node);
+          reverse_to_add = true;
+        }
+      }
       if (save_edge_ids) {
         sampled_edge_ids_.push_back(edge_id);
+        if (pyg::sampler::bidir_sampling_opt1 && reverse_to_add) {
+          // re-use same edge-id for reverse link
+          sampled_edge_ids_.push_back(edge_id);
+        }
       }
     }
+  }
+
+  void _mutuallyExtendVectors(std::vector<scalar_t>& avector,
+                              std::vector<scalar_t>& bvector) {
+    std::vector ttemp(avector.begin(), avector.end());  // maybe useless
+    avector.insert(avector.end(), bvector.begin(), bvector.end());
+    bvector.insert(bvector.end(), ttemp.begin(), ttemp.end());
+  }
+
+  void _extendVector(std::vector<scalar_t>& avector,
+                     const std::vector<scalar_t>& bvector) {
+    avector.insert(avector.end(), bvector.begin(), bvector.end());
+  }
+
+  void _removeDuplicateLinks() {
+    if (u_ordering) {
+      _removeDuplicateLinks_ordering_func();
+    } else {
+      _removeDuplicateLinks_hashing_func();
+    }
+  }
+
+  // finding unique entries with hashing function
+  struct pair_hash {
+    template <class T1, class T2>
+    std::size_t operator()(const std::pair<T1, T2>& p) const {
+      auto h1 = std::hash<T1>{}(p.first);
+      auto h2 = std::hash<T2>{}(p.second);
+      return (h1 ^ h2) ^ (h2 << 1);  // this one is asymm, h1 ^ h2 does not
+                                     // suffice. We want H(h1,h2) != H(h2,h1)
+    }
+  };
+
+  void _removeDuplicateLinks_hashing_func() {
+    phmap::parallel_flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t,
+                                  pair_hash>
+        linkMap;
+    std::vector<scalar_t> uniqueSource;
+    std::vector<scalar_t> uniqueDestination;
+    std::vector<scalar_t> uniqueLinkIDs;
+
+    auto startHSH = std::chrono::high_resolution_clock::now();
+
+    std::vector<int> flags;  // # distinct edges not clear at this stage
+    for (int i = 0; i < sampled_rows_.size(); ++i) {
+      std::pair<scalar_t, scalar_t> link =
+          std::make_pair(sampled_rows_[i], sampled_cols_[i]);
+      if (linkMap.count(link) ==
+          0) { /*this is the call to hash function with () operator*/
+        linkMap[link] = i;
+        flags.push_back(i);
+      }
+    }
+
+    const auto elems = flags.size();  // # of distinct edges = len(flags)
+    uniqueSource.reserve(elems);
+    uniqueDestination.reserve(elems);
+    uniqueLinkIDs.reserve(elems);
+
+#pragma omp parallel for schedule(static, elems / omp_get_num_threads())
+    for (int i = 0; i < elems; ++i) {
+      uniqueSource[i] =
+          (sampled_rows_[flags[i]]);  // This approach does not modify the
+                                      // lenght of the vector
+      uniqueDestination[i] =
+          (sampled_cols_[flags[i]]);  // but we do not need it, we know it must
+                                      // be = elems
+      uniqueLinkIDs[i] = (sampled_edge_ids_[flags[i]]);
+      // uniqueSource.push_back(sampled_rows_[flags[i]]);
+      // uniqueDestination.push_back(sampled_cols_[flags[i]]);
+      // uniqueLinkIDs.push_back(sampled_edge_ids_[flags[i]]);
+    }
+
+    // however we need to set the size for (later) .begin() .end() to work
+    uniqueSource.resize(elems);
+    uniqueDestination.resize(elems);
+    uniqueLinkIDs.resize(elems);
+
+    sampled_rows_.assign(uniqueSource.begin(), uniqueSource.end());
+    sampled_cols_.assign(uniqueDestination.begin(), uniqueDestination.end());
+    sampled_edge_ids_.assign(uniqueLinkIDs.begin(), uniqueLinkIDs.end());
+
+    if (get_durations) {
+      auto stopHSH = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopHSH - startHSH);
+      std::cout << "Time taken by generating unique link vectors using hasing "
+                   "function : "
+                << duration.count() << std::endl;
+    }
+    return;
+  }
+
+  // finding unique entries ordering first
+  // comparator function for sorting based on the first node of the link
+  inline static bool sortByFirst(const link& a, const link& b) {
+    return (std::get<0>(a)).first < (std::get<0>(b)).first;
+  }
+
+  // comparator for sorting based on the second node of the link
+  inline static bool sortBySecond(const link& a, const link& b) {
+    return (std::get<0>(a)).second < (std::get<0>(b)).second;
+  }
+
+  // sort an array of links
+  void sortLinks(std::vector<link>& arr, bool sortByFirstElement) {
+    std::vector<link> initialVector = arr;
+    if (sortByFirstElement) {
+      std::sort(arr.begin(), arr.end(), sortByFirst);
+    } else {
+      std::sort(arr.begin(), arr.end(), sortBySecond);
+    }
+    return;
+  }
+
+  // remove duplicates from the vector of ordered links
+  std::vector<link> __removeDuplicates(const std::vector<link>& links) {
+    std::vector<link> result;
+    if (links.empty()) {
+      return result;
+    }
+    result.push_back(links[0]);
+    for (size_t i = 1; i < links.size(); i++) {
+      const auto& currentLink = links[i];
+      const auto& prevLink = links[i - 1];
+      if (std::get<0>(currentLink) != std::get<0>(prevLink)) {
+        result.push_back(currentLink);
+      }
+    }
+    return result;
+  }
+
+  void _removeDuplicateLinks_ordering_func() {
+    std::vector<scalar_t> uniqueSource;
+    std::vector<scalar_t> uniqueDestination;
+    std::vector<scalar_t> uniqueLinkIDs;
+    uniqueSource.reserve(sampled_rows_.size());
+    uniqueDestination.reserve(sampled_rows_.size());
+    uniqueLinkIDs.reserve(sampled_rows_.size());
+
+    // set initial time for logging
+    auto startHSH = std::chrono::high_resolution_clock::now();
+
+    std::vector<link> links;
+    links.reserve(sampled_rows_.size());
+    for (size_t i = 0; i < sampled_rows_.size(); ++i) {
+      links.emplace_back(std::make_pair(sampled_rows_[i], sampled_cols_[i]),
+                         sampled_edge_ids_[i]);
+    }
+    if (get_durations) {
+      auto stopHSH = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopHSH - startHSH);
+      std::cout << "Time taken by PREPARATION links structure: "
+                << duration.count() << std::endl;
+    }
+
+    if (get_durations) {
+      startHSH = std::chrono::high_resolution_clock::now();
+    }
+    // Sort by first element and get the initial vector ordered
+    sortLinks(links, true);
+    if (get_durations) {
+      auto stopHSH = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopHSH - startHSH);
+      std::cout << "Time taken by REORDERING links structure: "
+                << duration.count() << std::endl;
+    }
+
+    if (get_durations) {
+      startHSH = std::chrono::high_resolution_clock::now();
+    }
+    // remove duplicate links
+    auto noduplicates = __removeDuplicates(links);
+    if (get_durations) {
+      auto stopHSH = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopHSH - startHSH);
+      std::cout << "Time taken by REMOVING duplicates from links structure: "
+                << duration.count() << std::endl;
+    }
+
+    if (get_durations) {
+      startHSH = std::chrono::high_resolution_clock::now();
+    }
+// Copy the data from the links vector to the NeighborSampler fields
+#pragma omp parallel for schedule( \
+        static, noduplicates.size() / omp_get_num_threads())
+    for (size_t i = 0; i < noduplicates.size(); ++i) {
+      sampled_rows_[i] = std::get<0>(noduplicates[i]).first;
+      sampled_cols_[i] = std::get<0>(noduplicates[i]).second;
+      sampled_edge_ids_[i] = std::get<1>(noduplicates[i]);
+    }
+    if (get_durations) {
+      auto stopHSH = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopHSH - startHSH);
+      std::cout << "Time taken by copying back data to NeighboSampler fields: "
+                << duration.count() << std::endl;
+    }
+    return;
   }
 
   const scalar_t* rowptr_;
@@ -186,6 +489,9 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_rows_;
   std::vector<scalar_t> sampled_cols_;
   std::vector<scalar_t> sampled_edge_ids_;
+  phmap::
+      parallel_flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash>
+          class_linkMap;
 
  public:
   std::vector<int64_t> num_sampled_edges_per_hop;
@@ -270,6 +576,8 @@ sample(const at::Tensor& rowptr,
     num_sampled_nodes_per_hop.push_back(seed.numel());
 
     size_t begin = 0, end = seed.size(0);
+    auto startSMP = std::chrono::high_resolution_clock::now();
+
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
       sampler.num_sampled_edges_per_hop.push_back(0);
@@ -293,13 +601,31 @@ sample(const at::Tensor& rowptr,
       begin = end, end = sampled_nodes.size();
       num_sampled_nodes_per_hop.push_back(end - begin);
     }
-
+    if (bidir_sampling_opt1 && !bidir_sampling_opt1_full_online) {
+      sampler.removeDuplicateLinks();
+    }
+    if (get_durations && bidir_sampling_opt1) {
+      auto stopSMP = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopSMP - startSMP);
+      std::cout << "Whole Uniform sampling duration: " << duration.count()
+                << std::endl;
+    }
     out_node_id = pyg::utils::from_vector(sampled_nodes);
     TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
     if (directed) {
-      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
+      std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(
+          csc); /* AZ here std::vector ==> torch.tensor*/
     } else {
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
+    }
+
+    if (get_durations && bidir_sampling_opt2) {
+      auto stopSMP = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+          stopSMP - startSMP);
+      std::cout << "Whole Uniform sampling duration: " << duration.count()
+                << std::endl;
     }
 
     num_sampled_edges_per_hop = sampler.num_sampled_edges_per_hop;
@@ -573,7 +899,7 @@ sample(const std::vector<node_type>& node_types,
 
 // Dispatcher //////////////////////////////////////////////////////////////////
 
-#define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, ...) \
+#define DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, ...) \
   if (replace && directed && disjoint && return_edge_id)                  \
     return sample<true, true, true, true>(__VA_ARGS__);                   \
   if (replace && directed && disjoint && !return_edge_id)                 \
@@ -615,18 +941,20 @@ std::tuple<at::Tensor,
            c10::optional<at::Tensor>,
            std::vector<int64_t>,
            std::vector<int64_t>>
-neighbor_sample_kernel(const at::Tensor& rowptr,
-                       const at::Tensor& col,
-                       const at::Tensor& seed,
-                       const std::vector<int64_t>& num_neighbors,
-                       const c10::optional<at::Tensor>& time,
-                       const c10::optional<at::Tensor>& seed_time,
-                       bool csc,
-                       bool replace,
-                       bool directed,
-                       bool disjoint,
-                       std::string temporal_strategy,
-                       bool return_edge_id) {
+neighbor_sample_kernel(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const at::Tensor& seed,
+    const std::vector<int64_t>& num_neighbors,
+    const c10::optional<at::Tensor>& time,
+    const c10::optional<at::Tensor>& seed_time,
+    bool csc,
+    bool replace,
+    bool directed,  // passed as self.subgraph_type != SubgraphType.induced, in
+                    // pyg:sampler/neighbor_sampler.py
+    bool disjoint,
+    std::string temporal_strategy,
+    bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
                   seed, num_neighbors, time, seed_time, csc, temporal_strategy);
 }
