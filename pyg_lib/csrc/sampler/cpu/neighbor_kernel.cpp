@@ -19,17 +19,17 @@ namespace sampler {
 
 // with bidir_sampling_opt1 true (and bidir_sampling_opt2 false):
 //// bidir_sampling_opt1_full_online false: reverse edges are added on the fly,
-///but duplicates are removed after the / edge_index has been fully populated (2
-///times in lenght) / bidir_sampling_opt1_full_online true: duplicates checked
-///via asymm hash done on the fly as edges are sampled. / if the reverse link is
-///not present, it gets added
+/// but duplicates are removed after the / edge_index has been fully populated
+/// (2 times in lenght) / bidir_sampling_opt1_full_online true: duplicates
+/// checked via asymm hash done on the fly as edges are sampled. / if the
+/// reverse link is not present, it gets added
 
 // with bidir_sampling_opt2 true (and bidir_sampling_opt1 false)
 // reverse edges are added as a post processing of the sampling process (so not
 // on the fly but at the end of sampling)
 //// with u_ordering true: duplicates are removed via sorting and additional for
-///loop to look for duplicates now easy to spot / with u_ordering false:
-///duplicates are removed via hashing
+/// loop to look for duplicates now easy to spot / with u_ordering false:
+/// duplicates are removed via hashing
 
 // bidir_sampling_opt2 true AND u_ordering true: it is the closest approach to
 // what is being done in PYG master opt2 mostly happens in 'get_sampled_edges'
