@@ -17,9 +17,30 @@
 namespace pyg {
 namespace sampler {
 
+
+// with bidir_sampling_opt1 true (and bidir_sampling_opt2 false):
+//// bidir_sampling_opt1_full_online false: reverse edges are added on the fly, but duplicates are removed after the
+//// edge_index has been fully populated (2 times in lenght)
+//// bidir_sampling_opt1_full_online true: duplicates checked via asymm hash done on the fly as edges are sampled. 
+//// if the reverse link is not present, it gets added
+
+// with bidir_sampling_opt2 true (and bidir_sampling_opt1 false)
+// reverse edges are added as a post processing of the sampling process (so not on the fly but at the end of sampling)
+//// with u_ordering true: duplicates are removed via sorting and additional for loop to look for duplicates now easy to spot
+//// with u_ordering false: duplicates are removed via hashing
+
+// bidir_sampling_opt2 true AND u_ordering true: it is the closest approach to what is being done in PYG master
+// opt2 mostly happens in 'get_sampled_edges' function 
+// opt1 mostly happens in 'add' function
+// either bidir_sampling_opt1 or bidir_sampling_opt2 can be true at the same time, so only one but not both
+// could be replaced by one bool but left like that to be more explicit
+
 bool bidir_sampling_opt1 {false}; // option1 adds reverse links as links are sampled and added (so in add function)
+bool bidir_sampling_opt1_full_online {false}; // if true, check for duplicates when adding, otherwise once are all duplicated
 bool bidir_sampling_opt2 {true};  // option2 adds reverse links at the end of sampling (in get_sampled_edges)
-bool u_ordering {false}; // true: unique links obtained via re-ordering, false via hashing function
+bool u_ordering {true}; // true: unique links obtained via re-ordering, false via hashing function
+
+// to print out durations of interest
 bool get_durations {false};
 namespace {
 
@@ -90,24 +111,23 @@ class NeighborSampler {
   get_sampled_edges(bool csc = false) {
     TORCH_CHECK(save_edges, "No edges have been stored")
     if (bidir_sampling_opt2){
-      //1 first duplicate rows and cols concatenating cols to rows, and rows to cols, like in to_bidirectional
+      //1 first duplicate rows and cols concatenating cols to rows, and rows to cols, like in to_bidirectional (pyg)
       if (save_edges) {
         _mutuallyExtendVectors(sampled_rows_, sampled_cols_ );
       }
-      //2 if edge_id is not none, use the same edge_id for both (not clear why but it is like this in pyg)
+      //2 if edge_id is not none, use the same edge_id for both (like in pyg)
       // and duplicate edge_id vector 
       if (save_edge_ids){
         _extendVector(sampled_edge_ids_, sampled_edge_ids_);
       }
       //3 What above covers what it is done in utils.py:to_bidirectional. 
-      // Now, do all is done in coalesce.py. See first how much it takes to reorder
-       // The following call _removeDuplicateLinks() reorders links AND removes duplicates. 
-       // Note that does that on a link structure and
-       // does not use a smart sequence and then a mask as in coalesce.py. 
-       // Also it does not suport any reduction function 
-       // It just keeps the first linkID found for that link.
+      // Now, do 'all' is done in coalesce.py. 
+      // _removeDuplicateLinks() may reorder links and removes duplicates. 
+      // Note that does that on a link structure and
+      // does not use a smart sequence and then a mask as in coalesce.py. 
+      // Also it does not suport any reduction function excluding the one implicitly enforced 
+      // that depends on the strategy used to remove duplicates
        _removeDuplicateLinks();
-      //std::cout << "\nget_sampled_edges - num_nodes should be: " << *rowptr_ - 1;
     }
     const auto row = pyg::utils::from_vector(sampled_rows_);
     const auto col = pyg::utils::from_vector(sampled_cols_);
@@ -115,7 +135,7 @@ class NeighborSampler {
     if (save_edge_ids) {
       edge_id = pyg::utils::from_vector(sampled_edge_ids_);
     }
-    // if (bidir_sampling_opt2){..} could place here, with the idea of using torch C++API to use sort and scatter
+    // if (bidir_sampling_opt2){..} could be placed here, *with the idea of using torch C++API to use optimized sort and scatter*
     if (!csc) {
       return std::make_tuple(row, col, edge_id);
     } else {
@@ -215,33 +235,36 @@ class NeighborSampler {
       num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
       sampled_rows_.push_back(local_src_node);
       sampled_cols_.push_back(res.first);
-      if (pyg::sampler::bidir_sampling_opt1) {//adding reverse link 
+      
+      bool reverse_to_add {false};
+      if (pyg::sampler::bidir_sampling_opt1) {
+        if (pyg::sampler::bidir_sampling_opt1_full_online){
+          std::pair<scalar_t, scalar_t> link_dir = std::make_pair(local_src_node, res.first);
+          class_linkMap[link_dir];
+          std::pair<scalar_t, scalar_t> link_rev = std::make_pair(res.first, local_src_node);
+
+          //adding reverse link if not present
+          if (class_linkMap.count(link_rev) == 0) { 
+          class_linkMap[link_rev];
           sampled_rows_.push_back(res.first);
-          sampled_cols_.push_back(local_src_node); 
+          sampled_cols_.push_back(local_src_node);
+          reverse_to_add = true;
+          }
+        } else {
+          sampled_rows_.push_back(res.first);
+          sampled_cols_.push_back(local_src_node);
+          reverse_to_add = true;
+        }
       }
       if (save_edge_ids) {
         sampled_edge_ids_.push_back(edge_id);
-        if (pyg::sampler::bidir_sampling_opt1){ //re-use same edge-id for reverse link
+        if (pyg::sampler::bidir_sampling_opt1 && reverse_to_add){ 
+          //re-use same edge-id for reverse link
           sampled_edge_ids_.push_back(edge_id);
         }
       }
     }
   }
-
-//  use to check link existence as it gets added: to slow approach
-//  inline int checkLinkExistence(const std::vector<scalar_t>& source, 
-//                                 const std::vector<scalar_t>& destination, 
-//                                 const std::tuple<scalar_t, scalar_t>& newLink) {
-//     scalar_t newSource = std::get<0>(newLink);
-//     scalar_t newDestination = std::get<1>(newLink);
-
-//     for (int i = 0; i < source.size(); ++i) {
-//         if (source[i] == newSource && destination[i] == newDestination) {
-//             return 1;  // Link already exists
-//         }
-//     }
-//     return 0;  // Link does not exist
-//  }
 
   void _mutuallyExtendVectors(std::vector<scalar_t>& avector, std::vector<scalar_t>& bvector) {
     std::vector ttemp(avector.begin(), avector.end()); //maybe useless
@@ -267,45 +290,9 @@ class NeighborSampler {
       std::size_t operator () (const std::pair<T1, T2>& p) const {
           auto h1 = std::hash<T1>{}(p.first);
           auto h2 = std::hash<T2>{}(p.second);
-          return h1 ^ h2 + h2; // h1 ^ h2 only would make hashing symmetrical which must not be
+          return (h1 ^ h2) ^ (h2<<1); // this one is asymm, h1 ^ h2 does not suffice. We want H(h1,h2) != H(h2,h1)
       }
   };
-
-  void _removeDuplicateLinks_hashing_func_old() {
-      // std::unordered_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash> linkMap;
-      // phmap::flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash> linkMap;
-      phmap::parallel_flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash> linkMap;
-
-      std::vector<scalar_t> uniqueSource;
-      std::vector<scalar_t> uniqueDestination;
-      std::vector<scalar_t> uniqueLinkIDs;
-      uniqueSource.reserve(sampled_rows_.size());
-      uniqueDestination.reserve(sampled_rows_.size());
-      uniqueLinkIDs.reserve(sampled_rows_.size());
-
-      // std::cout << "sampled_rows_.size is: " << sampled_rows_.size() << std::endl;
-      // auto startHSH = std::chrono::high_resolution_clock::now();
-
-      #pragma omp parallel for
-      for (int i = 0; i < sampled_rows_.size(); ++i) {
-        std::pair<scalar_t, scalar_t> link = std::make_pair(sampled_rows_[i], sampled_cols_[i]);
-        if (linkMap.count(link) == 0) { /*this is the call to hash function with () operator*/
-          linkMap[link] = i;
-          uniqueSource.push_back(sampled_rows_[i]);
-          uniqueDestination.push_back(sampled_cols_[i]);
-          uniqueLinkIDs.push_back(sampled_edge_ids_[i]);
-        }
-      }   
-
-      sampled_rows_.assign(uniqueSource.begin(), uniqueSource.end());
-      sampled_cols_.assign(uniqueDestination.begin(), uniqueDestination.end());
-      sampled_edge_ids_.assign(uniqueLinkIDs.begin(), uniqueLinkIDs.end());   
-
-      // auto stopHSH = std::chrono::high_resolution_clock::now();
-      // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stopHSH - startHSH);
-      // std::cout << "Time taken by generating unique link vectors using hasing function : " << duration.count() << std::endl; 
-      return; 
-  }
 
  void _removeDuplicateLinks_hashing_func() {
       phmap::parallel_flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash> linkMap;
@@ -315,7 +302,7 @@ class NeighborSampler {
 
       auto startHSH = std::chrono::high_resolution_clock::now();
 
-      std::vector<int> flags;
+      std::vector<int> flags; // # distinct edges not clear at this stage
       for (int i = 0; i < sampled_rows_.size(); ++i) {
         std::pair<scalar_t, scalar_t> link = std::make_pair(sampled_rows_[i], sampled_cols_[i]);
         if (linkMap.count(link) == 0) { /*this is the call to hash function with () operator*/
@@ -324,27 +311,35 @@ class NeighborSampler {
         }
       }   
 
-      const auto elems = flags.size();
+      const auto elems = flags.size(); // # of distinct edges = len(flags)
       uniqueSource.reserve(elems);
       uniqueDestination.reserve(elems);
       uniqueLinkIDs.reserve(elems);
 
       #pragma omp parallel for schedule(static, elems / omp_get_num_threads())
       for (int i = 0; i < elems; ++i) {
-          uniqueSource[i] = (sampled_rows_[flags[i]]);
-          uniqueDestination[i] = (sampled_cols_[flags[i]]);
-          uniqueLinkIDs[i] = (sampled_edge_ids_[flags[i]]);
+          uniqueSource[i] = (sampled_rows_[flags[i]]); //This approach does not modify the lenght of the vector
+          uniqueDestination[i] = (sampled_cols_[flags[i]]); // but we do not need it, we know it must be = elems
+          uniqueLinkIDs[i] = (sampled_edge_ids_[flags[i]]); 
+          // uniqueSource.push_back(sampled_rows_[flags[i]]);
+          // uniqueDestination.push_back(sampled_cols_[flags[i]]);
+          // uniqueLinkIDs.push_back(sampled_edge_ids_[flags[i]]);
       }
+
+      // however we need to set the size for (later) .begin() .end() to work
+      uniqueSource.resize(elems);
+      uniqueDestination.resize(elems);
+      uniqueLinkIDs.resize(elems);
+    
       sampled_rows_.assign(uniqueSource.begin(), uniqueSource.end());
       sampled_cols_.assign(uniqueDestination.begin(), uniqueDestination.end());
-      sampled_edge_ids_.assign(uniqueLinkIDs.begin(), uniqueLinkIDs.end());   
+      sampled_edge_ids_.assign(uniqueLinkIDs.begin(), uniqueLinkIDs.end());
 
       if (get_durations){
         auto stopHSH = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stopHSH - startHSH);
         std::cout << "Time taken by generating unique link vectors using hasing function : " << duration.count() << std::endl;   
       }
-
       return; 
   }
 
@@ -370,7 +365,7 @@ class NeighborSampler {
       return;
   }
 
-  // remove duplicates from the vector
+  // remove duplicates from the vector of ordered links
   std::vector<link> __removeDuplicates(const std::vector<link>& links) {
       std::vector<link> result;
       if (links.empty()) {
@@ -435,11 +430,11 @@ class NeighborSampler {
         startHSH = std::chrono::high_resolution_clock::now();
       }
       // Copy the data from the links vector to the NeighborSampler fields
+      #pragma omp parallel for schedule(static, noduplicates.size() / omp_get_num_threads())
       for (size_t i = 0; i < noduplicates.size(); ++i) {
           sampled_rows_[i] = std::get<0>(noduplicates[i]).first;
           sampled_cols_[i] = std::get<0>(noduplicates[i]).second;
           sampled_edge_ids_[i] = std::get<1>(noduplicates[i]);
-          //std::cout << "s,d,l: " << source[i] <<"-" << destination[i] << "-"<< linkIDs[i] << std::endl;
       }
       if (get_durations){
         auto stopHSH = std::chrono::high_resolution_clock::now();
@@ -455,6 +450,8 @@ class NeighborSampler {
   std::vector<scalar_t> sampled_rows_;
   std::vector<scalar_t> sampled_cols_;
   std::vector<scalar_t> sampled_edge_ids_;
+  phmap::parallel_flat_hash_map<std::pair<scalar_t, scalar_t>, scalar_t, pair_hash> class_linkMap;
+
 
  public:
   std::vector<int64_t> num_sampled_edges_per_hop;
@@ -565,7 +562,7 @@ sample(const at::Tensor& rowptr,
       begin = end, end = sampled_nodes.size();
       num_sampled_nodes_per_hop.push_back(end - begin);
     }
-    if (bidir_sampling_opt1){
+    if (bidir_sampling_opt1 && !bidir_sampling_opt1_full_online){
             sampler.removeDuplicateLinks();
     }
     if (get_durations && bidir_sampling_opt1){
