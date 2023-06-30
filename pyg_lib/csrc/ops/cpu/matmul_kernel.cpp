@@ -236,12 +236,12 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
         std::vector<scalar_t*> dst;
 
         size_t group_idx = 0;
-        for (const auto group_kv : groups) {
+        for (const auto& group_kv : groups) {
           int m;
           int n;
           int k;
           std::tie(m, n, k) = group_kv.first;
-          const auto indices = group_kv.second;
+          const auto& indices = group_kv.second;
 
           ms[group_idx] = m;
           ns[group_idx] = n;
@@ -369,9 +369,9 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
         const auto dst_base_ptr = out.data_ptr<scalar_t>();
 
         size_t group_idx = 0;
-        for (const auto group_kv : groups) {
+        for (const auto& group_kv : groups) {
           int m = group_kv.first;
-          const auto indices = group_kv.second;
+          const auto& indices = group_kv.second;
 
           ms[group_idx] = m;
           group_sizes[group_idx] = indices.size();

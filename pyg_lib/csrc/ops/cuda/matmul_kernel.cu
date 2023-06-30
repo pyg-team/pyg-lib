@@ -15,14 +15,16 @@ namespace pyg {
 namespace ops {
 
 namespace {
-
+int num_threadblocks = -1;
 template <typename GemmKernel>
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out,
                       bool segment) {
   using GemmGrouped = cutlass::gemm::device::GemmGrouped<GemmKernel>;
-
+  if (num_threadblocks == -1) {
+    num_threadblocks = GemmGrouped::sufficient();
+  }
   const int64_t num_matrices = input.size();
   const int64_t gemm_coord_size =
       num_matrices * ((int64_t)sizeof(cutlass::gemm::GemmCoord));
@@ -77,14 +79,14 @@ void run_grouped_gemm(const at::TensorList input,
   typename EpilogueOutputOp::Params epilogue_op(1.0, 0.0);
 
   // Create GemmGrouped::Arguments using the arguments prepared above
-  typename GemmGrouped::Arguments args(problem_sizes_data, num_matrices,
-                                       /*threadblock_count=*/1024, epilogue_op,
-                                       reinterpret_cast<float**>(ptr_A_data),
-                                       reinterpret_cast<float**>(ptr_B_data),
-                                       reinterpret_cast<float**>(ptr_C_data),
-                                       reinterpret_cast<float**>(ptr_C_data),
-                                       ld_A_data, ld_B_data, ld_C_data,
-                                       ld_C_data);
+  typename GemmGrouped::Arguments args(
+      problem_sizes_data, num_matrices,
+      /*threadblock_count=*/num_threadblocks, epilogue_op,
+      reinterpret_cast<float**>(ptr_A_data),
+      reinterpret_cast<float**>(ptr_B_data),
+      reinterpret_cast<float**>(ptr_C_data),
+      reinterpret_cast<float**>(ptr_C_data), ld_A_data, ld_B_data, ld_C_data,
+      ld_C_data);
 
   GemmGrouped gemm;
   auto status =
