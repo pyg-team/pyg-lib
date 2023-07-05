@@ -123,7 +123,7 @@ dev_requires = [
 ]
 
 if not bool(os.getenv('BUILD_DOCS', 0)):
-    ext_modules = [CMakeExtension('libpyg')] 
+    ext_modules = [CMakeExtension('libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
 else:
     ext_modules = None
@@ -158,15 +158,22 @@ setup(
 
 #Intel MessageQueue for distributed training
 from torch.utils import cpp_extension
+
 cxx_flags = ['-std=gnu++14', '-O3']
-src_files_list = ['./pyg_lib/csrc/messagequeue/messagequeue_shm.cpp', './pyg_lib/csrc/messagequeue/pybind_messagequeue_shm.cpp']
-include_dirs_list = [os.path.abspath(os.path.join(os.getcwd())) + '/csrc/messagequeue']
+src_files_list = [
+    './pyg_lib/csrc/messagequeue/messagequeue_shm.cpp',
+    './pyg_lib/csrc/messagequeue/pybind_messagequeue_shm.cpp'
+]
+include_dirs_list = [
+    os.path.abspath(os.path.join(os.getcwd())) + '/csrc/messagequeue'
+]
 
 setup(
-      name='pyg_messagequeue',
-      version = '0.0.1',
-      author='Intel Corporation, PyG Team',
-      descrption='An implementation of message queue for PyG distributed trainings',
-      ext_modules=[cpp_extension.CppExtension('messagequeue', src_files_list, include_dirs=include_dirs_list, extra_compile_args={'cxx': cxx_flags})],
-      cmdclass={'build_ext': cpp_extension.BuildExtension}
-)
+    name='pyg_messagequeue', version='0.0.1',
+    author='Intel Corporation, PyG Team', descrption=
+    'An implementation of message queue for PyG distributed trainings',
+    ext_modules=[
+        cpp_extension.CppExtension('messagequeue', src_files_list,
+                                   include_dirs=include_dirs_list,
+                                   extra_compile_args={'cxx': cxx_flags})
+    ], cmdclass={'build_ext': cpp_extension.BuildExtension})
