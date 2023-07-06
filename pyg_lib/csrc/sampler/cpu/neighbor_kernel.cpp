@@ -157,12 +157,12 @@ class NeighborSampler {
       auto index_tracker = IndexTracker<scalar_t>(population);
       if (population < (1 << 16)) {
         int arr[count];
-        generator.fill_with_ints(0, population - count, count, &arr[0]);
+        generator.fill_with_ints(0, population, count, &arr[0]);
         for (size_t i = 0; i < count; ++i) {
           auto rnd = arr[i];
           if (!index_tracker.try_insert(rnd)) {
             rnd = population - count + i;
-            index_tracker.insert(i);
+            index_tracker.insert(population - count + i);
           }
           const auto edge_id = row_start + rnd;
           add(edge_id, global_src_node, local_src_node, dst_mapper,
