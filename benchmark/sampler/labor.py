@@ -50,11 +50,12 @@ def test_labor(dataset, **kwargs):
         node_perm = torch.arange(num_nodes)
 
     data = defaultdict(list)
-    for num_neighbors, batch_size, layer_dependency in product(args.num_neighbors,
-                                             args.batch_sizes,
-                                             args.layer_dependencies):
+    for num_neighbors, batch_size, layer_dependency in product(
+            args.num_neighbors, args.batch_sizes, args.layer_dependencies):
 
-        print(f'batch_size={batch_size}, num_neighbors={num_neighbors}), layer_dependency={layer_dependency}:')
+        print(
+            f'batch_size={batch_size}, num_neighbors={num_neighbors}), layer_dependency={layer_dependency}:'
+        )
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
         data['layer_dependency'].append(layer_dependency)
