@@ -76,6 +76,9 @@ include_directories("${METIS_DIR}/include")
 add_subdirectory("${METIS_DIR}/libmetis")
 target_link_libraries(${PROJECT_NAME} PRIVATE metis)
 
+set(PCG_DIR third_party/pcg-cpp)
+target_include_directories(${PROJECT_NAME} PRIVATE ${PCG_DIR}/include)
+
 find_package(Torch REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 

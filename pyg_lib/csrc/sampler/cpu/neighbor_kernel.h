@@ -24,6 +24,22 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        std::string temporal_strategy,
                        bool return_edge_id);
 
+std::tuple<at::Tensor,
+           at::Tensor,
+           at::Tensor,
+           c10::optional<at::Tensor>,
+           std::vector<int64_t>,
+           std::vector<int64_t>>
+labor_sample_kernel(const at::Tensor& rowptr,
+                    const at::Tensor& col,
+                    const at::Tensor& seed,
+                    const std::vector<int64_t>& num_neighbors,
+                    c10::optional<int64_t> random_seed,
+                    int64_t importance_sampling,
+                    bool layer_dependency,
+                    bool csc,
+                    bool return_edge_id);
+
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,

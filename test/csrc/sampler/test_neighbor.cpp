@@ -53,6 +53,28 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
+TEST(LaborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto seed = at::arange(2, 4, options);
+  std::vector<int64_t> num_neighbors = {1, 1};
+
+  at::manual_seed(123456);
+  auto out = pyg::sampler::labor_sample(
+      /*rowptr=*/std::get<0>(graph),
+      /*col=*/std::get<1>(graph), seed, num_neighbors);
+
+  auto expected_row = at::tensor({0, 1, 2, 3}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3, 4, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({2, 3, 1, 4, 0}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::tensor({4, 7, 2, 8}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
 TEST(WithReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
