@@ -32,11 +32,12 @@ class LaborSampler {
                       const int64_t count,
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       const int64_t random_seed,
-                      std::vector<node_t>& out_global_dst_nodes) {
+                      std::vector<node_t>& out_global_dst_nodes,
+                      std::vector<std::pair<float, scalar_t>>& heap) {
     const auto row_start = rowptr_[global_src_node];
     const auto row_end = rowptr_[global_src_node + 1];
     _sample(global_src_node, local_src_node, row_start, row_end, count,
-            dst_mapper, random_seed, out_global_dst_nodes);
+            dst_mapper, random_seed, out_global_dst_nodes, heap);
   }
 
   std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
@@ -62,7 +63,8 @@ class LaborSampler {
                const int64_t count,
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                const int64_t random_seed,
-               std::vector<node_t>& out_global_dst_nodes) {
+               std::vector<node_t>& out_global_dst_nodes,
+               std::vector<std::pair<float, scalar_t>>& heap) {
     if (count == 0)
       return;
 
@@ -117,7 +119,7 @@ class LaborSampler {
       out_global_dst_nodes.push_back(global_dst_node_value);
     }
     {
-      num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
+      num_sampled_edges_per_hop.back()++;
       sampled_rows_.push_back(local_src_node);
       sampled_cols_.push_back(res.first);
       if (save_edge_ids) {
@@ -133,7 +135,6 @@ class LaborSampler {
   std::vector<scalar_t> sampled_edge_ids_;
 
  public:
-  std::vector<std::pair<float, scalar_t>> heap;
   std::vector<int64_t> num_sampled_edges_per_hop;
 };
 
@@ -180,7 +181,9 @@ sample(const at::Tensor& rowptr,
     size_t begin = 0, end = seed.size(0);
     const auto max_count =
         *std::max_element(num_neighbors.begin(), num_neighbors.end());
-    sampler.heap.reserve(max_count);
+    std::vector<std::pair<float, scalar_t>> heap;
+    if (max_count > 0)
+      heap.reserve(max_count);
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
       sampler.num_sampled_edges_per_hop.push_back(0);
@@ -190,7 +193,7 @@ sample(const at::Tensor& rowptr,
         sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
                                /*local_src_node=*/i, count, mapper,
                                random_seed_ell,
-                               /*out_global_dst_nodes=*/sampled_nodes);
+                               /*out_global_dst_nodes=*/sampled_nodes, heap);
       }
       begin = end, end = sampled_nodes.size();
       num_sampled_nodes_per_hop.push_back(end - begin);
