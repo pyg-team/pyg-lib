@@ -78,6 +78,57 @@ def neighbor_sample(
                                          return_edge_id)
 
 
+def labor_sample(
+    rowptr: Tensor,
+    col: Tensor,
+    seed: Tensor,
+    num_neighbors: List[int],
+    random_seed: Optional[int] = None,
+    importance_sampling: int = 0,
+    layer_dependency: bool = False,
+    csc: bool = False,
+    return_edge_id: bool = True,
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int]]:
+    r"""Recursively samples neighbors from all node indices in :obj:`seed`
+    in the graph given by :obj:`(rowptr, col)` using LABOR sampler in
+    https://arxiv.org/abs/2210.13339.
+
+    Args:
+        rowptr (torch.Tensor): Compressed source node indices.
+        col (torch.Tensor): Target node indices.
+        seed (torch.Tensor): The seed node indices.
+        num_neighbors (List[int]): The number of neighbors to sample for each
+            node in each iteration. If an entry is set to :obj:`-1`, all
+            neighbors will be included.
+        random_seed (int, optional): The random seed `z` to sample random
+            variates `r_t = PRNG(z, t)` for a neighbor `t`.
+        importance_sampling (int): Given any number `i`, runs the LABOR-i
+            algorithm with i iterations of importance sampling computation.
+            (default: :obj: `0`)
+        layer_dependency (bool): If set to true, causes random variates across
+            layers to be shared, similar to subgraph sampling where a vertex
+            has identical sampled neighborhood in all layers.
+            (default: :obj:`False`)
+        csc (bool, optional): If set to :obj:`True`, assumes that the graph is
+            given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
+        return_edge_id (bool, optional): If set to :obj:`False`, will not
+            return the indices of edges of the original graph.
+            (default: :obj: `True`)
+
+    Returns:
+        (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
+        List[int], List[int]):
+        Row indices, col indices of the returned subtree/subgraph, as well as
+        original node indices for all nodes sampled.
+        In addition, may return the indices of edges of the original graph.
+        Lastly, returns information about the sampled amount of nodes and edges
+        per hop.
+    """
+    return torch.ops.pyg.labor_sample(rowptr, col, seed, num_neighbors,
+                                      random_seed, importance_sampling,
+                                      layer_dependency, csc, return_edge_id)
+
+
 def hetero_neighbor_sample(
     rowptr_dict: Dict[EdgeType, Tensor],
     col_dict: Dict[EdgeType, Tensor],
@@ -207,6 +258,7 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
 
 __all__ = [
     'neighbor_sample',
+    'labor_sample',
     'hetero_neighbor_sample',
     'subgraph',
     'random_walk',
