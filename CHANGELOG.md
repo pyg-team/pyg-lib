@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Updated `cutlass` version for speed boosts in `segment_matmul` and `grouped_matmul` ([#235](https://github.com/pyg-team/pyg-lib/pull/235))
 - Drop nested tensor wrapper for `grouped_matmul` implementation ([#226](https://github.com/pyg-team/pyg-lib/pull/226))
 - Fixed TorchScript support in `grouped_matmul` ([#220](https://github.com/pyg-team/pyg-lib/pull/220))
+- Added `LABOR-0` sampling algorithm ([#242](https://github.com/pyg-team/pyg-lib/pull/242))
 ### Removed
 
 ## [0.2.0] - 2023-03-22
