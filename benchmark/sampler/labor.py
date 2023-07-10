@@ -73,10 +73,8 @@ def test_labor(dataset, **kwargs):
             data['pyg-lib'].append(round(pyg_lib_duration, 3))
             data['pyg-lib-avg-edges'].append(avg_edges)
             data['pyg-lib-avg-nodes'].append(avg_nodes)
-            print(
-                f'     pyg-lib={pyg_lib_duration:.3f} seconds, '
-                'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}'
-            )
+            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds, '
+                  'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
 
         if 'dgl' in args.libraries:
             import dgl
@@ -106,10 +104,8 @@ def test_labor(dataset, **kwargs):
             data['dgl'].append(round(dgl_duration, 3))
             data['dgl-avg-edges'].append(avg_edges)
             data['dgl-avg-nodes'].append(avg_nodes)
-            print(
-                f'         dgl={dgl_duration:.3f} seconds, '
-                'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}'
-            )
+            print(f'         dgl={dgl_duration:.3f} seconds, '
+                  'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
         print()
 
     if args.write_csv:
