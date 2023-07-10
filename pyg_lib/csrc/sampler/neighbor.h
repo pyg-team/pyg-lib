@@ -52,12 +52,13 @@ labor_sample(const at::Tensor& rowptr,
 // Recursively samples neighbors from all node indices in `seed_dict`
 // in the heterogeneous graph given by `(rowptr_dict, col_dict)`.
 // Returns: (row_dict, col_dict, node_id_dict, edge_id_dict)
-PYG_API std::tuple<c10::Dict<rel_type, at::Tensor>,
-                   c10::Dict<rel_type, at::Tensor>,
-                   c10::Dict<node_type, at::Tensor>,
-                   c10::optional<c10::Dict<rel_type, at::Tensor>>,
-                   c10::Dict<node_type, std::vector<int64_t>>,
-                   c10::Dict<rel_type, std::vector<int64_t>>>
+PYG_API
+std::tuple<c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<rel_type, at::Tensor>,
+           c10::Dict<node_type, at::Tensor>,
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::Dict<node_type, std::vector<int64_t>>,
+           c10::Dict<rel_type, std::vector<int64_t>>>
 hetero_neighbor_sample(
     const std::vector<node_type>& node_types,
     const std::vector<edge_type>& edge_types,
