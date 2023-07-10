@@ -3,7 +3,7 @@ import ast
 import time
 from collections import defaultdict
 from datetime import datetime
-from itertools import product, accumulate
+from itertools import accumulate, product
 
 import pandas as pd
 import torch
@@ -42,12 +42,10 @@ def test_labor(dataset, **kwargs):
     node_perm = torch.randperm(num_nodes)
 
     data = defaultdict(list)
-    for num_neighbors, batch_size in product(
-            args.num_neighbors, args.batch_sizes):
+    for num_neighbors, batch_size in product(args.num_neighbors,
+                                             args.batch_sizes):
 
-        print(
-            f'batch_size={batch_size}, num_neighbors={num_neighbors})'
-        )
+        print(f'batch_size={batch_size}, num_neighbors={num_neighbors})')
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
 
@@ -75,7 +73,9 @@ def test_labor(dataset, **kwargs):
             data['pyg-lib'].append(round(pyg_lib_duration, 3))
             data['pyg-lib-avg-edges'].append(avg_edges)
             data['pyg-lib-avg-nodes'].append(avg_nodes)
-            print(f'     pyg-lib={pyg_lib_duration:.3f} seconds, avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
+            print(
+                f'     pyg-lib={pyg_lib_duration:.3f} seconds, avg_edges: {avg_edges}, avg_nodes: {avg_nodes}'
+            )
 
         if 'dgl' in args.libraries:
             import dgl
@@ -105,7 +105,9 @@ def test_labor(dataset, **kwargs):
             data['dgl'].append(round(dgl_duration, 3))
             data['dgl-avg-edges'].append(avg_edges)
             data['dgl-avg-nodes'].append(avg_nodes)
-            print(f'         dgl={dgl_duration:.3f} seconds, avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
+            print(
+                f'         dgl={dgl_duration:.3f} seconds, avg_edges: {avg_edges}, avg_nodes: {avg_nodes}'
+            )
         print()
 
     if args.write_csv:

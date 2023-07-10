@@ -67,11 +67,11 @@ TEST(LaborTest, BasicAssertions) {
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
-  auto expected_col = at::tensor({2, 3, 4, 1}, options);
+  auto expected_col = at::tensor({2, 3, 4, 5}, options);
   EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
-  auto expected_nodes = at::tensor({2, 3, 1, 4, 0}, options);
+  auto expected_nodes = at::tensor({2, 3, 1, 4, 0, 5}, options);
   EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
-  auto expected_edges = at::tensor({4, 7, 2, 8}, options);
+  auto expected_edges = at::tensor({4, 7, 2, 9}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 

@@ -123,8 +123,8 @@ def labor_sample(
         per hop.
     """
     return torch.ops.pyg.labor_sample(rowptr, col, seed, num_neighbors,
-                                      random_seed, importance_sampling,
-                                      csc, return_edge_id)
+                                      random_seed, importance_sampling, csc,
+                                      return_edge_id)
 
 
 def hetero_neighbor_sample(

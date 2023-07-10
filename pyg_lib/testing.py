@@ -153,6 +153,7 @@ def get_ogb_mag_hetero_sparse_matrix(
 
     return colptr_dict, row_dict
 
+
 def get_reddit_sparse_matrix(
     dtype: torch.dtype = torch.long,
     device: Optional[torch.device] = None,
