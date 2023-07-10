@@ -85,13 +85,15 @@ def labor_sample(
     num_neighbors: List[int],
     random_seed: Optional[int] = None,
     importance_sampling: int = 0,
-    layer_dependency: bool = False,
     csc: bool = False,
     return_edge_id: bool = True,
 ) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)` using LABOR sampler in
-    https://arxiv.org/abs/2210.13339.
+    https://arxiv.org/abs/2210.13339. Implements the layer_dependency=True
+    option when compared to `dgl.sampling.sample_labors`. Also uses sequential
+    poisson sampling instead of poisson sampling as described in the paper
+    for importance_sampling=0.
 
     Args:
         rowptr (torch.Tensor): Compressed source node indices.
@@ -105,10 +107,6 @@ def labor_sample(
         importance_sampling (int): Given any number `i`, runs the LABOR-i
             algorithm with i iterations of importance sampling computation.
             (default: :obj: `0`)
-        layer_dependency (bool): If set to true, causes random variates across
-            layers to be shared, similar to subgraph sampling where a vertex
-            has identical sampled neighborhood in all layers.
-            (default: :obj:`False`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         return_edge_id (bool, optional): If set to :obj:`False`, will not
@@ -126,7 +124,7 @@ def labor_sample(
     """
     return torch.ops.pyg.labor_sample(rowptr, col, seed, num_neighbors,
                                       random_seed, importance_sampling,
-                                      layer_dependency, csc, return_edge_id)
+                                      csc, return_edge_id)
 
 
 def hetero_neighbor_sample(

@@ -53,6 +53,11 @@ def withDataset(group: str, name: str) -> Callable:
                     dtype=kwargs.get('dtype', torch.long),
                     device=kwargs.get('device', None),
                 )
+            elif group == 'reddit':
+                dataset = get_reddit_sparse_matrix(
+                    dtype=kwargs.get('dtype', torch.long),
+                    device=kwargs.get('device', None),
+                )
             else:
                 dataset = get_sparse_matrix(
                     group,
@@ -147,6 +152,19 @@ def get_ogb_mag_hetero_sparse_matrix(
         row_dict[edge_type] = row.to(device, dtype)
 
     return colptr_dict, row_dict
+
+def get_reddit_sparse_matrix(
+    dtype: torch.dtype = torch.long,
+    device: Optional[torch.device] = None,
+) -> Tuple[Tensor, Tensor]:
+    from dgl.data import RedditDataset
+
+    path = osp.join(get_home_dir(), 'reddit')
+    g = RedditDataset(True, path)[0]
+
+    indptr, indices, data = g.adj_tensors('csc')
+
+    return indptr, indices
 
 
 def to_edge_index(rowptr: Tensor, col: Tensor) -> Tensor:

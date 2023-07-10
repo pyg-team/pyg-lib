@@ -54,7 +54,6 @@ labor_sample(const at::Tensor& rowptr,
              const std::vector<int64_t>& num_neighbors,
              c10::optional<int64_t> random_seed,
              int64_t importance_sampling,
-             bool layer_dependency,
              bool csc,
              bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
@@ -69,7 +68,7 @@ labor_sample(const at::Tensor& rowptr,
                        .findSchemaOrThrow("pyg::labor_sample", "")
                        .typed<decltype(labor_sample)>();
   return op.call(rowptr, col, seed, num_neighbors, random_seed,
-                 importance_sampling, layer_dependency, csc, return_edge_id);
+                 importance_sampling, csc, return_edge_id);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -131,8 +130,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::labor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
       "num_neighbors, int? random_seed = None, int importance_sampling = 0, "
-      "bool layer_dependency = False, bool csc = False, "
-      "bool return_edge_id = True) "
+      "bool csc = False, bool return_edge_id = True) "
       "-> (Tensor, Tensor, Tensor, Tensor?, int[], int[])"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "

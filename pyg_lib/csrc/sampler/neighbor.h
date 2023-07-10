@@ -46,7 +46,6 @@ labor_sample(const at::Tensor& rowptr,
              const std::vector<int64_t>& num_neighbors,
              c10::optional<int64_t> random_seed = c10::nullopt,
              int64_t importance_sampling = 0,
-             bool layer_dependency = false,
              bool csc = false,
              bool return_edge_id = true);
 

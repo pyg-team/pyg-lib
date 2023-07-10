@@ -82,29 +82,28 @@ class LaborSampler {
     }
     // Case 2: Sample with sequential poisson sampling:
     else {
-      heap.clear();
       for (size_t i = 0; i < count; i++) {
-        pcg32 ng(random_seed, col_[row_start + i]);
+        const auto t = col_[row_start + i];
+        pcg32 ng(random_seed, t);
         std::uniform_real_distribution<float> uni;
-        const auto rnd = uni(ng);
-        heap.emplace_back(rnd, row_start + i);
+        const auto rnd = uni(ng);  // r_t
+        heap[i] = std::make_pair(rnd, row_start + i);
       }
       std::make_heap(heap.begin(), heap.end());
       for (size_t i = count; i < population; ++i) {
-        pcg32 ng(random_seed, col_[row_start + i]);
+        const auto t = col_[row_start + i];
+        pcg32 ng(random_seed, t);
         std::uniform_real_distribution<float> uni;
-        const auto rnd = uni(ng);
+        const auto rnd = uni(ng);  // r_t
         if (rnd < heap[0].first) {
           std::pop_heap(heap.begin(), heap.end());
           heap.back() = std::make_pair(rnd, row_start + i);
           std::push_heap(heap.begin(), heap.end());
         }
       }
-      for (std::size_t i = 0; i < count; ++i) {
-        const auto edge_id = heap[i].second;
+      for (auto [rnd, edge_id] : heap)
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
-      }
     }
   }
 
@@ -152,7 +151,6 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
        const bool csc,
-       const bool layer_dependency,
        const int64_t random_seed) {
   TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr'");
   TORCH_CHECK(col.is_contiguous(), "Non-contiguous 'col'");
@@ -186,13 +184,11 @@ sample(const at::Tensor& rowptr,
       heap.reserve(max_count);
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
+      heap.resize(count);
       sampler.num_sampled_edges_per_hop.push_back(0);
-      const int64_t random_seed_ell =
-          random_seed + (layer_dependency ? 0 : ell);
       for (size_t i = begin; i < end; ++i) {
         sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                               /*local_src_node=*/i, count, mapper,
-                               random_seed_ell,
+                               /*local_src_node=*/i, count, mapper, random_seed,
                                /*out_global_dst_nodes=*/sampled_nodes, heap);
       }
       begin = end, end = sampled_nodes.size();
@@ -204,7 +200,7 @@ sample(const at::Tensor& rowptr,
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
     }
 
-    num_sampled_edges_per_hop = sampler.num_sampled_edges_per_hop;
+    num_sampled_edges_per_hop = std::move(sampler.num_sampled_edges_per_hop);
   });
 
   return std::make_tuple(out_row, out_col, out_node_id, out_edge_id,
@@ -233,7 +229,6 @@ labor_sample_kernel(const at::Tensor& rowptr,
                     const std::vector<int64_t>& num_neighbors,
                     c10::optional<int64_t> random_seed,
                     int64_t importance_sampling,
-                    bool layer_dependency,
                     bool csc,
                     bool return_edge_id) {
   TORCH_CHECK(importance_sampling == 0,
@@ -246,7 +241,7 @@ labor_sample_kernel(const at::Tensor& rowptr,
     random_seed_ = ng(0, 1ll << 62);
   }
   DISPATCH_SAMPLE(return_edge_id, rowptr, col, seed, num_neighbors, csc,
-                  layer_dependency, random_seed_);
+                  random_seed_);
 }
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
