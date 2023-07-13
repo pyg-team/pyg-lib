@@ -48,10 +48,8 @@ def test_labor(dataset, **kwargs):
     for num_neighbors, batch_size, with_prob in product(
             args.num_neighbors, args.batch_sizes, args.with_prob):
 
-        print(
-            f'batch_size={batch_size}, num_neighbors={num_neighbors}), '
-            f'with_prob={with_prob}'
-        )
+        print(f'batch_size={batch_size}, num_neighbors={num_neighbors}), '
+              f'with_prob={with_prob}')
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
         data['with_prob'].append(with_prob)
