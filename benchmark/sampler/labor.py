@@ -24,6 +24,10 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
     [10, 10, 10],
     [20, 15, 10],
 ])
+argparser.add_argument('--with-prob', nargs='+', type=bool, default=[
+    True,
+    False
+])
 argparser.add_argument('--write-csv', action='store_true')
 argparser.add_argument('--libraries', nargs="*", type=str,
                        default=['pyg-lib', 'dgl'])
@@ -40,14 +44,17 @@ def test_labor(dataset, **kwargs):
             ('csc', (rowptr, col, torch.arange(col.size(0)))))
 
     node_perm = torch.randperm(num_nodes)
+    probs = torch.rand(col.shape[0])
 
     data = defaultdict(list)
-    for num_neighbors, batch_size in product(args.num_neighbors,
-                                             args.batch_sizes):
+    for num_neighbors, batch_size, with_prob in product(args.num_neighbors,
+                                             args.batch_sizes,
+                                             args.with_prob):
 
-        print(f'batch_size={batch_size}, num_neighbors={num_neighbors})')
+        print(f'batch_size={batch_size}, num_neighbors={num_neighbors}), with_prob={with_prob}')
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
+        data['with_prob'].append(with_prob)
 
         if 'pyg-lib' in args.libraries:
             t = time.perf_counter()
@@ -60,6 +67,7 @@ def test_labor(dataset, **kwargs):
                     col,
                     seed,
                     num_neighbors,
+                    probs=(probs if with_prob else None),
                     return_edge_id=True,
                 )
                 for i, _ in enumerate(num_neighbors):
@@ -74,13 +82,14 @@ def test_labor(dataset, **kwargs):
             data['pyg-lib-avg-edges'].append(avg_edges)
             data['pyg-lib-avg-nodes'].append(avg_nodes)
             print(f'     pyg-lib={pyg_lib_duration:.3f} seconds, '
-                  'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
+                  f'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
 
         if 'dgl' in args.libraries:
             import dgl
             dgl_sampler = dgl.dataloading.LaborSampler(
                 list(reversed(num_neighbors)),
                 layer_dependency=True,
+                prob=(probs if with_prob else None),
             )
             dgl_loader = dgl.dataloading.DataLoader(
                 dgl_graph,
@@ -105,12 +114,12 @@ def test_labor(dataset, **kwargs):
             data['dgl-avg-edges'].append(avg_edges)
             data['dgl-avg-nodes'].append(avg_nodes)
             print(f'         dgl={dgl_duration:.3f} seconds, '
-                  'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
+                  f'avg_edges: {avg_edges}, avg_nodes: {avg_nodes}')
         print()
 
     if args.write_csv:
         df = pd.DataFrame(data)
-        df.to_csv(f'neighbor{datetime.now()}.csv', index=False)
+        df.to_csv(f'labor{datetime.now()}.csv', index=False)
 
 
 if __name__ == '__main__':

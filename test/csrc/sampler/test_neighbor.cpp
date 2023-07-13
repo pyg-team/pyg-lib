@@ -75,6 +75,38 @@ TEST(LaborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
+TEST(WithProbsLaborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+  auto float_options = at::TensorOptions().dtype(at::kFloat);
+
+  const int64_t num_nodes = 6;
+  auto graph = cycle_graph(num_nodes, options);
+  auto seed = at::arange(2, 4, options);
+  std::vector<int64_t> num_neighbors = {1, 1};
+  const auto probs1 = at::zeros(num_nodes, float_options);
+  const auto probs2 = at::ones(num_nodes, float_options);
+  // Always go to higher neighbor
+  const auto probs = at::stack({probs1, probs2}, /*dim=*/1).flatten();
+
+  const uint64_t random_seed = 123456;
+  const int tries = 100;
+  for (uint64_t my_seed = random_seed; my_seed < random_seed + tries;
+       ++my_seed) {
+    auto out = pyg::sampler::labor_sample(
+        /*rowptr=*/std::get<0>(graph),
+        /*col=*/std::get<1>(graph), seed, num_neighbors, my_seed, probs);
+
+    auto expected_row = at::tensor({0, 1, 2}, options);
+    EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+    auto expected_col = at::tensor({1, 2, 3}, options);
+    EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+    auto expected_nodes = at::tensor({2, 3, 4, 5}, options);
+    EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+    auto expected_edges = at::tensor({5, 7, 9}, options);
+    EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+  }
+}
+
 TEST(WithReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 

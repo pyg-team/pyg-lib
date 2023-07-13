@@ -84,6 +84,7 @@ def labor_sample(
     seed: Tensor,
     num_neighbors: List[int],
     random_seed: Optional[int] = None,
+    probs: Optional[Tensor] = None,
     importance_sampling: int = 0,
     csc: bool = False,
     return_edge_id: bool = True,
@@ -104,6 +105,7 @@ def labor_sample(
             neighbors will be included.
         random_seed (int, optional): The random seed `z` to sample random
             variates `r_t = PRNG(z, t)` for a neighbor `t`.
+        probs (Tensor, optional): The edge probabilities to use during sampling.
         importance_sampling (int): Given any number `i`, runs the LABOR-i
             algorithm with i iterations of importance sampling computation.
             (default: :obj: `0`)
@@ -123,8 +125,8 @@ def labor_sample(
         per hop.
     """
     return torch.ops.pyg.labor_sample(rowptr, col, seed, num_neighbors,
-                                      random_seed, importance_sampling, csc,
-                                      return_edge_id)
+                                      random_seed, probs, importance_sampling,
+                                      csc, return_edge_id)
 
 
 def hetero_neighbor_sample(

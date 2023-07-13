@@ -52,7 +52,8 @@ labor_sample(const at::Tensor& rowptr,
              const at::Tensor& col,
              const at::Tensor& seed,
              const std::vector<int64_t>& num_neighbors,
-             c10::optional<int64_t> random_seed,
+             const c10::optional<int64_t>& random_seed,
+             const c10::optional<at::Tensor>& probs,
              int64_t importance_sampling,
              bool csc,
              bool return_edge_id) {
@@ -67,7 +68,7 @@ labor_sample(const at::Tensor& rowptr,
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::labor_sample", "")
                        .typed<decltype(labor_sample)>();
-  return op.call(rowptr, col, seed, num_neighbors, random_seed,
+  return op.call(rowptr, col, seed, num_neighbors, random_seed, probs,
                  importance_sampling, csc, return_edge_id);
 }
 
@@ -129,8 +130,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "-> (Tensor, Tensor, Tensor, Tensor?, int[], int[])"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::labor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
-      "num_neighbors, int? random_seed = None, int importance_sampling = 0, "
-      "bool csc = False, bool return_edge_id = True) "
+      "num_neighbors, int? random_seed = None, Tensor? probs = None, int "
+      "importance_sampling = 0, bool csc = False, bool return_edge_id = True) "
       "-> (Tensor, Tensor, Tensor, Tensor?, int[], int[])"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
