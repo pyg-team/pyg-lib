@@ -105,7 +105,8 @@ def labor_sample(
             neighbors will be included.
         random_seed (int, optional): The random seed `z` to sample random
             variates `r_t = PRNG(z, t)` for a neighbor `t`.
-        probs (Tensor, optional): The edge probabilities to use during sampling.
+        probs (Tensor, optional):
+            The edge probabilities to use during sampling.
         importance_sampling (int): Given any number `i`, runs the LABOR-i
             algorithm with i iterations of importance sampling computation.
             (default: :obj: `0`)

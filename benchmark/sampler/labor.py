@@ -49,7 +49,8 @@ def test_labor(dataset, **kwargs):
             args.num_neighbors, args.batch_sizes, args.with_prob):
 
         print(
-            f'batch_size={batch_size}, num_neighbors={num_neighbors}), with_prob={with_prob}'
+            f'batch_size={batch_size}, num_neighbors={num_neighbors}), '
+            f'with_prob={with_prob}'
         )
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
