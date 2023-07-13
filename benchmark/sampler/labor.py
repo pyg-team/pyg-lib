@@ -24,10 +24,8 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
     [10, 10, 10],
     [20, 15, 10],
 ])
-argparser.add_argument('--with-prob', nargs='+', type=bool, default=[
-    True,
-    False
-])
+argparser.add_argument('--with-prob', nargs='+', type=bool,
+                       default=[True, False])
 argparser.add_argument('--write-csv', action='store_true')
 argparser.add_argument('--libraries', nargs="*", type=str,
                        default=['pyg-lib', 'dgl'])
@@ -47,11 +45,12 @@ def test_labor(dataset, **kwargs):
     probs = torch.rand(col.shape[0])
 
     data = defaultdict(list)
-    for num_neighbors, batch_size, with_prob in product(args.num_neighbors,
-                                             args.batch_sizes,
-                                             args.with_prob):
+    for num_neighbors, batch_size, with_prob in product(
+            args.num_neighbors, args.batch_sizes, args.with_prob):
 
-        print(f'batch_size={batch_size}, num_neighbors={num_neighbors}), with_prob={with_prob}')
+        print(
+            f'batch_size={batch_size}, num_neighbors={num_neighbors}), with_prob={with_prob}'
+        )
         data['num_neighbors'].append(num_neighbors)
         data['batch_size'].append(batch_size)
         data['with_prob'].append(with_prob)
