@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `metis` partitioning ([#229](https://github.com/pyg-team/pyg-lib/pull/229))
 - Enable `hetero_neighbor_samplee` to work in parallel ([#211](https://github.com/pyg-team/pyg-lib/pull/211))
 ### Changed
+- Fixed vector-based mapping issue in `Mapping` ([#244](https://github.com/pyg-team/pyg-lib/pull/244))
 - Fixed performance issues reported by Coverity Tool ([#240](https://github.com/pyg-team/pyg-lib/pull/240))
 - Updated `cutlass` version for speed boosts in `segment_matmul` and `grouped_matmul` ([#235](https://github.com/pyg-team/pyg-lib/pull/235))
 - Drop nested tensor wrapper for `grouped_matmul` implementation ([#226](https://github.com/pyg-team/pyg-lib/pull/226))
