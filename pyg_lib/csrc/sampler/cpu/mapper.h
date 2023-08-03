@@ -12,14 +12,14 @@ namespace sampler {
 template <typename node_t, typename scalar_t>
 class Mapper {
  public:
-  Mapper(const size_t num_nodes, const size_t num_entries = -1)
+  Mapper(const size_t num_nodes, const size_t num_entries = 0)
       : num_nodes(num_nodes), num_entries(num_entries) {
     // We use some simple heuristic to determine whether we can use a vector
     // to perform the mapping instead of relying on the more memory-friendly,
     // but slower hash map implementation. As a general rule of thumb, we are
     // safe to use vectors in case the number of nodes are small, or it is
     // expected that we sample a large amount of nodes.
-    use_vec = (num_nodes < 1000000) || (num_entries > num_nodes / 10);
+    use_vec = (num_nodes < 1000000) || (num_entries > (num_nodes / 10));
 
     if (num_nodes <= 0) {  // == `num_nodes` is undefined:
       use_vec = false;
