@@ -136,15 +136,13 @@ class NeighborSampler {
     // Case 2: Sample with replacement:
     else if (replace) {
       if (row_end < (1 << 16)) {
-        int arr[count];
-        generator.fill_with_ints(row_start, row_end, count, &arr[0]);
-        for (size_t i = 0; i < count; ++i) {
-          const auto edge_id = arr[i];
+        const auto arr = std::move(
+            generator.generate_range_of_ints(row_start, row_end, count));
+        for (const auto edge_id : arr)
           add(edge_id, global_src_node, local_src_node, dst_mapper,
               out_global_dst_nodes);
-        }
       } else {
-        for (size_t i = 0; i < count; ++i) {
+        for (int64_t i = 0; i < count; ++i) {
           const auto edge_id = generator(row_start, row_end);
           add(edge_id, global_src_node, local_src_node, dst_mapper,
               out_global_dst_nodes);
@@ -156,9 +154,9 @@ class NeighborSampler {
     else {
       auto index_tracker = IndexTracker<scalar_t>(population);
       if (population < (1 << 16)) {
-        int arr[count];
-        generator.fill_with_ints(0, population, count, &arr[0]);
-        for (size_t i = 0; i < count; ++i) {
+        const auto arr =
+            std::move(generator.generate_range_of_ints(0, population, count));
+        for (auto i = 0; i < arr.size(); ++i) {
           auto rnd = arr[i];
           if (!index_tracker.try_insert(rnd)) {
             rnd = population - count + i;
@@ -169,7 +167,7 @@ class NeighborSampler {
               out_global_dst_nodes);
         }
       } else {
-        for (size_t i = population - count; i < population; ++i) {
+        for (auto i = population - count; i < population; ++i) {
           auto rnd = generator(0, i + 1);
           if (!index_tracker.try_insert(rnd)) {
             rnd = i;

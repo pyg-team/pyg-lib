@@ -105,12 +105,12 @@ class RandintEngine {
  public:
   RandintEngine() {
 #if WITH_MKL_BLAS()
-    vslNewStream(&stream, VSL_BRNG_MT19937, 1);
+    vslNewStream(&stream_, VSL_BRNG_MT19937, 1);
 #endif
   }
   ~RandintEngine() {
 #if WITH_MKL_BLAS()
-    vslDeleteStream(&stream);
+    vslDeleteStream(&stream_);
 #endif
   }
 
@@ -118,30 +118,42 @@ class RandintEngine {
   T operator()(T beg, T end) {
     TORCH_CHECK(beg < end, "Randint engine illegal range");
 
-    T range = end - beg;
-    if (!prefetch_initialized) {
-      prefetched_ = PrefetchedRandint(RAND_PREFETCH_SIZE, RAND_PREFETCH_BITS);
-      prefetch_initialized = true;
-    }
+    const T range = end - beg;
     return prefetched_.next(range) + beg;
   }
 
-  void fill_with_ints(T beg, T end, T count, int* ptr) {
+  // Generates `count` numbers within range [beg, end). If
+  // possible, it will use specialized MKL implementation.
+  // It is user's responsibility to ensure that `beg` and `end`
+  // fit into int.
+  std::vector<int> generate_range_of_ints(T beg, T end, int64_t count) {
+    TORCH_CHECK(beg < end, "Randint engine illegal range");
+
+    std::vector<int> result(count);
+    const auto fallback_func = [this](T beg, T end, std::vector<int>& dst) {
+      for (auto& val : dst)
+        val = static_cast<int>((*this)(beg, end));
+    };
 #if WITH_MKL_BLAS()
-    viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream, count, ptr, beg, end);
-#else
-    for (size_t i = 0; i < count; ++i) {
-      *ptr = (*this)(beg, end);
-      ++ptr;
+    const bool use_fallback_func = count > std::numeric_limits<MKL_INT>::max();
+    if (use_fallback_func) {
+      fallback_func(beg, end, result);
+    } else {
+      const auto b = static_cast<int>(beg);
+      const auto e = static_cast<int>(end);
+      const auto c = static_cast<MKL_INT>(count);
+      viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream_, c, result.data(), b, e);
     }
+#else
+    fallback_func(beg, end, result);
 #endif
+    return result;
   }
 
  private:
   PrefetchedRandint prefetched_;
-  bool prefetch_initialized = false;
 #if WITH_MKL_BLAS()
-  VSLStreamStatePtr stream;
+  VSLStreamStatePtr stream_;
 #endif
 };
 
