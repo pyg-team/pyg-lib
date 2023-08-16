@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Fixed performance issues reported by Coverity Tool ([#240](https://github.com/pyg-team/pyg-lib/pull/240))
 - Updated `cutlass` version for speed boosts in `segment_matmul` and `grouped_matmul` ([#235](https://github.com/pyg-team/pyg-lib/pull/235))
 - Drop nested tensor wrapper for `grouped_matmul` implementation ([#226](https://github.com/pyg-team/pyg-lib/pull/226))
-- Added `fill_with_ints` function (it uses MKL library in order to generate ints) to RandintEngine class ([#222](https://github.com/pyg-team/pyg-lib/pull/222))
+- Added `generate_range_of_ints` function (it uses MKL library in order to generate ints) to RandintEngine class ([#222](https://github.com/pyg-team/pyg-lib/pull/222))
 - Fixed TorchScript support in `grouped_matmul` ([#220](https://github.com/pyg-team/pyg-lib/pull/220))
 ### Removed
 
