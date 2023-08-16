@@ -135,25 +135,48 @@ class NeighborSampler {
 
     // Case 2: Sample with replacement:
     else if (replace) {
-      for (size_t i = 0; i < count; ++i) {
-        const auto edge_id = generator(row_start, row_end);
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
+      if (row_end < (1 << 16)) {
+        const auto arr = std::move(
+            generator.generate_range_of_ints(row_start, row_end, count));
+        for (const auto edge_id : arr)
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+      } else {
+        for (int64_t i = 0; i < count; ++i) {
+          const auto edge_id = generator(row_start, row_end);
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
       }
     }
 
     // Case 3: Sample without replacement:
     else {
       auto index_tracker = IndexTracker<scalar_t>(population);
-      for (size_t i = population - count; i < population; ++i) {
-        auto rnd = generator(0, i + 1);
-        if (!index_tracker.try_insert(rnd)) {
-          rnd = i;
-          index_tracker.insert(i);
+      if (population < (1 << 16)) {
+        const auto arr =
+            std::move(generator.generate_range_of_ints(0, population, count));
+        for (auto i = 0; i < arr.size(); ++i) {
+          auto rnd = arr[i];
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = population - count + i;
+            index_tracker.insert(population - count + i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
         }
-        const auto edge_id = row_start + rnd;
-        add(edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
+      } else {
+        for (auto i = population - count; i < population; ++i) {
+          auto rnd = generator(0, i + 1);
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = i;
+            index_tracker.insert(i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
       }
     }
   }

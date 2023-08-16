@@ -93,17 +93,15 @@ def maybe_append_with_mkl(dependencies):
         torch_config = torch.__config__.show()
         with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
         if torch.backends.mkl.is_available() and with_mkl_blas:
-            # product version is decoupled from library version. For older
-            # releases, where MKL was not a part of oneAPI, we can safely use
-            # 2021.4 as it is backward compatible (default for PyTorch conda
-            # distribution).
-            product_version = '2021.4'
+            product_version = '2023.1.0'
             pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
             match = re.search(pattern, torch_config)
             if match:
                 product_version = match.group(0).split(' ')[-1]
 
             dependencies.append(f'mkl-include=={product_version}')
+            dependencies.append(f'mkl=={product_version}')
+            dependencies.append(f'mkl-devel=={product_version}')
 
 
 install_requires = []
