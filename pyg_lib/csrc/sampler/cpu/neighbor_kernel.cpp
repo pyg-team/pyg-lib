@@ -160,7 +160,7 @@ class NeighborSampler {
 
         // Add edges to the sampled list one-by-one
         for (int i = 0; i < edges.numel(); ++i) {
-          const auto edge = row_start + edges.index({i}).item<int64_t>();
+          const auto edge = row_start + edges.index({i}).item<scalar_t>();
           add(edge, global_src_node, local_src_node, dst_mapper,
               out_global_dst_nodes);
         }  // Sampling complete
