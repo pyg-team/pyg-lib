@@ -13,6 +13,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
+                       const at::Tensor& weights,
                        const at::Tensor& seed,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
@@ -22,7 +23,8 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        bool directed,
                        bool disjoint,
                        std::string temporal_strategy,
-                       bool return_edge_id);
+                       bool return_edge_id,
+                       bool multinomial_mode);
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
@@ -44,7 +46,8 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     std::string temporal_strategy,
-    bool return_edge_id);
+    bool return_edge_id,
+    bool multinomial_mode);
 
 }  // namespace sampler
 }  // namespace pyg

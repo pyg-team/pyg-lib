@@ -19,6 +19,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
+                const at::Tensor& weights,
                 const at::Tensor& seed,
                 const std::vector<int64_t>& num_neighbors,
                 const c10::optional<at::Tensor>& time = c10::nullopt,
@@ -28,7 +29,8 @@ neighbor_sample(const at::Tensor& rowptr,
                 bool directed = true,
                 bool disjoint = false,
                 std::string strategy = "uniform",
-                bool return_edge_id = true);
+                bool return_edge_id = true,
+                bool multinomial_mode = false);
 
 // Recursively samples neighbors from all node indices in `seed_dict`
 // in the heterogeneous graph given by `(rowptr_dict, col_dict)`.
@@ -56,7 +58,8 @@ hetero_neighbor_sample(
     bool directed = true,
     bool disjoint = false,
     std::string strategy = "uniform",
-    bool return_edge_id = true);
+    bool return_edge_id = true,
+    bool multinomial_mode = false);
 
 }  // namespace sampler
 }  // namespace pyg
