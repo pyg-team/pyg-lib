@@ -15,13 +15,16 @@ def neighbor_sample(
     num_neighbors: List[int],
     time: Optional[Tensor] = None,
     seed_time: Optional[Tensor] = None,
+    batch: Optional[Tensor] = None,
     csc: bool = False,
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
-) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int]]:
+    distributed: bool = False,
+) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int],
+           List[int]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
 
@@ -48,6 +51,9 @@ def neighbor_sample(
         seed_time (torch.Tensor, optional): Optional values to override the
             timestamp for seed nodes. If not set, will use timestamps in
             :obj:`time` as default for seed nodes. (default: :obj:`None`)
+        batch (torch.Tensor, optional): Optional values to specify the
+            initial subgraph indices for seed nodes. If not set, will use
+            incremental values starting from 0. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
@@ -62,20 +68,25 @@ def neighbor_sample(
         return_edge_id (bool, optional): If set to :obj:`False`, will not
             return the indices of edges of the original graph.
             (default: :obj: `True`)
+        distributed (bool, optional): If set to :obj:`True`, will sample nodes
+            with duplicates, save information about the number of sampled
+            neighbors per node and will not return rows and cols.
+            This argument was added for the purpose of a distributed training.
 
     Returns:
         (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
-        List[int], List[int]):
+        List[int], List[int], List[int]):
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph.
         Lastly, returns information about the sampled amount of nodes and edges
-        per hop.
+        per hop and if `distributed` will return cummulative sum of the sampled
+        neighbors per node.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         time, seed_time, csc, replace,
+                                         time, seed_time, batch, csc, replace,
                                          directed, disjoint, temporal_strategy,
-                                         return_edge_id)
+                                         return_edge_id, distributed)
 
 
 def hetero_neighbor_sample(
@@ -91,9 +102,10 @@ def hetero_neighbor_sample(
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
+    distributed: bool = False,
 ) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
         NodeType, Tensor], Optional[Dict[EdgeType, Tensor]], Dict[
-            NodeType, List[int]], Dict[NodeType, List[int]]]:
+            NodeType, List[int]], Dict[EdgeType, List[int]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed_dict`
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
@@ -121,21 +133,9 @@ def hetero_neighbor_sample(
     }
 
     out = torch.ops.pyg.hetero_neighbor_sample(
-        node_types,
-        edge_types,
-        rowptr_dict,
-        col_dict,
-        seed_dict,
-        num_neighbors_dict,
-        time_dict,
-        seed_time_dict,
-        csc,
-        replace,
-        directed,
-        disjoint,
-        temporal_strategy,
-        return_edge_id,
-    )
+        node_types, edge_types, rowptr_dict, col_dict, seed_dict,
+        num_neighbors_dict, time_dict, seed_time_dict, csc, replace, directed,
+        disjoint, temporal_strategy, return_edge_id, distributed)
 
     (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_per_hop_dict,
      num_edges_per_hop_dict) = out
@@ -205,9 +205,83 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 
 
+def relabel_neighborhood(
+    seed: Tensor,
+    sampled_nodes_with_dupl: Tensor,
+    sampled_nbrs_per_node: List[int],
+    num_nodes: int,
+    batch: Optional[Tensor] = None,
+    csc: bool = False,
+    disjoint: bool = False,
+) -> Tuple[Tensor, Tensor]:
+    r"""Relabel global indices of the :obj:`sampled_nodes_with_dupl` to the
+        local subtree/subgraph indices.
+
+    .. note::
+
+        For :obj:`disjoint`, the :obj:`batch` needs to be specified
+        and each node from :obj:`sampled_nodes_with_dupl` must be assigned
+        to a subgraph.
+
+    Args:
+        seed (torch.Tensor): The seed node indices.
+        sampled_nodes_with_dupl (torch.Tensor): Sampled nodes with duplicates.
+            Should not include seed nodes.
+        sampled_nbrs_per_node (List[int]): The number of neighbors sampled by
+            each node from :obj:`sampled_nodes_with_dupl`.
+        num_nodes (int): Number of all nodes in a graph.
+        batch (torch.Tensor, optional): Stores information about which subgraph
+            the node from :obj:`sampled_nodes_with_dupl` belongs to.
+            Must be specified when :obj:`disjoint`. (default: :obj:`None`)
+        csc (bool, optional): If set to :obj:`True`, assumes that the graph is
+            given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
+        disjoint (bool, optional): If set to :obj:`True` , will create disjoint
+            subgraphs for every seed node. (default: :obj:`False`)
+
+    Returns:
+        (torch.Tensor, torch.Tensor):
+        Row indices, col indices of the returned subtree/subgraph.
+    """
+    return torch.ops.pyg.relabel_neighborhood(seed, sampled_nodes_with_dupl,
+                                              sampled_nbrs_per_node, num_nodes,
+                                              batch, csc, disjoint)
+
+
+def hetero_relabel_neighborhood(
+    edge_types: List[EdgeType], seed_dict: Dict[NodeType, Tensor],
+    sampled_nodes_with_dupl_dict: Dict[NodeType, Tensor],
+    sampled_nbrs_per_node_dict: Dict[NodeType,
+                                     List[int]], num_nodes_dict: Dict[NodeType,
+                                                                      int],
+    batch_dict: Optional[Dict[NodeType, Tensor]] = None, csc: bool = False,
+    disjoint: bool = False
+) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor]]:
+    r"""Relabel global indices of the :obj:`sampled_nodes_with_dupl` to the
+        local subtree/subgraph indices in the heterogeneous graph.
+
+    .. note ::
+        Similar to :meth:`relabel_neighborhood`, but expects a dictionary of
+        node types (:obj:`str`) and edge types (:obj:`Tuple[str, str, str]`)
+        for each non-boolean argument.
+
+    Args:
+        kwargs: Arguments of :meth:`relabel_neighborhood`.
+    """
+
+    src_node_types = {k[0] for k in sampled_nodes_with_dupl_dict.keys()}
+    dst_node_types = {k[-1] for k in sampled_nodes_with_dupl_dict.keys()}
+    node_types = list(src_node_types | dst_node_types)
+
+    return torch.ops.pyg.hetero_relabel_neighborhood(
+        node_types, edge_types, seed_dict, sampled_nodes_with_dupl_dict,
+        sampled_nbrs_per_node_dict, num_nodes_dict, batch_dict, csc, disjoint)
+
+
 __all__ = [
     'neighbor_sample',
     'hetero_neighbor_sample',
     'subgraph',
     'random_walk',
+    'relabel_neighborhood',
+    'hetero_relabel_neighborhood',
 ]

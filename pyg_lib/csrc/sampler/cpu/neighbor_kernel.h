@@ -10,6 +10,7 @@ std::tuple<at::Tensor,
            at::Tensor,
            c10::optional<at::Tensor>,
            std::vector<int64_t>,
+           std::vector<int64_t>,
            std::vector<int64_t>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
@@ -17,12 +18,14 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
                        const c10::optional<at::Tensor>& seed_time,
+                       const c10::optional<at::Tensor>& batch,
                        bool csc,
                        bool replace,
                        bool directed,
                        bool disjoint,
                        std::string temporal_strategy,
-                       bool return_edge_id);
+                       bool return_edge_id,
+                       bool distributed);
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
@@ -44,7 +47,8 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     std::string temporal_strategy,
-    bool return_edge_id);
+    bool return_edge_id,
+    bool distributed);
 
 }  // namespace sampler
 }  // namespace pyg
