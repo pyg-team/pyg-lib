@@ -15,8 +15,8 @@ namespace {
 
 template <typename scalar_t>
 std::tuple<at::Tensor, at::Tensor> get_sampled_edges(
-    std::vector<scalar_t> sampled_rows,
-    std::vector<scalar_t> sampled_cols,
+    const std::vector<scalar_t>& sampled_rows,
+    const std::vector<scalar_t>& sampled_cols,
     const bool csc = false) {
   const auto row = pyg::utils::from_vector(sampled_rows);
   const auto col = pyg::utils::from_vector(sampled_cols);
@@ -36,23 +36,12 @@ std::tuple<at::Tensor, at::Tensor> relabel(
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch,
     const bool csc) {
-  if (disjoint) {
-    TORCH_CHECK(batch.has_value(),
-                "Batch needs to be specified to create disjoint subgraphs");
-    TORCH_CHECK(batch.value().is_contiguous(), "Non-contiguous 'batch'");
-    TORCH_CHECK(batch.value().numel() == sampled_nodes_with_dupl.numel(),
-                "Each node must belong to a subgraph.'");
-  }
-  TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
-  TORCH_CHECK(sampled_nodes_with_dupl.is_contiguous(),
-              "Non-contiguous 'sampled_nodes_with_dupl'");
-
   at::Tensor out_row, out_col;
 
   AT_DISPATCH_INTEGRAL_TYPES(
       seed.scalar_type(), "relabel_neighborhood_kernel", [&] {
-        typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
-        typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
+        using pair_scalar_t = std::pair<scalar_t, scalar_t>;
+        using node_t = std::conditional_t<!disjoint, scalar_t, pair_scalar_t>;
 
         const auto sampled_nodes_data =
             sampled_nodes_with_dupl.data_ptr<scalar_t>();
@@ -67,11 +56,12 @@ std::tuple<at::Tensor, at::Tensor> relabel(
         if constexpr (!disjoint) {
           mapper.fill(seed);
         } else {
-          for (size_t i = 0; i < seed.numel(); ++i) {
+          for (size_t i = 0; i < seed.numel(); i++) {
             mapper.insert({i, seed_data[i]});
           }
         }
-        size_t begin = 0, end = 0;
+        size_t begin = 0;
+        size_t end = 0;
         for (auto i = 0; i < sampled_nbrs_per_node.size(); i++) {
           end += sampled_nbrs_per_node[i];
 
@@ -103,37 +93,16 @@ relabel(const std::vector<node_type>& node_types,
         const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
         const c10::Dict<node_type, std::vector<int64_t>>&
             sampled_nbrs_per_node_dict,
-        const c10::Dict<node_type, int64_t> num_nodes_dict,
+        const c10::Dict<node_type, int64_t>& num_nodes_dict,
         const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
         const bool csc) {
-  if (disjoint) {
-    TORCH_CHECK(batch_dict.has_value(),
-                "Batch needs to be specified to create disjoint subgraphs");
-    for (const auto& kv : batch_dict.value()) {
-      const at::Tensor& batch = kv.value();
-      const at::Tensor& sampled_nodes_with_dupl = kv.value();
-      TORCH_CHECK(batch.is_contiguous(), "Non-contiguous 'batch'");
-      TORCH_CHECK(batch.numel() == sampled_nodes_with_dupl.numel(),
-                  "Each node must belong to a subgraph.'");
-    }
-  }
-  for (const auto& kv : seed_dict) {
-    const at::Tensor& seed = kv.value();
-    TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
-  }
-  for (const auto& kv : sampled_nodes_with_dupl_dict) {
-    const at::Tensor& sampled_nodes_with_dupl = kv.value();
-    TORCH_CHECK(sampled_nodes_with_dupl.is_contiguous(),
-                "Non-contiguous 'sampled_nodes_with_dupl'");
-  }
-
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
 
   AT_DISPATCH_INTEGRAL_TYPES(
       seed_dict.begin()->value().scalar_type(),
       "hetero_relabel_neighborhood_kernel", [&] {
-        typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
-        typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
+        using pair_scalar_t = std::pair<scalar_t, scalar_t>;
+        using node_t = std::conditional_t<!disjoint, scalar_t, pair_scalar_t>;
 
         phmap::flat_hash_map<node_type, scalar_t*> sampled_nodes_data_dict;
         phmap::flat_hash_map<node_type, scalar_t*> batch_data_dict;
@@ -168,7 +137,7 @@ relabel(const std::vector<node_type>& node_types,
           } else {
             auto& mapper = mapper_dict.at(kv.key());
             const auto seed_data = seed.data_ptr<scalar_t>();
-            for (size_t i = 0; i < seed.numel(); ++i) {
+            for (size_t i = 0; i < seed.numel(); i++) {
               mapper.insert({i, seed_data[i]});
             }
           }
@@ -179,9 +148,9 @@ relabel(const std::vector<node_type>& node_types,
           for (auto i = 0; i < sampled_nbrs_per_node_dict.at(dst).size(); i++) {
             auto& dst_mapper = mapper_dict.at(dst);
             auto& dst_sampled_nodes_data = sampled_nodes_data_dict.at(dst);
+
             slice_dict.at(dst).second += sampled_nbrs_per_node_dict.at(dst)[i];
-            size_t begin, end;
-            std::tie(begin, end) = slice_dict.at(dst);
+            auto [begin, end] = slice_dict.at(dst);
 
             for (auto j = begin; j < end; j++) {
               std::pair<scalar_t, bool> res;
@@ -237,7 +206,7 @@ hetero_relabel_neighborhood_kernel(
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
     const c10::Dict<node_type, std::vector<int64_t>>&
         sampled_nbrs_per_node_dict,
-    const c10::Dict<node_type, int64_t> num_nodes_dict,
+    const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint) {

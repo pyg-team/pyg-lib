@@ -16,13 +16,25 @@ std::tuple<at::Tensor, at::Tensor> relabel_neighborhood(
     const c10::optional<at::Tensor>& batch,
     bool csc,
     bool disjoint) {
-  at::TensorArg seed_t{seed, "seed", 1};
-  at::TensorArg sampled_nodes_with_dupl_t{sampled_nodes_with_dupl,
-                                          "sampled_nodes_with_dupl", 1};
+  at::TensorArg seed_args{seed, "seed", 1};
+  at::TensorArg sampled_nodes_with_dupl_args{sampled_nodes_with_dupl,
+                                             "sampled_nodes_with_dupl", 1};
 
   at::CheckedFrom c = "relabel_neighborhood";
-  at::checkAllDefined(c, {sampled_nodes_with_dupl_t, seed_t});
-  at::checkAllSameType(c, {sampled_nodes_with_dupl_t, seed_t});
+  at::checkAllDefined(c, {sampled_nodes_with_dupl_args, seed_args});
+  at::checkAllSameType(c, {sampled_nodes_with_dupl_args, seed_args});
+
+  TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
+  TORCH_CHECK(sampled_nodes_with_dupl.is_contiguous(),
+              "Non-contiguous 'sampled_nodes_with_dupl'");
+
+  if (disjoint) {
+    TORCH_CHECK(batch.has_value(),
+                "Batch needs to be specified to create disjoint subgraphs");
+    TORCH_CHECK(batch.value().is_contiguous(), "Non-contiguous 'batch'");
+    TORCH_CHECK(batch.value().numel() == sampled_nodes_with_dupl.numel(),
+                "Each node must belong to a subgraph.'");
+  }
 
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::relabel_neighborhood", "")
@@ -39,7 +51,7 @@ hetero_relabel_neighborhood(
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
     const c10::Dict<node_type, std::vector<int64_t>>&
         sampled_nbrs_per_node_dict,
-    const c10::Dict<node_type, int64_t> num_nodes_dict,
+    const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint) {
@@ -54,6 +66,29 @@ hetero_relabel_neighborhood(
   at::checkAllDefined(c, seed_dict_args);
   at::checkAllDefined(c, sampled_nodes_with_dupl_dict_args);
   at::checkSameType(c, seed_dict_args[0], sampled_nodes_with_dupl_dict_args[0]);
+
+  for (const auto& kv : seed_dict) {
+    const at::Tensor& seed = kv.value();
+    TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
+  }
+  for (const auto& kv : sampled_nodes_with_dupl_dict) {
+    const at::Tensor& sampled_nodes_with_dupl = kv.value();
+    TORCH_CHECK(sampled_nodes_with_dupl.is_contiguous(),
+                "Non-contiguous 'sampled_nodes_with_dupl'");
+  }
+
+  if (disjoint) {
+    TORCH_CHECK(batch_dict.has_value(),
+                "Batch needs to be specified to create disjoint subgraphs");
+    for (const auto& kv : batch_dict.value()) {
+      const at::Tensor& batch = kv.value();
+      const at::Tensor& sampled_nodes_with_dupl =
+          sampled_nodes_with_dupl_dict.at(kv.key());
+      TORCH_CHECK(batch.is_contiguous(), "Non-contiguous 'batch'");
+      TORCH_CHECK(batch.numel() == sampled_nodes_with_dupl.numel(),
+                  "Each node must belong to a subgraph.'");
+    }
+  }
 
   static auto op =
       c10::Dispatcher::singleton()
