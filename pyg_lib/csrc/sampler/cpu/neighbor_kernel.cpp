@@ -756,9 +756,10 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     std::string temporal_strategy,
-    bool return_edge_id,
-    bool multinomial_mode) {
-  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, multinomial_mode, node_types,
+    bool return_edge_id)
+    // bool multinomial_mode) 
+    {
+  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, 0, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
                   num_neighbors_dict, time_dict, seed_time_dict, csc,
                   temporal_strategy);

@@ -46,8 +46,7 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     std::string temporal_strategy,
-    bool return_edge_id,
-    bool multinomial_mode);
+    bool return_edge_id);
 
 }  // namespace sampler
 }  // namespace pyg
