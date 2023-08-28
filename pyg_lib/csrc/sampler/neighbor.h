@@ -58,8 +58,7 @@ hetero_neighbor_sample(
     bool directed = true,
     bool disjoint = false,
     std::string strategy = "uniform",
-    bool return_edge_id = true,
-    bool multinomial_mode = false);
+    bool return_edge_id = true);
 
 }  // namespace sampler
 }  // namespace pyg

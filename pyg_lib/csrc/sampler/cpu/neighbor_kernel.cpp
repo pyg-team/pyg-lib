@@ -54,7 +54,6 @@ class NeighborSampler {
 
   void uniform_sample(const node_t global_src_node,
                       const scalar_t local_src_node,
-                      const at::Tensor& weights,
                       const int64_t count,
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
@@ -62,13 +61,12 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     
-    _sample(global_src_node, local_src_node, row_start, row_end, count, weights, false,
+    _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
   }
 
   void temporal_sample(const node_t global_src_node,
                        const scalar_t local_src_node,
-                       const at::Tensor& weights,
                        const int64_t count,
                        const temporal_t seed_time,
                        const temporal_t* time,
@@ -94,7 +92,7 @@ class NeighborSampler {
                   "Found invalid non-sorted temporal neighborhood");
     }
 
-    _sample(global_src_node, local_src_node, row_start, row_end, count, weights, false,
+    _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
   }
 
@@ -134,6 +132,78 @@ class NeighborSampler {
                const scalar_t row_start,
                const scalar_t row_end,
                const int64_t count,
+               pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+               pyg::random::RandintEngine<scalar_t>& generator,
+               std::vector<node_t>& out_global_dst_nodes) {
+    if (count == 0)
+      return;
+
+    const auto population = row_end - row_start;
+
+    if (population == 0)
+      return;
+
+    // Case 1: Sample the full neighborhood:
+    if (count < 0 || (!replace && count >= population)) {
+      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
+        add(edge_id, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }
+    }
+
+    // Case 2: Sample with replacement:
+    else if (replace) {
+      if (row_end < (1 << 16)) {
+        const auto arr = std::move(
+            generator.generate_range_of_ints(row_start, row_end, count));
+        for (const auto edge_id : arr)
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+      } else {
+        for (int64_t i = 0; i < count; ++i) {
+          const auto edge_id = generator(row_start, row_end);
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
+      }
+    }
+
+    // Case 3: Sample without replacement:
+    else {
+      auto index_tracker = IndexTracker<scalar_t>(population);
+      if (population < (1 << 16)) {
+        const auto arr =
+            std::move(generator.generate_range_of_ints(0, population, count));
+        for (auto i = 0; i < arr.size(); ++i) {
+          auto rnd = arr[i];
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = population - count + i;
+            index_tracker.insert(population - count + i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
+      } else {
+        for (auto i = population - count; i < population; ++i) {
+          auto rnd = generator(0, i + 1);
+          if (!index_tracker.try_insert(rnd)) {
+            rnd = i;
+            index_tracker.insert(i);
+          }
+          const auto edge_id = row_start + rnd;
+          add(edge_id, global_src_node, local_src_node, dst_mapper,
+              out_global_dst_nodes);
+        }
+      }
+    }
+  }
+
+  void _sample(const node_t global_src_node,
+               const scalar_t local_src_node,
+               const scalar_t row_start,
+               const scalar_t row_end,
+               const int64_t count,
                const at::Tensor& weight_vector,
                bool multinomial_mode,
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
@@ -154,68 +224,17 @@ class NeighborSampler {
             out_global_dst_nodes);
       }
     } else {
-      if (multinomial_mode) {
-        // Multinomial sampling
-        at::Tensor edges = at::multinomial(weight_vector, count, replace);
-
-        // Add edges to the sampled list one-by-one
-        for (int i = 0; i < edges.numel(); ++i) {
-          const auto edge = row_start + edges.index({i}).item<scalar_t>();
-          add(edge, global_src_node, local_src_node, dst_mapper,
-              out_global_dst_nodes);
-        }  // Sampling complete
-      } else {
-        // Multinomial mode not enabled
-
-        // Case 2: Sample with replacement:
-        if (replace) {
-          if (row_end < (1 << 16)) {
-            const auto arr = std::move(
-                generator.generate_range_of_ints(row_start, row_end, count));
-            for (const auto edge_id : arr)
-              add(edge_id, global_src_node, local_src_node, dst_mapper,
-                  out_global_dst_nodes);
-          } else {
-            for (int64_t i = 0; i < count; ++i) {
-              const auto edge_id = generator(row_start, row_end);
-              add(edge_id, global_src_node, local_src_node, dst_mapper,
-                  out_global_dst_nodes);
-            }
-          }
-        }
-
-        // Case 3: Sample without replacement:
-        else {
-          auto index_tracker = IndexTracker<scalar_t>(population);
-          if (population < (1 << 16)) {
-            const auto arr =
-                std::move(generator.generate_range_of_ints(0, population, count));
-            for (auto i = 0; i < arr.size(); ++i) {
-              auto rnd = arr[i];
-              if (!index_tracker.try_insert(rnd)) {
-                rnd = population - count + i;
-                index_tracker.insert(population - count + i);
-              }
-              const auto edge_id = row_start + rnd;
-              add(edge_id, global_src_node, local_src_node, dst_mapper,
-                  out_global_dst_nodes);
-            }
-          } else {
-            for (auto i = population - count; i < population; ++i) {
-              auto rnd = generator(0, i + 1);
-              if (!index_tracker.try_insert(rnd)) {
-                rnd = i;
-                index_tracker.insert(i);
-              }
-              const auto edge_id = row_start + rnd;
-              add(edge_id, global_src_node, local_src_node, dst_mapper,
-                  out_global_dst_nodes);
-            }
-          }
-        }
-      }
+      // Multinomial sampling
+      at::Tensor edges = at::multinomial(weight_vector, count, replace);
+      // Add edges to the sampled list one-by-one
+      for (int i = 0; i < edges.numel(); ++i) {
+        const auto edge = row_start + edges.index({i}).item<scalar_t>();
+        add(edge, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }  // Sampling complete
     }
   }
+
 
   inline void add(const scalar_t edge_id,
                   const node_t global_src_node,
@@ -337,7 +356,7 @@ sample(const at::Tensor& rowptr,
         if (!multinomial_mode) {
           for (size_t i = begin; i < end; ++i) {
             sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                                   /*local_src_node=*/i, weights, count, mapper,
+                                   /*local_src_node=*/i, count, mapper,
                                    generator,
                                    /*out_global_dst_nodes=*/sampled_nodes);
           }
@@ -354,7 +373,7 @@ sample(const at::Tensor& rowptr,
         for (size_t i = begin; i < end; ++i) {
           const auto batch_idx = sampled_nodes[i].first;
           sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
-                                  /*local_src_node=*/i, weights, count,
+                                  /*local_src_node=*/i, count,
                                   seed_times[batch_idx], time_data, mapper,
                                   generator,
                                   /*out_global_dst_nodes=*/sampled_nodes);
@@ -579,7 +598,7 @@ sample(const std::vector<node_type>& node_types,
                   for (size_t i = begin; i < end; ++i) {
                     sampler.uniform_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, /*PH for weights*/at::ones({1,1}), count, dst_mapper, generator,
+                        /*local_src_node=*/i, count, dst_mapper, generator,
                         dst_sampled_nodes);
                   }
                 } else if constexpr (!std::is_scalar<
@@ -590,7 +609,7 @@ sample(const std::vector<node_type>& node_types,
                     const auto batch_idx = src_sampled_nodes[i].first;
                     sampler.temporal_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, /*PH for weights*/at::ones({1,1}), count, seed_times[batch_idx],
+                        /*local_src_node=*/i, count, seed_times[batch_idx],
                         dst_time_data, dst_mapper, generator,
                         dst_sampled_nodes);
                   }
@@ -756,9 +775,7 @@ hetero_neighbor_sample_kernel(
     bool directed,
     bool disjoint,
     std::string temporal_strategy,
-    bool return_edge_id)
-    // bool multinomial_mode) 
-    {
+    bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, 0, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
                   num_neighbors_dict, time_dict, seed_time_dict, csc,
