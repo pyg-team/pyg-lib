@@ -45,6 +45,14 @@ class NeighborSampler {
                       std::vector<node_t>& out_global_dst_nodes) {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+    if (count == 0)
+      return;
+
+    const auto population = row_end - row_start;
+    if (population == 0)
+      return;
+
     at::Tensor weights_neighborhood =  weights.index(
                      {at::indexing::Slice(row_start, row_end)});
     
@@ -61,6 +69,13 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     
+    if (count == 0)
+      return;
+
+    const auto population = row_end - row_start;
+    if (population == 0)
+      return;
+
     _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
   }
@@ -75,7 +90,13 @@ class NeighborSampler {
                        std::vector<node_t>& out_global_dst_nodes) {
     auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
-    auto population = row_end - row_start;
+    const auto population = row_end - row_start;
+
+    if (count == 0)
+      return;
+
+    if (population == 0)
+      return;
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::upper_bound(
@@ -135,13 +156,7 @@ class NeighborSampler {
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                pyg::random::RandintEngine<scalar_t>& generator,
                std::vector<node_t>& out_global_dst_nodes) {
-    if (count == 0)
-      return;
-
     const auto population = row_end - row_start;
-
-    if (population == 0)
-      return;
 
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
@@ -209,13 +224,7 @@ class NeighborSampler {
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                pyg::random::RandintEngine<scalar_t>& generator,
                std::vector<node_t>& out_global_dst_nodes) {
-    if (count == 0)
-      return;
-
     const auto population = row_end - row_start;
-
-    if (population == 0)
-      return;
 
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
