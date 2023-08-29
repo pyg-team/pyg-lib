@@ -46,9 +46,6 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    if (count == 0)
-      return;
-
     const auto population = row_end - row_start;
     if (population == 0)
       return;
@@ -68,9 +65,6 @@ class NeighborSampler {
                       std::vector<node_t>& out_global_dst_nodes) {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
-    
-    if (count == 0)
-      return;
 
     const auto population = row_end - row_start;
     if (population == 0)
@@ -91,9 +85,6 @@ class NeighborSampler {
     auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
     const auto population = row_end - row_start;
-
-    if (count == 0)
-      return;
 
     if (population == 0)
       return;
@@ -364,6 +355,8 @@ sample(const at::Tensor& rowptr,
       if (!time.has_value()) {
         if (!multinomial_mode) {
           for (size_t i = begin; i < end; ++i) {
+            if (count == 0)
+              continue;
             sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
                                    /*local_src_node=*/i, count, mapper,
                                    generator,
@@ -371,6 +364,8 @@ sample(const at::Tensor& rowptr,
           }
         } else {
           for (size_t i = begin; i < end; ++i) {
+            if (count == 0)
+              continue;
             sampler.multinomial_sample(/*global_src_node=*/sampled_nodes[i],
                                    /*local_src_node=*/i, weights, count, mapper,
                                    generator,
@@ -380,6 +375,8 @@ sample(const at::Tensor& rowptr,
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
         const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
+          if (count == 0)
+            continue;
           const auto batch_idx = sampled_nodes[i].first;
           sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
                                   /*local_src_node=*/i, count,
@@ -586,7 +583,7 @@ sample(const std::vector<node_type>& node_types,
       }
       at::parallel_for(
           0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
-            for (auto j = _s; j < _e; j++) {
+            for (auto j = _s; j < _e; ++j) {
               for (const auto& k : threads_edge_types[j]) {
                 const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
                 const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
