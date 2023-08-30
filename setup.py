@@ -142,7 +142,7 @@ setup(
         'graph-neural-networks',
         'graph-convolutional-networks',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=install_requires,
     extras_require={
         'triton': triton_requires,
