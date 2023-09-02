@@ -32,7 +32,7 @@ template <bool disjoint>
 std::tuple<at::Tensor, at::Tensor> relabel(
     const at::Tensor& seed,
     const at::Tensor& sampled_nodes_with_dupl,
-    const std::vector<int64_t>& sampled_nbrs_per_node,
+    const std::vector<int64_t>& num_sampled_nbrs_per_node,
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch,
     const bool csc) {
@@ -62,8 +62,8 @@ std::tuple<at::Tensor, at::Tensor> relabel(
         }
         size_t begin = 0;
         size_t end = 0;
-        for (auto i = 0; i < sampled_nbrs_per_node.size(); i++) {
-          end += sampled_nbrs_per_node[i];
+        for (auto i = 0; i < num_sampled_nbrs_per_node.size(); i++) {
+          end += num_sampled_nbrs_per_node[i];
 
           for (auto j = begin; j < end; j++) {
             std::pair<scalar_t, bool> res;
@@ -91,8 +91,8 @@ relabel(const std::vector<node_type>& node_types,
         const std::vector<edge_type>& edge_types,
         const c10::Dict<node_type, at::Tensor>& seed_dict,
         const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
-        const c10::Dict<node_type, std::vector<int64_t>>&
-            sampled_nbrs_per_node_dict,
+        const c10::Dict<rel_type, std::vector<int64_t>>&
+            num_sampled_nbrs_per_node_dict,
         const c10::Dict<node_type, int64_t>& num_nodes_dict,
         const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
         const bool csc) {
@@ -114,11 +114,37 @@ relabel(const std::vector<node_type>& node_types,
         phmap::flat_hash_map<node_type, Mapper<node_t, scalar_t>> mapper_dict;
         phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
 
+        const bool parallel =
+            at::get_num_threads() > 1 && edge_types.size() > 1;
+        std::vector<std::vector<edge_type>> threads_edge_types;
+
         for (const auto& k : edge_types) {
           // Initialize empty vectors.
           sampled_rows_dict[k];
           sampled_cols_dict[k];
+
+          if (parallel) {
+            // Each thread is assigned edge types that have the same dst node
+            // type. Thanks to this, each thread will operate on a separate
+            // mapper and separate sampler.
+            bool added = false;
+            const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
+            for (auto& e : threads_edge_types) {
+              if ((!csc ? std::get<2>(e[0]) : std::get<0>(e[0])) == dst) {
+                e.push_back(k);
+                added = true;
+                break;
+              }
+            }
+            if (!added)
+              threads_edge_types.push_back({k});
+          }
         }
+        if (!parallel) {
+          // If not parallel then one thread handles all edge types.
+          threads_edge_types.push_back({edge_types});
+        }
+
         for (const auto& k : node_types) {
           sampled_nodes_data_dict.insert(
               {k, sampled_nodes_with_dupl_dict.at(k).data_ptr<scalar_t>()});
@@ -142,30 +168,46 @@ relabel(const std::vector<node_type>& node_types,
             }
           }
         }
-        for (const auto& k : edge_types) {
-          const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
-          const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
-          for (auto i = 0; i < sampled_nbrs_per_node_dict.at(dst).size(); i++) {
-            auto& dst_mapper = mapper_dict.at(dst);
-            auto& dst_sampled_nodes_data = sampled_nodes_data_dict.at(dst);
+        at::parallel_for(
+            0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
+              for (auto j = _s; j < _e; j++) {
+                for (const auto& k : threads_edge_types[j]) {
+                  const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
+                  const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
 
-            slice_dict.at(dst).second += sampled_nbrs_per_node_dict.at(dst)[i];
-            auto [begin, end] = slice_dict.at(dst);
+                  if (num_sampled_nbrs_per_node_dict.at(to_rel_type(k))
+                          .size() == 0) {
+                    continue;
+                  }
 
-            for (auto j = begin; j < end; j++) {
-              std::pair<scalar_t, bool> res;
-              if constexpr (!disjoint) {
-                res = dst_mapper.insert(dst_sampled_nodes_data[j]);
-              } else {
-                res = dst_mapper.insert(
-                    {batch_data_dict.at(dst)[j], dst_sampled_nodes_data[j]});
+                  for (auto i = 0;
+                       i <
+                       num_sampled_nbrs_per_node_dict.at(to_rel_type(k)).size();
+                       i++) {
+                    auto& dst_mapper = mapper_dict.at(dst);
+                    auto& dst_sampled_nodes_data =
+                        sampled_nodes_data_dict.at(dst);
+
+                    slice_dict.at(dst).second +=
+                        num_sampled_nbrs_per_node_dict.at(to_rel_type(k))[i];
+                    auto [begin, end] = slice_dict.at(dst);
+
+                    for (auto j = begin; j < end; j++) {
+                      std::pair<scalar_t, bool> res;
+                      if constexpr (!disjoint) {
+                        res = dst_mapper.insert(dst_sampled_nodes_data[j]);
+                      } else {
+                        res = dst_mapper.insert({batch_data_dict.at(dst)[j],
+                                                 dst_sampled_nodes_data[j]});
+                      }
+                      sampled_rows_dict.at(k).push_back(i);
+                      sampled_cols_dict.at(k).push_back(res.first);
+                    }
+                    slice_dict.at(dst).first = end;
+                  }
+                }
               }
-              sampled_rows_dict.at(k).push_back(i);
-              sampled_cols_dict.at(k).push_back(res.first);
-            }
-            slice_dict.at(dst).first = end;
-          }
-        }
+            });
 
         for (const auto& k : edge_types) {
           const auto edges = get_sampled_edges<scalar_t>(
@@ -189,13 +231,13 @@ relabel(const std::vector<node_type>& node_types,
 std::tuple<at::Tensor, at::Tensor> relabel_neighborhood_kernel(
     const at::Tensor& seed,
     const at::Tensor& sampled_nodes_with_dupl,
-    const std::vector<int64_t>& sampled_nbrs_per_node,
+    const std::vector<int64_t>& num_sampled_nbrs_per_node,
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch,
     bool csc,
     bool disjoint) {
   DISPATCH_RELABEL(disjoint, seed, sampled_nodes_with_dupl,
-                   sampled_nbrs_per_node, num_nodes, batch, csc);
+                   num_sampled_nbrs_per_node, num_nodes, batch, csc);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>>
@@ -204,15 +246,15 @@ hetero_relabel_neighborhood_kernel(
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
-    const c10::Dict<node_type, std::vector<int64_t>>&
-        sampled_nbrs_per_node_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>&
+        num_sampled_nbrs_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint) {
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   DISPATCH_RELABEL(disjoint, node_types, edge_types, seed_dict,
-                   sampled_nodes_with_dupl_dict, sampled_nbrs_per_node_dict,
+                   sampled_nodes_with_dupl_dict, num_sampled_nbrs_per_node_dict,
                    num_nodes_dict, batch_dict, csc);
 }
 
