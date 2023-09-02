@@ -259,10 +259,61 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 
 
+def merge_sampler_outputs(
+    nodes: List[Tensor],
+    cumm_sampled_nbrs_per_node: List[List[int]],
+    partition_ids: List[int],
+    partition_orders: List[int],
+    partitions_num: int,
+    one_hop_num: int,
+    edge_ids: Optional[List[Tensor]] = None,
+    batch: Optional[List[Tensor]] = None,
+    disjoint: bool = False,
+    with_edge: bool = True,
+) -> Tuple[Tensor, Optional[Tensor], Optional[Tensor], List[int]]:
+    r""" For distributed training purpose. Merges samplers outputs from
+    different partitions, so that they are sorted according to the sampling
+    order. Removes seed nodes from sampled nodes and calculates how many
+    neighbors were sampled by each src node based on the
+    :obj:`cumm_sampled_nbrs_per_node`.
+
+    Args:
+        nodes (List[torch.Tensor]): A list of nodes sampled by all machines.
+        cumm_sampled_nbrs_per_node (List[List[int]]): For each sampled node,
+            it contains information of how many neighbors it has sampled.
+            Represented as a cumulative sum for the nodes in a given partition.
+        partition_ids (torch.Tensor): Contains information on which
+            partition src nodes are located on.
+        partition_orders (torch.Tensor): Contains information about the
+                order of src nodes in each partition.
+        one_hop_num (int): Max number of neighbors sampled in the current
+                layer.
+        edge_ids (List[Tensor], optional): A list of edge_ids sampled by all
+            machines. (default: :obj:`None`)
+        batch (List[Tensor], optional): A list of subgraph ids that the sampled
+            :obj:`nodes` belong to. (default: :obj:`None`)
+        disjoint (bool, optional): Informs whether it is a disjoint sampling.
+            (default: :obj:`False`)
+        with_edge (bool, optional): Informs whether it is a sampling with edge.
+            (default: :obj:`True`)
+        Returns:
+            (torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor],
+            List[int]):
+            Returns sorted and merged nodes, edge_ids and subgraph ids (batch),
+            as well as number of sampled neighbors per each :obj:`node`.
+    """
+    return torch.ops.pyg.merge_sampler_outputs(nodes, edge_ids, batch,
+                                               cumm_sampled_nbrs_per_node,
+                                               partition_ids, partition_orders,
+                                               partitions_num, one_hop_num,
+                                               disjoint, with_edge)
+
+
 __all__ = [
     'neighbor_sample',
     'hetero_neighbor_sample',
     'dist_neighbor_sample',
     'subgraph',
     'random_walk',
+    'merge_sampler_outputs',
 ]
