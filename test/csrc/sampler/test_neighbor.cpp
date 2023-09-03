@@ -12,9 +12,9 @@ TEST(FullNeighborTest, BasicAssertions) {
   auto seed = at::arange(2, 4, options);
   std::vector<int64_t> num_neighbors = {-1, -1};
 
-  auto out = pyg::sampler::neighbor_sample(/*rowptr=*/std::get<0>(graph),
-                                           /*col=*/std::get<1>(graph), /*weights=*/at::ones(8),
-                                           seed, num_neighbors);
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/std::get<0>(graph),
+      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -40,7 +40,8 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph),  /*weights=*/at::ones(8), seed, num_neighbors, /*time=*/c10::nullopt,
+      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
@@ -63,7 +64,8 @@ TEST(WithReplacementNeighborTest, BasicAssertions) {
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph),  /*weights=*/at::ones(8), seed, num_neighbors, /*time=*/c10::nullopt,
+      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/true);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
@@ -85,7 +87,8 @@ TEST(DisjointNeighborTest, BasicAssertions) {
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph),  /*weights=*/at::ones(8), seed, num_neighbors, /*time=*/c10::nullopt,
+      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true);
 
@@ -115,7 +118,8 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   col = std::get<0>(at::sort(col.view({-1, 2}), /*dim=*/1)).flatten();
 
   auto out1 = pyg::sampler::neighbor_sample(
-      rowptr, col,  /*weights=*/at::ones(8), seed, /*num_neighbors=*/{2, 2}, /*time=*/time,
+      rowptr, col, /*weights=*/at::ones(8), seed, /*num_neighbors=*/{2, 2},
+      /*time=*/time,
       /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true);
 
@@ -131,7 +135,8 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out1).value(), expected_edges));
 
   auto out2 = pyg::sampler::neighbor_sample(
-      rowptr, col,  /*weights=*/at::ones(8), seed, /*num_neighbors=*/{1, 2}, /*time=*/time,
+      rowptr, col, /*weights=*/at::ones(8), seed, /*num_neighbors=*/{1, 2},
+      /*time=*/time,
       /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true, /*temporal_strategy=*/"last");
 

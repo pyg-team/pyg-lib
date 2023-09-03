@@ -74,10 +74,11 @@ def neighbor_sample(
         Lastly, returns information about the sampled amount of nodes and edges
         per hop.
     """
-    return torch.ops.pyg.neighbor_sample(rowptr, col, weights, seed, num_neighbors,
-                                         time, seed_time, csc, replace,
-                                         directed, disjoint, temporal_strategy,
-                                         return_edge_id, multinomial_mode)
+    return torch.ops.pyg.neighbor_sample(rowptr, col, weights, seed,
+                                         num_neighbors, time, seed_time, csc,
+                                         replace, directed, disjoint,
+                                         temporal_strategy, return_edge_id,
+                                         multinomial_mode)
 
 
 def hetero_neighbor_sample(

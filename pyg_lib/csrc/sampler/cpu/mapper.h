@@ -19,8 +19,7 @@ class Mapper {
     // but slower hash map implementation. As a general rule of thumb, we are
     // safe to use vectors in case the number of nodes are small, or it is
     // expected that we sample a large amount of nodes.
-    use_vec = std::is_scalar<node_t>::value &&
-              (num_nodes > 0) &&
+    use_vec = std::is_scalar<node_t>::value && (num_nodes > 0) &&
               ((num_nodes < 1000000) || (num_entries > (num_nodes / 10)));
 
     if (use_vec)
