@@ -349,30 +349,25 @@ sample(const at::Tensor& rowptr,
     num_sampled_nodes_per_hop.push_back(seed.numel());
 
     size_t begin = 0, end = seed.size(0);
-    for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-      const auto count = num_neighbors[ell];
-      sampler.num_sampled_edges_per_hop.push_back(0);
-      if (!time.has_value()) {
-        if (!multinomial_mode) {
-          for (size_t i = begin; i < end; ++i) {
-            if (count == 0)
-              continue;
-            sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                                   /*local_src_node=*/i, count, mapper,
-                                   generator,
-                                   /*out_global_dst_nodes=*/sampled_nodes);
-          }
-        } else {
-          for (size_t i = begin; i < end; ++i) {
+    if constexpr (multinomial_mode) {
+      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
+        const auto count = num_neighbors[ell];
+        sampler.num_sampled_edges_per_hop.push_back(0);
+        for (size_t i = begin; i < end; ++i) {
             if (count == 0)
               continue;
             sampler.multinomial_sample(/*global_src_node=*/sampled_nodes[i],
                                    /*local_src_node=*/i, weights, count, mapper,
                                    generator,
                                    /*out_global_dst_nodes=*/sampled_nodes);
-          }
         }
-      } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
+        begin = end, end = sampled_nodes.size();
+        num_sampled_nodes_per_hop.push_back(end - begin);
+      }
+    } else if constexpr (!std::is_scalar<node_t>::value) {
+      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
+        const auto count = num_neighbors[ell];
+        sampler.num_sampled_edges_per_hop.push_back(0);
         const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
           if (count == 0)
@@ -384,9 +379,24 @@ sample(const at::Tensor& rowptr,
                                   generator,
                                   /*out_global_dst_nodes=*/sampled_nodes);
         }
+        begin = end, end = sampled_nodes.size();
+        num_sampled_nodes_per_hop.push_back(end - begin);
       }
-      begin = end, end = sampled_nodes.size();
-      num_sampled_nodes_per_hop.push_back(end - begin);
+    } else {
+      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
+        const auto count = num_neighbors[ell];
+        sampler.num_sampled_edges_per_hop.push_back(0);
+        for (size_t i = begin; i < end; ++i) {
+          if (count == 0)
+            continue;
+          sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
+                                  /*local_src_node=*/i, count, mapper,
+                                  generator,
+                                  /*out_global_dst_nodes=*/sampled_nodes);
+        }
+        begin = end, end = sampled_nodes.size();
+        num_sampled_nodes_per_hop.push_back(end - begin);
+      }
     }
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
