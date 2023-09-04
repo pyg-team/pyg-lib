@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.3.0] - 2023-MM-DD
 ### Added
+- Added support for homogeneous biased neighborhood sampling ([#247](https://github.com/pyg-team/pyg-lib/pull/247))
 - Added dispatch for XPU device in `index_sort` ([#243](https://github.com/pyg-team/pyg-lib/pull/243))
 - Added `metis` partitioning ([#229](https://github.com/pyg-team/pyg-lib/pull/229))
 - Enable `hetero_neighbor_samplee` to work in parallel ([#211](https://github.com/pyg-team/pyg-lib/pull/211))

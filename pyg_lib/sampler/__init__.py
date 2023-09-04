@@ -15,6 +15,7 @@ def neighbor_sample(
     num_neighbors: List[int],
     time: Optional[Tensor] = None,
     seed_time: Optional[Tensor] = None,
+    edge_weight: Optional[Tensor] = None,
     csc: bool = False,
     replace: bool = False,
     directed: bool = True,
@@ -73,9 +74,9 @@ def neighbor_sample(
         per hop.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         time, seed_time, csc, replace,
-                                         directed, disjoint, temporal_strategy,
-                                         return_edge_id)
+                                         time, seed_time, edge_weight, csc,
+                                         replace, directed, disjoint,
+                                         temporal_strategy, return_edge_id)
 
 
 def hetero_neighbor_sample(
