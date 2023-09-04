@@ -49,6 +49,8 @@ def neighbor_sample(
         seed_time (torch.Tensor, optional): Optional values to override the
             timestamp for seed nodes. If not set, will use timestamps in
             :obj:`time` as default for seed nodes. (default: :obj:`None`)
+        edge-weight (torch.Tensor, optional): If given, will perform biased
+            sampling based on the weight of each edge. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
