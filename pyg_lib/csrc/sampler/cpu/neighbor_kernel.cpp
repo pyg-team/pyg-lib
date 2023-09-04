@@ -611,9 +611,8 @@ sample(const std::vector<node_type>& node_types,
                   for (size_t i = begin; i < end; ++i) {
                     sampler.biased_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, edge_weight_dict.value().at(dst), count,
-                        dst_mapper, generator,
-                        dst_sampled_nodes);
+                        /*local_src_node=*/i, edge_weight_dict.value().at(dst),
+                        count, dst_mapper, generator, dst_sampled_nodes);
                   }
                 } else if constexpr (!std::is_scalar<
                                          node_t>::value) {  // Temporal:
@@ -760,8 +759,8 @@ hetero_neighbor_sample_kernel(
     bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict, seed_time_dict, edge_weight_dict, csc,
-                  temporal_strategy);
+                  num_neighbors_dict, time_dict, seed_time_dict,
+                  edge_weight_dict, csc, temporal_strategy);
 }
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {

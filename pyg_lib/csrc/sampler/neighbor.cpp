@@ -89,8 +89,9 @@ hetero_neighbor_sample(
                        .findSchemaOrThrow("pyg::hetero_neighbor_sample", "")
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
-                 num_neighbors_dict, time_dict, seed_time_dict, edge_weight_dict, csc, replace,
-                 directed, disjoint, temporal_strategy, return_edge_id);
+                 num_neighbors_dict, time_dict, seed_time_dict,
+                 edge_weight_dict, csc, replace, directed, disjoint,
+                 temporal_strategy, return_edge_id);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
@@ -106,7 +107,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
       "Dict(str, Tensor) seed_dict, Dict(str, int[]) num_neighbors_dict, "
       "Dict(str, Tensor)? time_dict = None, Dict(str, Tensor)? seed_time_dict "
-      "= None, Dict(str, Tensor)? edge_weight_dict = None, bool csc = False, bool replace = False, bool directed = True, "
+      "= None, Dict(str, Tensor)? edge_weight_dict = None, bool csc = False, "
+      "bool replace = False, bool directed = True, "
       "bool disjoint = False, str temporal_strategy = 'uniform', bool "
       "return_edge_id = True) -> (Dict(str, Tensor), Dict(str, Tensor), "
       "Dict(str, Tensor), Dict(str, Tensor)?, Dict(str, int[]), "
