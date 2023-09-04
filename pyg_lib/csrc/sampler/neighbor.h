@@ -29,8 +29,7 @@ neighbor_sample(const at::Tensor& rowptr,
                 bool directed = true,
                 bool disjoint = false,
                 std::string strategy = "uniform",
-                bool return_edge_id = true,
-                bool multinomial_mode = false);
+                bool return_edge_id = true);
 
 // Recursively samples neighbors from all node indices in `seed_dict`
 // in the heterogeneous graph given by `(rowptr_dict, col_dict)`.

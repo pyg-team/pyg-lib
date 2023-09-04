@@ -5,7 +5,7 @@
 #include "pyg_lib/csrc/utils/types.h"
 #include "test/csrc/graph.h"
 
-TEST(FullNeighborTest, BasicAssertions) {
+TEST(BasicNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
@@ -214,4 +214,36 @@ TEST(HeteroNeighborTest, BasicAssertions) {
   EXPECT_TRUE(std::get<4>(out).at("paper") == expected_num_nodes);
   std::vector<int64_t> expected_num_edges = {4, 4};
   EXPECT_TRUE(std::get<5>(out).at("paper__to__paper") == expected_num_edges);
+}
+
+
+TEST(BiasedNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto seed = at::arange(0, 2, options);
+  std::vector<int64_t> num_neighbors = {1};
+
+  auto ones = at::ones(6).view({-1, 1});
+  auto zeros = at::zeros(6).view({-1, 1});
+  // Only sample even edges:
+  auto edge_weight = at::cat({ones, zeros}, -1).view(-1);
+
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/std::get<0>(graph),
+      /*col=*/std::get<1>(graph),
+      /*seed=*/seed,
+      /*num_neighbors=*/num_neighbors,
+      /*time=*/c10::nullopt,
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/edge_weight);
+
+  auto expected_row = at::tensor({0, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 0}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({0, 1, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::tensor({0, 2}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }

@@ -223,7 +223,7 @@ class NeighborSampler {
     // Case 2: Multinomial sampling:
     else {
       const auto index = at::multinomial(weight, count, replace);
-      const auto index_data = index.data_ptr<at::kLong>();
+      const auto index_data = index.data_ptr<int64_t>();
       for (size_t i = 0; i < index.numel(); ++i) {
         add(row_start + index_data[i], global_src_node, local_src_node,
             dst_mapper, out_global_dst_nodes);
@@ -295,7 +295,7 @@ sample(const at::Tensor& rowptr,
     TORCH_CHECK(seed_time.value().is_contiguous(),
                 "Non-contiguous 'seed_time'");
   }
-  TORCH_CHECK(time.has_value() && edge_weight.has_value(),
+  TORCH_CHECK(!(time.has_value() && edge_weight.has_value()),
               "Biased temporal sampling not yet supported");
 
   at::Tensor out_row, out_col, out_node_id;
@@ -351,7 +351,7 @@ sample(const at::Tensor& rowptr,
       sampler.num_sampled_edges_per_hop.push_back(0);
       if (edge_weight.has_value()) {
         for (size_t i = begin; i < end; ++i) {
-          sampler.multinomial_sample(
+          sampler.biased_sample(
               /*global_src_node=*/sampled_nodes[i],
               /*local_src_node=*/i,
               /*edge_weight=*/edge_weight.value(),
@@ -360,7 +360,7 @@ sample(const at::Tensor& rowptr,
               /*generator=*/generator,
               /*out_global_dst_nodes=*/sampled_nodes);
         }
-      } else if (!time.has_value) {
+      } else if (!time.has_value()) {
         for (size_t i = begin; i < end; ++i) {
           sampler.uniform_sample(
               /*global_src_node=*/sampled_nodes[i],
