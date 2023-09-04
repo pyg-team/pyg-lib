@@ -14,7 +14,7 @@ TEST(FullNeighborTest, BasicAssertions) {
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors);
+      /*col=*/std::get<1>(graph), seed, num_neighbors);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -40,9 +40,14 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*col=*/std::get<1>(graph),
+      /*seed=*/seed,
+      /*num_neighbors=*/num_neighbors,
       /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false);
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/false);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -64,9 +69,14 @@ TEST(WithReplacementNeighborTest, BasicAssertions) {
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*col=*/std::get<1>(graph),
+      /*seed=*/seed,
+      /*num_neighbors=*/num_neighbors,
       /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/true);
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/true);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -87,10 +97,16 @@ TEST(DisjointNeighborTest, BasicAssertions) {
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph), /*weights=*/at::ones(8), seed, num_neighbors,
+      /*col=*/std::get<1>(graph),
+      /*seed=*/seed,
+      /*num_neighbors=*/num_neighbors,
       /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
-      /*directed=*/true, /*disjoint=*/true);
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/false,
+      /*directed=*/true,
+      /*disjoint=*/true);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -118,10 +134,17 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   col = std::get<0>(at::sort(col.view({-1, 2}), /*dim=*/1)).flatten();
 
   auto out1 = pyg::sampler::neighbor_sample(
-      rowptr, col, /*weights=*/at::ones(8), seed, /*num_neighbors=*/{2, 2},
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/seed,
+      /*num_neighbors=*/{2, 2},
       /*time=*/time,
-      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
-      /*directed=*/true, /*disjoint=*/true);
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/false,
+      /*directed=*/true,
+      /*disjoint=*/true);
 
   // Expect only the earlier neighbors or the same node to be sampled:
   auto expected_row = at::tensor({0, 1, 2, 2, 3, 3}, options);
@@ -135,10 +158,18 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out1).value(), expected_edges));
 
   auto out2 = pyg::sampler::neighbor_sample(
-      rowptr, col, /*weights=*/at::ones(8), seed, /*num_neighbors=*/{1, 2},
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/seed,
+      /*num_neighbors=*/{1, 2},
       /*time=*/time,
-      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
-      /*directed=*/true, /*disjoint=*/true, /*temporal_strategy=*/"last");
+      /*seed_time=*/c10::nullopt,
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/false,
+      /*directed=*/true,
+      /*disjoint=*/true,
+      /*temporal_strategy=*/"last");
 
   EXPECT_TRUE(at::equal(std::get<0>(out1), std::get<0>(out2)));
   EXPECT_TRUE(at::equal(std::get<1>(out1), std::get<1>(out2)));

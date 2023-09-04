@@ -36,26 +36,23 @@ class NeighborSampler {
                 "No valid temporal strategy found");
   }
 
-  void multinomial_sample(const node_t global_src_node,
-                          const scalar_t local_src_node,
-                          const at::Tensor& weights,
-                          const int64_t count,
-                          pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
-                          pyg::random::RandintEngine<scalar_t>& generator,
-                          std::vector<node_t>& out_global_dst_nodes) {
+  void biased_sample(const node_t global_src_node,
+                     const scalar_t local_src_node,
+                     const at::Tensor& edge_weight,
+                     const int64_t count,
+                     pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                     pyg::random::RandintEngine<scalar_t>& generator,
+                     std::vector<node_t>& out_global_dst_nodes) {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    const auto population = row_end - row_start;
-    if (population == 0)
-      return;
+    if (row_end - row_start == 0)
+      || (count == 0) return;
 
-    at::Tensor weights_neighborhood =
-        weights.index({at::indexing::Slice(row_start, row_end)});
+    const auto weight = edge_weight.narrow(0, row_start, row_end - row_start);
 
-    _sample(global_src_node, local_src_node, row_start, row_end, count,
-            weights_neighborhood, true, dst_mapper, generator,
-            out_global_dst_nodes);
+    _biased_sample(global_src_node, local_src_node, row_start, row_end, count,
+                   weight, dst_mapper, generator, out_global_dst_nodes);
   }
 
   void uniform_sample(const node_t global_src_node,
@@ -67,9 +64,8 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    const auto population = row_end - row_start;
-    if (population == 0)
-      return;
+    if (row_end - row_start == 0)
+      || (count == 0) return;
 
     _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
@@ -85,10 +81,9 @@ class NeighborSampler {
                        std::vector<node_t>& out_global_dst_nodes) {
     auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
-    const auto population = row_end - row_start;
 
-    if (population == 0)
-      return;
+    if (row_end - row_start == 0)
+      || (count == 0) return;
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::upper_bound(
@@ -206,16 +201,15 @@ class NeighborSampler {
     }
   }
 
-  void _sample(const node_t global_src_node,
-               const scalar_t local_src_node,
-               const scalar_t row_start,
-               const scalar_t row_end,
-               const int64_t count,
-               const at::Tensor& weight_vector,
-               bool multinomial_mode,
-               pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
-               pyg::random::RandintEngine<scalar_t>& generator,
-               std::vector<node_t>& out_global_dst_nodes) {
+  void _biased_sample(const node_t global_src_node,
+                      const scalar_t local_src_node,
+                      const scalar_t row_start,
+                      const scalar_t row_end,
+                      const int64_t count,
+                      const at::Tensor& weight,
+                      pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                      pyg::random::RandintEngine<scalar_t>& generator,
+                      std::vector<node_t>& out_global_dst_nodes) {
     const auto population = row_end - row_start;
 
     // Case 1: Sample the full neighborhood:
@@ -224,15 +218,16 @@ class NeighborSampler {
         add(edge_id, global_src_node, local_src_node, dst_mapper,
             out_global_dst_nodes);
       }
-    } else {
-      // Multinomial sampling
-      at::Tensor edges = at::multinomial(weight_vector, count, replace);
-      // Add edges to the sampled list one-by-one
-      for (int i = 0; i < edges.numel(); ++i) {
-        const auto edge = row_start + edges.index({i}).item<scalar_t>();
-        add(edge, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes);
-      }  // Sampling complete
+    }
+
+    // Case 2: Multinomial sampling:
+    else {
+      const auto index = at::multinomial(weight, count, replace);
+      const auto index_data = index.data_ptr<at::kLong>();
+      for (size_t i = 0; i < index.numel(); ++i) {
+        add(row_start + index_data[i], global_src_node, local_src_node,
+            dst_mapper, out_global_dst_nodes);
+      }
     }
   }
 
@@ -271,11 +266,7 @@ class NeighborSampler {
 
 // Homogeneous neighbor sampling ///////////////////////////////////////////////
 
-template <bool replace,
-          bool directed,
-          bool disjoint,
-          bool return_edge_id,
-          bool multinomial_mode>
+template <bool replace, bool directed, bool disjoint, bool return_edge_id>
 std::tuple<at::Tensor,
            at::Tensor,
            at::Tensor,
@@ -284,11 +275,11 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 sample(const at::Tensor& rowptr,
        const at::Tensor& col,
-       const at::Tensor& weights,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
        const c10::optional<at::Tensor>& time,
        const c10::optional<at::Tensor>& seed_time,
+       const c10::optional<at::Tensor>& edge_weight,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time.has_value() || disjoint,
@@ -304,6 +295,8 @@ sample(const at::Tensor& rowptr,
     TORCH_CHECK(seed_time.value().is_contiguous(),
                 "Non-contiguous 'seed_time'");
   }
+  TORCH_CHECK(time.has_value() && edge_weight.has_value(),
+              "Biased temporal sampling not yet supported");
 
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
@@ -353,53 +346,45 @@ sample(const at::Tensor& rowptr,
     num_sampled_nodes_per_hop.push_back(seed.numel());
 
     size_t begin = 0, end = seed.size(0);
-    if constexpr (multinomial_mode) {
-      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-        const auto count = num_neighbors[ell];
-        sampler.num_sampled_edges_per_hop.push_back(0);
+    for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
+      const auto count = num_neighbors[ell];
+      sampler.num_sampled_edges_per_hop.push_back(0);
+      if (edge_weight.has_value()) {
         for (size_t i = begin; i < end; ++i) {
-          if (count == 0)
-            continue;
-          sampler.multinomial_sample(/*global_src_node=*/sampled_nodes[i],
-                                     /*local_src_node=*/i, weights, count,
-                                     mapper, generator,
-                                     /*out_global_dst_nodes=*/sampled_nodes);
+          sampler.multinomial_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i,
+              /*edge_weight=*/edge_weight.value(),
+              /*count=*/count,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
         }
-        begin = end, end = sampled_nodes.size();
-        num_sampled_nodes_per_hop.push_back(end - begin);
-      }
-    } else if constexpr (!std::is_scalar<node_t>::value) {
-      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-        const auto count = num_neighbors[ell];
-        sampler.num_sampled_edges_per_hop.push_back(0);
-        const auto time_data = time.value().data_ptr<temporal_t>();
+      } else if (!time.has_value) {
         for (size_t i = begin; i < end; ++i) {
-          if (count == 0)
-            continue;
+          sampler.uniform_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i,
+              /*count=*/count,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
+        }
+      } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
+        for (size_t i = begin; i < end; ++i) {
           const auto batch_idx = sampled_nodes[i].first;
-          sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
-                                  /*local_src_node=*/i, count,
-                                  seed_times[batch_idx], time_data, mapper,
-                                  generator,
-                                  /*out_global_dst_nodes=*/sampled_nodes);
+          sampler.temporal_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i, /*count=*/count,
+              /*seed_time=*/seed_times[batch_idx],
+              /*time=*/time_data,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
         }
-        begin = end, end = sampled_nodes.size();
-        num_sampled_nodes_per_hop.push_back(end - begin);
       }
-    } else {
-      for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
-        const auto count = num_neighbors[ell];
-        sampler.num_sampled_edges_per_hop.push_back(0);
-        for (size_t i = begin; i < end; ++i) {
-          if (count == 0)
-            continue;
-          sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                                 /*local_src_node=*/i, count, mapper, generator,
-                                 /*out_global_dst_nodes=*/sampled_nodes);
-        }
-        begin = end, end = sampled_nodes.size();
-        num_sampled_nodes_per_hop.push_back(end - begin);
-      }
+      begin = end, end = sampled_nodes.size();
+      num_sampled_nodes_per_hop.push_back(end - begin);
     }
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
@@ -419,11 +404,7 @@ sample(const at::Tensor& rowptr,
 
 // Heterogeneous neighbor sampling /////////////////////////////////////////////
 
-template <bool replace,
-          bool directed,
-          bool disjoint,
-          bool return_edge_id,
-          bool multinomial_mode>
+template <bool replace, bool directed, bool disjoint, bool return_edge_id>
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
@@ -531,9 +512,9 @@ sample(const std::vector<node_type>& node_types,
                   temporal_strategy)});
 
       if (parallel) {
-        // Each thread is assigned edge types that have the same dst node type.
-        // Thanks to this, each thread will operate on a separate mapper and
-        // separate sampler.
+        // Each thread is assigned edge types that have the same dst node
+        // type. Thanks to this, each thread will operate on a separate mapper
+        // and separate sampler.
         bool added = false;
         const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
         for (auto& e : threads_edge_types) {
@@ -547,7 +528,8 @@ sample(const std::vector<node_type>& node_types,
           threads_edge_types.push_back({k});
       }
     }
-    if (!parallel) {  // If not parallel then one thread handles all edge types.
+    if (!parallel) {  // If not parallel then one thread handles all edge
+                      // types.
       threads_edge_types.push_back({edge_types});
     }
 
@@ -685,88 +667,39 @@ sample(const std::vector<node_type>& node_types,
 
 // Dispatcher //////////////////////////////////////////////////////////////////
 
-#define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id,           \
-                        multinomial_mode, ...)                                 \
-  if (replace && directed && disjoint && return_edge_id && !multinomial_mode)  \
-    return sample<true, true, true, true, false>(__VA_ARGS__);                 \
-  if (replace && directed && disjoint && !return_edge_id && !multinomial_mode) \
-    return sample<true, true, true, false, false>(__VA_ARGS__);                \
-  if (replace && directed && !disjoint && return_edge_id && !multinomial_mode) \
-    return sample<true, true, false, true, false>(__VA_ARGS__);                \
-  if (replace && directed && !disjoint && !return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<true, true, false, false, false>(__VA_ARGS__);               \
-  if (replace && !directed && disjoint && return_edge_id && !multinomial_mode) \
-    return sample<true, false, true, true, false>(__VA_ARGS__);                \
-  if (replace && !directed && disjoint && !return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<true, false, true, false, false>(__VA_ARGS__);               \
-  if (replace && !directed && !disjoint && return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<true, false, false, true, false>(__VA_ARGS__);               \
-  if (replace && !directed && !disjoint && !return_edge_id &&                  \
-      !multinomial_mode)                                                       \
-    return sample<true, false, false, false, false>(__VA_ARGS__);              \
-  if (!replace && directed && disjoint && return_edge_id && !multinomial_mode) \
-    return sample<false, true, true, true, false>(__VA_ARGS__);                \
-  if (!replace && directed && disjoint && !return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<false, true, true, false, false>(__VA_ARGS__);               \
-  if (!replace && directed && !disjoint && return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<false, true, false, true, false>(__VA_ARGS__);               \
-  if (!replace && directed && !disjoint && !return_edge_id &&                  \
-      !multinomial_mode)                                                       \
-    return sample<false, true, false, false, false>(__VA_ARGS__);              \
-  if (!replace && !directed && disjoint && return_edge_id &&                   \
-      !multinomial_mode)                                                       \
-    return sample<false, false, true, true, false>(__VA_ARGS__);               \
-  if (!replace && !directed && disjoint && !return_edge_id &&                  \
-      !multinomial_mode)                                                       \
-    return sample<false, false, true, false, false>(__VA_ARGS__);              \
-  if (!replace && !directed && !disjoint && return_edge_id &&                  \
-      !multinomial_mode)                                                       \
-    return sample<false, false, false, true, false>(__VA_ARGS__);              \
-  if (!replace && !directed && !disjoint && !return_edge_id &&                 \
-      !multinomial_mode)                                                       \
-    return sample<false, false, false, false, false>(__VA_ARGS__);             \
-  if (replace && directed && disjoint && return_edge_id && multinomial_mode)   \
-    return sample<true, true, true, true, true>(__VA_ARGS__);                  \
-  if (replace && directed && disjoint && !return_edge_id && multinomial_mode)  \
-    return sample<true, true, true, true, true>(__VA_ARGS__);                  \
-  if (replace && directed && !disjoint && return_edge_id && multinomial_mode)  \
-    return sample<true, true, false, true, true>(__VA_ARGS__);                 \
-  if (replace && directed && !disjoint && !return_edge_id && multinomial_mode) \
-    return sample<true, true, false, true, true>(__VA_ARGS__);                 \
-  if (replace && !directed && disjoint && return_edge_id && multinomial_mode)  \
-    return sample<true, false, true, true, true>(__VA_ARGS__);                 \
-  if (replace && !directed && disjoint && !return_edge_id && multinomial_mode) \
-    return sample<true, false, true, true, true>(__VA_ARGS__);                 \
-  if (replace && !directed && !disjoint && return_edge_id && multinomial_mode) \
-    return sample<true, false, false, true, true>(__VA_ARGS__);                \
-  if (replace && !directed && !disjoint && !return_edge_id &&                  \
-      multinomial_mode)                                                        \
-    return sample<true, false, false, true, true>(__VA_ARGS__);                \
-  if (!replace && directed && disjoint && return_edge_id && multinomial_mode)  \
-    return sample<false, true, true, true, true>(__VA_ARGS__);                 \
-  if (!replace && directed && disjoint && !return_edge_id && multinomial_mode) \
-    return sample<false, true, true, true, true>(__VA_ARGS__);                 \
-  if (!replace && directed && !disjoint && return_edge_id && multinomial_mode) \
-    return sample<false, true, false, true, true>(__VA_ARGS__);                \
-  if (!replace && directed && !disjoint && !return_edge_id &&                  \
-      multinomial_mode)                                                        \
-    return sample<false, true, false, true, true>(__VA_ARGS__);                \
-  if (!replace && !directed && disjoint && return_edge_id && multinomial_mode) \
-    return sample<false, false, true, true, true>(__VA_ARGS__);                \
-  if (!replace && !directed && disjoint && !return_edge_id &&                  \
-      multinomial_mode)                                                        \
-    return sample<false, false, true, true, true>(__VA_ARGS__);                \
-  if (!replace && !directed && !disjoint && return_edge_id &&                  \
-      multinomial_mode)                                                        \
-    return sample<false, false, false, true, true>(__VA_ARGS__);               \
-  if (!replace && !directed && !disjoint && !return_edge_id &&                 \
-      multinomial_mode)                                                        \
-    return sample<false, false, false, false, true>(__VA_ARGS__);
+#define DISPATCH_SAMPLE(replace, directed, disjount, return_edge_id, ...) \
+  if (replace && directed && disjoint && return_edge_id)                  \
+    return sample<true, true, true, true>(__VA_ARGS__);                   \
+  if (replace && directed && disjoint && !return_edge_id)                 \
+    return sample<true, true, true, false>(__VA_ARGS__);                  \
+  if (replace && directed && !disjoint && return_edge_id)                 \
+    return sample<true, true, false, true>(__VA_ARGS__);                  \
+  if (replace && directed && !disjoint && !return_edge_id)                \
+    return sample<true, true, false, false>(__VA_ARGS__);                 \
+  if (replace && !directed && disjoint && return_edge_id)                 \
+    return sample<true, false, true, true>(__VA_ARGS__);                  \
+  if (replace && !directed && disjoint && !return_edge_id)                \
+    return sample<true, false, true, false>(__VA_ARGS__);                 \
+  if (replace && !directed && !disjoint && return_edge_id)                \
+    return sample<true, false, false, true>(__VA_ARGS__);                 \
+  if (replace && !directed && !disjoint && !return_edge_id)               \
+    return sample<true, false, false, false>(__VA_ARGS__);                \
+  if (!replace && directed && disjoint && return_edge_id)                 \
+    return sample<false, true, true, true>(__VA_ARGS__);                  \
+  if (!replace && directed && disjoint && !return_edge_id)                \
+    return sample<false, true, true, false>(__VA_ARGS__);                 \
+  if (!replace && directed && !disjoint && return_edge_id)                \
+    return sample<false, true, false, true>(__VA_ARGS__);                 \
+  if (!replace && directed && !disjoint && !return_edge_id)               \
+    return sample<false, true, false, false>(__VA_ARGS__);                \
+  if (!replace && !directed && disjoint && return_edge_id)                \
+    return sample<false, false, true, true>(__VA_ARGS__);                 \
+  if (!replace && !directed && disjoint && !return_edge_id)               \
+    return sample<false, false, true, false>(__VA_ARGS__);                \
+  if (!replace && !directed && !disjoint && return_edge_id)               \
+    return sample<false, false, false, true>(__VA_ARGS__);                \
+  if (!replace && !directed && !disjoint && !return_edge_id)              \
+    return sample<false, false, false, false>(__VA_ARGS__);
 
 }  // namespace
 
@@ -778,21 +711,20 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
-                       const at::Tensor& weights,
                        const at::Tensor& seed,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
                        const c10::optional<at::Tensor>& seed_time,
+                       const c10::optional<at::Tensor>& edge_weight,
                        bool csc,
                        bool replace,
                        bool directed,
                        bool disjoint,
                        std::string temporal_strategy,
-                       bool return_edge_id,
-                       bool multinomial_mode) {
-  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, multinomial_mode,
-                  rowptr, col, weights, seed, num_neighbors, time, seed_time,
-                  csc, temporal_strategy);
+                       bool return_edge_id) {
+  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
+                  seed, num_neighbors, time, seed_time, edge_weight, csc,
+                  temporal_strategy);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -816,7 +748,7 @@ hetero_neighbor_sample_kernel(
     bool disjoint,
     std::string temporal_strategy,
     bool return_edge_id) {
-  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, 0, node_types,
+  DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
                   num_neighbors_dict, time_dict, seed_time_dict, csc,
                   temporal_strategy);

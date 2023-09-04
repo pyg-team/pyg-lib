@@ -13,16 +13,15 @@ def neighbor_sample(
     col: Tensor,
     seed: Tensor,
     num_neighbors: List[int],
-    weights: Optional[Tensor] = None,
     time: Optional[Tensor] = None,
     seed_time: Optional[Tensor] = None,
+    edge_weight: Optional[Tensor] = None,
     csc: bool = False,
     replace: bool = False,
     directed: bool = True,
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
-    multinomial_mode: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], List[int], List[int]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed`
     in the graph given by :obj:`(rowptr, col)`.
@@ -74,11 +73,10 @@ def neighbor_sample(
         Lastly, returns information about the sampled amount of nodes and edges
         per hop.
     """
-    return torch.ops.pyg.neighbor_sample(rowptr, col, weights, seed,
-                                         num_neighbors, time, seed_time, csc,
+    return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
+                                         time, seed_time, edge_weight, csc,
                                          replace, directed, disjoint,
-                                         temporal_strategy, return_edge_id,
-                                         multinomial_mode)
+                                         temporal_strategy, return_edge_id)
 
 
 def hetero_neighbor_sample(

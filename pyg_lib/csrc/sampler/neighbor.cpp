@@ -16,18 +16,17 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
-                const at::Tensor& weights,
                 const at::Tensor& seed,
                 const std::vector<int64_t>& num_neighbors,
                 const c10::optional<at::Tensor>& time,
                 const c10::optional<at::Tensor>& seed_time,
+                const c10::optional<at::Tensor>& edge_weight,
                 bool csc,
                 bool replace,
                 bool directed,
                 bool disjoint,
                 std::string temporal_strategy,
-                bool return_edge_id,
-                bool multinomial_mode) {
+                bool return_edge_id) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg seed_t{seed, "seed", 1};
@@ -39,9 +38,9 @@ neighbor_sample(const at::Tensor& rowptr,
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::neighbor_sample", "")
                        .typed<decltype(neighbor_sample)>();
-  return op.call(rowptr, col, weights, seed, num_neighbors, time, seed_time,
+  return op.call(rowptr, col, seed, num_neighbors, time, seed_time, edge_weight,
                  csc, replace, directed, disjoint, temporal_strategy,
-                 return_edge_id, multinomial_mode);
+                 return_edge_id);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -95,13 +94,12 @@ hetero_neighbor_sample(
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
-      "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor weights, Tensor "
-      "seed, int[] "
-      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, bool csc "
-      "= False, bool replace = False, bool directed = True, bool disjoint = "
-      "False, str temporal_strategy = 'uniform', bool return_edge_id = True, "
-      "bool multinomial_mode = False) "
-      "-> (Tensor, Tensor, Tensor, Tensor?, int[], int[])"));
+      "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
+      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? "
+      "edge_weight = None, bool csc = False, bool replace = False, bool "
+      "directed = True, bool disjoint = False, str temporal_strategy = "
+      "'uniform', bool return_edge_id = True) -> "
+      "(Tensor, Tensor, Tensor, Tensor?, int[], int[])"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::hetero_neighbor_sample(str[] node_types, (str, str, str)[] "
       "edge_types, Dict(str, Tensor) rowptr_dict, Dict(str, Tensor) col_dict, "
