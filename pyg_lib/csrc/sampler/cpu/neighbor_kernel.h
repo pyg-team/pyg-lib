@@ -40,6 +40,7 @@ hetero_neighbor_sample_kernel(
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& edge_weight_dict,
     bool csc,
     bool replace,
     bool directed,

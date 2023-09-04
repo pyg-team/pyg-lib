@@ -420,6 +420,7 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+       const c10::optional<c10::Dict<node_type, at::Tensor>>& edge_weight_dict,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
@@ -447,6 +448,12 @@ sample(const std::vector<node_type>& node_types,
     for (const auto& kv : seed_time_dict.value()) {
       const at::Tensor& seed_time = kv.value();
       TORCH_CHECK(seed_time.is_contiguous(), "Non-contiguous 'seed_time'");
+    }
+  }
+  if (edge_weight_dict.has_value()) {
+    for (const auto& kv : edge_weight_dict.value()) {
+      const at::Tensor& edge_weight = kv.value();
+      TORCH_CHECK(edge_weight.is_contiguous(), "Non-contiguous 'edge_weight'");
     }
   }
 
@@ -492,6 +499,7 @@ sample(const std::vector<node_type>& node_types,
     phmap::flat_hash_map<edge_type, NeighborSamplerImpl> sampler_dict;
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
     std::vector<scalar_t> seed_times;
+    std::vector<scalar_t> edge_weights;
 
     for (const auto& k : node_types) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
@@ -564,6 +572,13 @@ sample(const std::vector<node_type>& node_types,
           for (size_t i = 0; i < seed.numel(); ++i) {
             seed_times.push_back(time_data[seed_data[i]]);
           }
+        } else if (edge_weight_dict.has_value()) {
+          const at::Tensor& edge_weight = edge_weight_dict.value().at(kv.key());
+          const auto edge_weight_data = edge_weight.data_ptr<scalar_t>();
+          edge_weights.reserve(edge_weights.size() + seed.numel());
+          for (size_t i = 0; i < seed.numel(); ++i) {
+            edge_weights.push_back(edge_weight_data[seed_data[i]]);
+          }
         }
       }
 
@@ -604,6 +619,17 @@ sample(const std::vector<node_type>& node_types,
                     sampler.uniform_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
                         /*local_src_node=*/i, count, dst_mapper, generator,
+                        dst_sampled_nodes);
+                  }
+                } else if (edge_weight_dict.has_value()) {  // Temporal:
+                  const at::Tensor& dst_weight = edge_weight_dict.value().at(dst);
+                  const auto dst_weight_data = dst_weight.data_ptr<temporal_t>();
+                  for (size_t i = begin; i < end; ++i) {
+                    const auto batch_idx = src_sampled_nodes[i].first;
+                    sampler.biased_sample(
+                        /*global_src_node=*/src_sampled_nodes[i],
+                        /*local_src_node=*/i, count, edge_weights[batch_idx],
+                        dst_weight_data, dst_mapper, generator,
                         dst_sampled_nodes);
                   }
                 } else if constexpr (!std::is_scalar<
