@@ -46,8 +46,8 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    if (row_end - row_start == 0)
-      || (count == 0) return;
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
 
     const auto weight = edge_weight.narrow(0, row_start, row_end - row_start);
 
@@ -64,8 +64,8 @@ class NeighborSampler {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    if (row_end - row_start == 0)
-      || (count == 0) return;
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
 
     _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
@@ -82,8 +82,8 @@ class NeighborSampler {
     auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
-    if (row_end - row_start == 0)
-      || (count == 0) return;
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::upper_bound(
@@ -371,6 +371,7 @@ sample(const at::Tensor& rowptr,
               /*out_global_dst_nodes=*/sampled_nodes);
         }
       } else if constexpr (!std::is_scalar<node_t>::value) {  // Temporal:
+        const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
           const auto batch_idx = sampled_nodes[i].first;
           sampler.temporal_sample(
@@ -528,8 +529,7 @@ sample(const std::vector<node_type>& node_types,
           threads_edge_types.push_back({k});
       }
     }
-    if (!parallel) {  // If not parallel then one thread handles all edge
-                      // types.
+    if (!parallel) {  // One thread handles all edge types.
       threads_edge_types.push_back({edge_types});
     }
 

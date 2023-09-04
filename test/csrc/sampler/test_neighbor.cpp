@@ -14,7 +14,9 @@ TEST(FullNeighborTest, BasicAssertions) {
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
-      /*col=*/std::get<1>(graph), seed, num_neighbors);
+      /*col=*/std::get<1>(graph),
+      /*seed=*/seed,
+      /*num_neighbors=*/num_neighbors);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
