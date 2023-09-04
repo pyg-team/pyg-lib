@@ -216,7 +216,6 @@ TEST(HeteroNeighborTest, BasicAssertions) {
   EXPECT_TRUE(std::get<5>(out).at("paper__to__paper") == expected_num_edges);
 }
 
-
 TEST(BiasedNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
