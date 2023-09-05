@@ -199,8 +199,12 @@ TEST(HeteroNeighborTest, BasicAssertions) {
   num_neighbors_dict.insert(rel_key, num_neighbors);
 
   auto out = pyg::sampler::hetero_neighbor_sample(
-      node_types, edge_types, rowptr_dict, col_dict, seed_dict,
-      num_neighbors_dict);
+      /*node_types=*/node_types,
+      /*edge_types=*/edge_types,
+      /*rowptr_dict=*/rowptr_dict,
+      /*col_dict=*/col_dict,
+      /*seed_dict=*/seed_dict,
+      /*num_neighbors_dict=*/num_neighbors_dict);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out).at(rel_key), expected_row));
@@ -245,4 +249,52 @@ TEST(BiasedNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
   auto expected_edges = at::tensor({0, 2}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+}
+
+TEST(HeteroBiasedNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  const auto node_key = "paper";
+  const auto edge_key = std::make_tuple("paper", "to", "paper");
+  const auto rel_key = "paper__to__paper";
+
+  auto ones = at::ones(6).view({-1, 1});
+  auto zeros = at::zeros(6).view({-1, 1});
+  // Only sample even edges:
+  auto edge_weight = at::cat({ones, zeros}, -1).view(-1);
+
+  std::vector<node_type> node_types = {node_key};
+  std::vector<edge_type> edge_types = {edge_key};
+  c10::Dict<rel_type, at::Tensor> rowptr_dict;
+  rowptr_dict.insert(rel_key, std::get<0>(graph));
+  c10::Dict<rel_type, at::Tensor> col_dict;
+  col_dict.insert(rel_key, std::get<1>(graph));
+  c10::Dict<node_type, at::Tensor> seed_dict;
+  seed_dict.insert(node_key, at::arange(0, 2, options));
+  std::vector<int64_t> num_neighbors = {1};
+  c10::Dict<rel_type, std::vector<int64_t>> num_neighbors_dict;
+  num_neighbors_dict.insert(rel_key, num_neighbors);
+  c10::Dict<rel_type, at::Tensor> edge_weight_dict;
+  edge_weight_dict.insert(rel_key, edge_weight);
+
+  auto out = pyg::sampler::hetero_neighbor_sample(
+      /*node_types=*/node_types,
+      /*edge_types=*/edge_types,
+      /*rowptr_dict=*/rowptr_dict,
+      /*col_dict=*/col_dict,
+      /*seed_dict=*/seed_dict,
+      /*num_neighbors_dict=*/num_neighbors_dict,
+      /*time_dict=*/c10::nullopt,
+      /*seed_time_dict=*/c10::nullopt,
+      /*edge_weight_dict=*/edge_weight_dict);
+
+  auto expected_row = at::tensor({0, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out).at(rel_key), expected_row));
+  auto expected_col = at::tensor({2, 0}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out).at(rel_key), expected_col));
+  auto expected_nodes = at::tensor({0, 1, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out).at(node_key), expected_nodes));
+  auto expected_edges = at::tensor({0, 2}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value().at(rel_key), expected_edges));
 }
