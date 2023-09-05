@@ -70,8 +70,7 @@ def neighbor_sample(
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph.
         Lastly, returns information about the sampled amount of nodes and edges
-        per hop and if `distributed` will return cummulative sum of the sampled
-        neighbors per node.
+        per hop.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
                                          time, seed_time, csc, replace,
