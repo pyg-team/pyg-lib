@@ -52,7 +52,7 @@ hetero_neighbor_sample(
         c10::nullopt,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict =
         c10::nullopt,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& edge_weight_dict =
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict =
         c10::nullopt,
     bool csc = false,
     bool replace = false,

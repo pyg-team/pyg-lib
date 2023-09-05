@@ -420,7 +420,7 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
-       const c10::optional<c10::Dict<node_type, at::Tensor>>& edge_weight_dict,
+       const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
@@ -450,6 +450,8 @@ sample(const std::vector<node_type>& node_types,
       TORCH_CHECK(seed_time.is_contiguous(), "Non-contiguous 'seed_time'");
     }
   }
+  TORCH_CHECK(!(time_dict.has_value() && edge_weight_dict.has_value()),
+              "Biased temporal sampling not yet supported");
 
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   c10::Dict<node_type, at::Tensor> out_node_id_dict;
@@ -599,32 +601,46 @@ sample(const std::vector<node_type>& node_types,
 
                 sampler.num_sampled_edges_per_hop.push_back(0);
 
-                if (!time_dict.has_value() ||
-                    !time_dict.value().contains(dst)) {
-                  for (size_t i = begin; i < end; ++i) {
-                    sampler.uniform_sample(
-                        /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, count, dst_mapper, generator,
-                        dst_sampled_nodes);
-                  }
-                } else if (edge_weight_dict.has_value()) {  // Temporal:
+                if (edge_weight_dict.has_value() &&
+                    edge_weight_dict.value().contains(to_rel_type(k))) {
+                  const at::Tensor& edge_weight =
+                      edge_weight_dict.value().at(to_rel_type(k));
                   for (size_t i = begin; i < end; ++i) {
                     sampler.biased_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, edge_weight_dict.value().at(dst),
-                        count, dst_mapper, generator, dst_sampled_nodes);
+                        /*local_src_node=*/i,
+                        /*edge_weight=*/edge_weight,
+                        /*count=*/count,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
                   }
-                } else if constexpr (!std::is_scalar<
-                                         node_t>::value) {  // Temporal:
+                } else if (!time_dict.has_value() ||
+                           !time_dict.value().contains(dst)) {
+                  for (size_t i = begin; i < end; ++i) {
+                    sampler.uniform_sample(
+                        /*global_src_node=*/src_sampled_nodes[i],
+                        /*local_src_node=*/i,
+                        /*count=*/count,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
+                  }
+                } else if constexpr (!std::is_scalar<node_t>::value) {
+                  // Temporal sampling:
                   const at::Tensor& dst_time = time_dict.value().at(dst);
                   const auto dst_time_data = dst_time.data_ptr<temporal_t>();
                   for (size_t i = begin; i < end; ++i) {
                     const auto batch_idx = src_sampled_nodes[i].first;
                     sampler.temporal_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, count, seed_times[batch_idx],
-                        dst_time_data, dst_mapper, generator,
-                        dst_sampled_nodes);
+                        /*local_src_node=*/i,
+                        /*count=*/count,
+                        /*seed_time=*/seed_times[batch_idx],
+                        /*time=*/dst_time_data,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
                   }
                 }
               }
