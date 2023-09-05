@@ -19,20 +19,11 @@ class Mapper {
     // but slower hash map implementation. As a general rule of thumb, we are
     // safe to use vectors in case the number of nodes are small, or it is
     // expected that we sample a large amount of nodes.
-    use_vec = (num_nodes < 1000000) || (num_entries > (num_nodes / 10));
+    use_vec = std::is_scalar<node_t>::value && (num_nodes > 0) &&
+              ((num_nodes < 1000000) || (num_entries > (num_nodes / 10)));
 
-    if (num_nodes <= 0) {  // == `num_nodes` is undefined:
-      use_vec = false;
-    }
-
-    // We can only utilize vector mappings in case entries are scalar:
-    if (!std::is_scalar<node_t>::value) {
-      use_vec = false;
-    }
-
-    if (use_vec) {
+    if (use_vec)
       to_local_vec.resize(num_nodes, -1);
-    }
   }
 
   std::pair<scalar_t, bool> insert(const node_t& node) {
@@ -49,7 +40,7 @@ class Mapper {
       res = std::pair<scalar_t, bool>(out.first->second, out.second);
     }
     if (res.second) {
-      curr++;
+      ++curr;
     }
     return res;
   }
@@ -65,11 +56,7 @@ class Mapper {
   }
 
   bool exists(const node_t& node) {
-    if (use_vec) {
-      return to_local_vec[node] >= 0;
-    } else {
-      return to_local_map.count(node) > 0;
-    }
+    return use_vec ? to_local_vec[node] >= 0 : to_local_map.count(node) > 0;
   }
 
   scalar_t map(const node_t& node) {

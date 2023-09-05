@@ -37,6 +37,25 @@ class NeighborSampler {
                 "No valid temporal strategy found");
   }
 
+  void biased_sample(const node_t global_src_node,
+                     const scalar_t local_src_node,
+                     const at::Tensor& edge_weight,
+                     const int64_t count,
+                     pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                     pyg::random::RandintEngine<scalar_t>& generator,
+                     std::vector<node_t>& out_global_dst_nodes) {
+    const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+    const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
+
+    const auto weight = edge_weight.narrow(0, row_start, row_end - row_start);
+
+    _biased_sample(global_src_node, local_src_node, row_start, row_end, count,
+                   weight, dst_mapper, generator, out_global_dst_nodes);
+  }
+
   void uniform_sample(const node_t global_src_node,
                       const scalar_t local_src_node,
                       const int64_t count,
@@ -45,6 +64,10 @@ class NeighborSampler {
                       std::vector<node_t>& out_global_dst_nodes) {
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
+
     _sample(global_src_node, local_src_node, row_start, row_end, count,
             dst_mapper, generator, out_global_dst_nodes);
   }
@@ -59,6 +82,9 @@ class NeighborSampler {
                        std::vector<node_t>& out_global_dst_nodes) {
     auto row_start = rowptr_[to_scalar_t(global_src_node)];
     auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+    if ((row_end - row_start == 0) || (count == 0))
+      return;
 
     // Find new `row_end` such that all neighbors fulfill temporal constraints:
     auto it = std::upper_bound(
@@ -118,13 +144,7 @@ class NeighborSampler {
                pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                pyg::random::RandintEngine<scalar_t>& generator,
                std::vector<node_t>& out_global_dst_nodes) {
-    if (count == 0)
-      return;
-
     const auto population = row_end - row_start;
-
-    if (population == 0)
-      return;
 
     // Case 1: Sample the full neighborhood:
     if (count < 0 || (!replace && count >= population)) {
@@ -178,6 +198,36 @@ class NeighborSampler {
           add(edge_id, global_src_node, local_src_node, dst_mapper,
               out_global_dst_nodes);
         }
+      }
+    }
+  }
+
+  void _biased_sample(const node_t global_src_node,
+                      const scalar_t local_src_node,
+                      const scalar_t row_start,
+                      const scalar_t row_end,
+                      const int64_t count,
+                      const at::Tensor& weight,
+                      pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                      pyg::random::RandintEngine<scalar_t>& generator,
+                      std::vector<node_t>& out_global_dst_nodes) {
+    const auto population = row_end - row_start;
+
+    // Case 1: Sample the full neighborhood:
+    if (count < 0 || (!replace && count >= population)) {
+      for (scalar_t edge_id = row_start; edge_id < row_end; ++edge_id) {
+        add(edge_id, global_src_node, local_src_node, dst_mapper,
+            out_global_dst_nodes);
+      }
+    }
+
+    // Case 2: Multinomial sampling:
+    else {
+      const auto index = at::multinomial(weight, count, replace);
+      const auto index_data = index.data_ptr<int64_t>();
+      for (size_t i = 0; i < index.numel(); ++i) {
+        add(row_start + index_data[i], global_src_node, local_src_node,
+            dst_mapper, out_global_dst_nodes);
       }
     }
   }
@@ -245,6 +295,7 @@ sample(const at::Tensor& rowptr,
        const std::vector<int64_t>& num_neighbors,
        const c10::optional<at::Tensor>& time,
        const c10::optional<at::Tensor>& seed_time,
+       const c10::optional<at::Tensor>& edge_weight,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time.has_value() || disjoint,
@@ -260,6 +311,8 @@ sample(const at::Tensor& rowptr,
     TORCH_CHECK(seed_time.value().is_contiguous(),
                 "Non-contiguous 'seed_time'");
   }
+  TORCH_CHECK(!(time.has_value() && edge_weight.has_value()),
+              "Biased temporal sampling not yet supported");
 
   at::Tensor out_row, out_col, out_node_id;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
@@ -315,11 +368,28 @@ sample(const at::Tensor& rowptr,
     for (size_t ell = 0; ell < num_neighbors.size(); ++ell) {
       const auto count = num_neighbors[ell];
       sampler.num_sampled_edges_per_hop.push_back(0);
-      if (!time.has_value()) {
+      if (edge_weight.has_value()) {
         for (size_t i = begin; i < end; ++i) {
-          sampler.uniform_sample(/*global_src_node=*/sampled_nodes[i],
-                                 /*local_src_node=*/i, count, mapper, generator,
-                                 /*out_global_dst_nodes=*/sampled_nodes);
+          sampler.biased_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i,
+              /*edge_weight=*/edge_weight.value(),
+              /*count=*/count,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
+          if constexpr (distributed)
+            cumsum_neighbors_per_node.push_back(sampled_nodes.size());
+        }
+      } else if (!time.has_value()) {
+        for (size_t i = begin; i < end; ++i) {
+          sampler.uniform_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i,
+              /*count=*/count,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
           if constexpr (distributed)
             cumsum_neighbors_per_node.push_back(sampled_nodes.size());
         }
@@ -327,11 +397,14 @@ sample(const at::Tensor& rowptr,
         const auto time_data = time.value().data_ptr<temporal_t>();
         for (size_t i = begin; i < end; ++i) {
           const auto batch_idx = sampled_nodes[i].first;
-          sampler.temporal_sample(/*global_src_node=*/sampled_nodes[i],
-                                  /*local_src_node=*/i, count,
-                                  seed_times[batch_idx], time_data, mapper,
-                                  generator,
-                                  /*out_global_dst_nodes=*/sampled_nodes);
+          sampler.temporal_sample(
+              /*global_src_node=*/sampled_nodes[i],
+              /*local_src_node=*/i, /*count=*/count,
+              /*seed_time=*/seed_times[batch_idx],
+              /*time=*/time_data,
+              /*dst_mapper=*/mapper,
+              /*generator=*/generator,
+              /*out_global_dst_nodes=*/sampled_nodes);
           if constexpr (distributed)
             cumsum_neighbors_per_node.push_back(sampled_nodes.size());
         }
@@ -377,6 +450,7 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
        const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+       const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!time_dict.has_value() || disjoint,
@@ -406,6 +480,8 @@ sample(const std::vector<node_type>& node_types,
       TORCH_CHECK(seed_time.is_contiguous(), "Non-contiguous 'seed_time'");
     }
   }
+  TORCH_CHECK(!(time_dict.has_value() && edge_weight_dict.has_value()),
+              "Biased temporal sampling not yet supported");
 
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   c10::Dict<node_type, at::Tensor> out_node_id_dict;
@@ -470,9 +546,9 @@ sample(const std::vector<node_type>& node_types,
                   temporal_strategy)});
 
       if (parallel) {
-        // Each thread is assigned edge types that have the same dst node type.
-        // Thanks to this, each thread will operate on a separate mapper and
-        // separate sampler.
+        // Each thread is assigned edge types that have the same dst node
+        // type. Thanks to this, each thread will operate on a separate mapper
+        // and separate sampler.
         bool added = false;
         const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
         for (auto& e : threads_edge_types) {
@@ -486,7 +562,7 @@ sample(const std::vector<node_type>& node_types,
           threads_edge_types.push_back({k});
       }
     }
-    if (!parallel) {  // If not parallel then one thread handles all edge types.
+    if (!parallel) {  // One thread handles all edge types.
       threads_edge_types.push_back({edge_types});
     }
 
@@ -539,7 +615,7 @@ sample(const std::vector<node_type>& node_types,
       }
       at::parallel_for(
           0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
-            for (auto j = _s; j < _e; j++) {
+            for (auto j = _s; j < _e; ++j) {
               for (const auto& k : threads_edge_types[j]) {
                 const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
                 const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
@@ -555,25 +631,46 @@ sample(const std::vector<node_type>& node_types,
 
                 sampler.num_sampled_edges_per_hop.push_back(0);
 
-                if (!time_dict.has_value() ||
-                    !time_dict.value().contains(dst)) {
+                if (edge_weight_dict.has_value() &&
+                    edge_weight_dict.value().contains(to_rel_type(k))) {
+                  const at::Tensor& edge_weight =
+                      edge_weight_dict.value().at(to_rel_type(k));
+                  for (size_t i = begin; i < end; ++i) {
+                    sampler.biased_sample(
+                        /*global_src_node=*/src_sampled_nodes[i],
+                        /*local_src_node=*/i,
+                        /*edge_weight=*/edge_weight,
+                        /*count=*/count,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
+                  }
+                } else if (!time_dict.has_value() ||
+                           !time_dict.value().contains(dst)) {
                   for (size_t i = begin; i < end; ++i) {
                     sampler.uniform_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, count, dst_mapper, generator,
-                        dst_sampled_nodes);
+                        /*local_src_node=*/i,
+                        /*count=*/count,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
                   }
-                } else if constexpr (!std::is_scalar<
-                                         node_t>::value) {  // Temporal:
+                } else if constexpr (!std::is_scalar<node_t>::value) {
+                  // Temporal sampling:
                   const at::Tensor& dst_time = time_dict.value().at(dst);
                   const auto dst_time_data = dst_time.data_ptr<temporal_t>();
                   for (size_t i = begin; i < end; ++i) {
                     const auto batch_idx = src_sampled_nodes[i].first;
                     sampler.temporal_sample(
                         /*global_src_node=*/src_sampled_nodes[i],
-                        /*local_src_node=*/i, count, seed_times[batch_idx],
-                        dst_time_data, dst_mapper, generator,
-                        dst_sampled_nodes);
+                        /*local_src_node=*/i,
+                        /*count=*/count,
+                        /*seed_time=*/seed_times[batch_idx],
+                        /*time=*/dst_time_data,
+                        /*dst_mapper=*/dst_mapper,
+                        /*generator=*/generator,
+                        /*out_global_dst_nodes=*/dst_sampled_nodes);
                   }
                 }
               }
@@ -706,6 +803,7 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        const std::vector<int64_t>& num_neighbors,
                        const c10::optional<at::Tensor>& time,
                        const c10::optional<at::Tensor>& seed_time,
+                       const c10::optional<at::Tensor>& edge_weight,
                        bool csc,
                        bool replace,
                        bool directed,
@@ -714,7 +812,7 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
                        bool return_edge_id) {
   const auto out = [&] {
     DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
-                    seed, num_neighbors, time, seed_time, csc,
+                    seed, num_neighbors, time, seed_time, edge_weight, csc,
                     temporal_strategy);
   }();
   return std::make_tuple(std::get<0>(out), std::get<1>(out), std::get<2>(out),
@@ -736,6 +834,7 @@ hetero_neighbor_sample_kernel(
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
     bool csc,
     bool replace,
     bool directed,
@@ -744,8 +843,8 @@ hetero_neighbor_sample_kernel(
     bool return_edge_id) {
   DISPATCH_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                   edge_types, rowptr_dict, col_dict, seed_dict,
-                  num_neighbors_dict, time_dict, seed_time_dict, csc,
-                  temporal_strategy);
+                  num_neighbors_dict, time_dict, seed_time_dict,
+                  edge_weight_dict, csc, temporal_strategy);
 }
 
 std::tuple<at::Tensor,

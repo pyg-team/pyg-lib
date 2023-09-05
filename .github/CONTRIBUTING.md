@@ -22,7 +22,7 @@ If you already previously cloned `pyg-lib`, update it:
 ```
 git pull
 git submodule sync --recursive
-git submodule update --init --recursive --jobs 0
+git submodule update --init --recursive
 ```
 
 Then, build the library via:

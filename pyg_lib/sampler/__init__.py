@@ -15,6 +15,7 @@ def neighbor_sample(
     num_neighbors: List[int],
     time: Optional[Tensor] = None,
     seed_time: Optional[Tensor] = None,
+    edge_weight: Optional[Tensor] = None,
     csc: bool = False,
     replace: bool = False,
     directed: bool = True,
@@ -48,6 +49,8 @@ def neighbor_sample(
         seed_time (torch.Tensor, optional): Optional values to override the
             timestamp for seed nodes. If not set, will use timestamps in
             :obj:`time` as default for seed nodes. (default: :obj:`None`)
+        edge-weight (torch.Tensor, optional): If given, will perform biased
+            sampling based on the weight of each edge. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
         replace (bool, optional): If set to :obj:`True`, will sample with
@@ -73,9 +76,9 @@ def neighbor_sample(
         per hop.
     """
     return torch.ops.pyg.neighbor_sample(rowptr, col, seed, num_neighbors,
-                                         time, seed_time, csc, replace,
-                                         directed, disjoint, temporal_strategy,
-                                         return_edge_id)
+                                         time, seed_time, edge_weight, csc,
+                                         replace, directed, disjoint,
+                                         temporal_strategy, return_edge_id)
 
 
 def hetero_neighbor_sample(
@@ -85,6 +88,7 @@ def hetero_neighbor_sample(
     num_neighbors_dict: Dict[EdgeType, List[int]],
     time_dict: Optional[Dict[NodeType, Tensor]] = None,
     seed_time_dict: Optional[Dict[NodeType, Tensor]] = None,
+    edge_weight_dict: Optional[Dict[EdgeType, Tensor]] = None,
     csc: bool = False,
     replace: bool = False,
     directed: bool = True,
@@ -119,6 +123,11 @@ def hetero_neighbor_sample(
         TO_REL_TYPE[k]: v
         for k, v in num_neighbors_dict.items()
     }
+    if edge_weight_dict is not None:
+        edge_weight_dict = {
+            TO_REL_TYPE[k]: v
+            for k, v in edge_weight_dict.items()
+        }
 
     out = torch.ops.pyg.hetero_neighbor_sample(
         node_types,
@@ -129,6 +138,7 @@ def hetero_neighbor_sample(
         num_neighbors_dict,
         time_dict,
         seed_time_dict,
+        edge_weight_dict,
         csc,
         replace,
         directed,
