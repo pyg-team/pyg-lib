@@ -41,8 +41,7 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*batch=*/c10::nullopt, /*csc=*/false,
-      /*replace=*/false);
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -65,8 +64,7 @@ TEST(WithReplacementNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*batch=*/c10::nullopt, /*csc=*/false,
-      /*replace=*/true);
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/true);
 
   auto expected_row = at::tensor({0, 1, 2, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -88,8 +86,7 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph), seed, num_neighbors, /*time=*/c10::nullopt,
-      /*seed_time=*/c10::nullopt, /*batch=*/c10::nullopt, /*csc=*/false,
-      /*replace=*/false,
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true);
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5}, options);
@@ -119,8 +116,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
 
   auto out1 = pyg::sampler::neighbor_sample(
       rowptr, col, seed, /*num_neighbors=*/{2, 2}, /*time=*/time,
-      /*seed_time=*/c10::nullopt, /*batch=*/c10::nullopt, /*csc=*/false,
-      /*replace=*/false,
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true);
 
   // Expect only the earlier neighbors or the same node to be sampled:
@@ -136,8 +132,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
 
   auto out2 = pyg::sampler::neighbor_sample(
       rowptr, col, seed, /*num_neighbors=*/{1, 2}, /*time=*/time,
-      /*seed_time=*/c10::nullopt, /*batch=*/c10::nullopt, /*csc=*/false,
-      /*replace=*/false,
+      /*seed_time=*/c10::nullopt, /*csc=*/false, /*replace=*/false,
       /*directed=*/true, /*disjoint=*/true, /*temporal_strategy=*/"last");
 
   EXPECT_TRUE(at::equal(std::get<0>(out1), std::get<0>(out2)));
