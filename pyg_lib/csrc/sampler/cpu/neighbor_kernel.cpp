@@ -860,6 +860,7 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             const std::vector<int64_t>& num_neighbors,
                             const c10::optional<at::Tensor>& time,
                             const c10::optional<at::Tensor>& seed_time,
+                            const c10::optional<at::Tensor>& edge_weight,
                             bool csc,
                             bool replace,
                             bool directed,
@@ -867,7 +868,7 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             std::string temporal_strategy,
                             bool return_edge_id) {
   DISPATCH_DIST_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr, col,
-                       seed, num_neighbors, time, seed_time, csc,
+                       seed, num_neighbors, time, seed_time, edge_weight, csc,
                        temporal_strategy);
 }
 
@@ -886,6 +887,7 @@ dist_hetero_neighbor_sample_kernel(
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
     bool csc,
     bool replace,
     bool directed,
@@ -894,8 +896,8 @@ dist_hetero_neighbor_sample_kernel(
     bool return_edge_id) {
   DISPATCH_DIST_SAMPLE(replace, directed, disjoint, return_edge_id, node_types,
                        edge_types, rowptr_dict, col_dict, seed_dict,
-                       num_neighbors_dict, time_dict, seed_time_dict, csc,
-                       temporal_strategy);
+                       num_neighbors_dict, time_dict, seed_time_dict,
+                       edge_weight_dict, csc, temporal_strategy);
 }
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
