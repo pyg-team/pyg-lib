@@ -97,7 +97,7 @@ def hetero_neighbor_sample(
     return_edge_id: bool = True,
 ) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
         NodeType, Tensor], Optional[Dict[EdgeType, Tensor]], Dict[
-            NodeType, List[int]], Dict[NodeType, List[int]]]:
+            NodeType, List[int]], Dict[EdgeType, List[int]]]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed_dict`
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
