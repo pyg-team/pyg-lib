@@ -48,11 +48,11 @@ hetero_neighbor_sample_kernel(
     std::string temporal_strategy,
     bool return_edge_id);
 
-std::tuple<at::Tensor, c10::optional<at::Tensor>, std::vector<int64_t>>
+std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>>
 dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             const at::Tensor& col,
                             const at::Tensor& seed,
-                            const int64_t one_hop_num,
+                            const int64_t num_neighbors,
                             const c10::optional<at::Tensor>& time,
                             const c10::optional<at::Tensor>& seed_time,
                             const c10::optional<at::Tensor>& edge_weight,
@@ -60,8 +60,7 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             bool replace,
                             bool directed,
                             bool disjoint,
-                            std::string temporal_strategy,
-                            bool return_edge_id);
+                            std::string temporal_strategy);
 
 }  // namespace sampler
 }  // namespace pyg

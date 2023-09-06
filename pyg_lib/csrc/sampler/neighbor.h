@@ -62,12 +62,11 @@ hetero_neighbor_sample(
     bool return_edge_id = true);
 
 PYG_API
-std::tuple<at::Tensor, c10::optional<at::Tensor>, std::vector<int64_t>>
-dist_neighbor_sample(
+std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& seed,
-    const int64_t one_hop_num,
+    const int64_t num_neighbors,
     const c10::optional<at::Tensor>& time = c10::nullopt,
     const c10::optional<at::Tensor>& seed_time = c10::nullopt,
     const c10::optional<at::Tensor>& edge_weight = c10::nullopt,
@@ -75,8 +74,7 @@ dist_neighbor_sample(
     bool replace = false,
     bool directed = true,
     bool disjoint = false,
-    std::string strategy = "uniform",
-    bool return_edge_id = true);
+    std::string strategy = "uniform");
 
 }  // namespace sampler
 }  // namespace pyg

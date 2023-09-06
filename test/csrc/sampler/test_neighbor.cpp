@@ -9,14 +9,12 @@ TEST(BasicNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  auto seed = at::arange(2, 4, options);
-  std::vector<int64_t> num_neighbors = {-1, -1};
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/seed,
-      /*num_neighbors=*/num_neighbors);
+      /*seed=*/at::arange(2, 4, options),
+      /*num_neighbors=*/{-1, -1});
 
   auto expected_row = at::tensor({0, 0, 1, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
@@ -36,15 +34,13 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  auto seed = at::arange(2, 4, options);
-  std::vector<int64_t> num_neighbors = {1, 1};
 
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/seed,
-      /*num_neighbors=*/num_neighbors,
+      /*seed=*/at ::arange(2, 4, options),
+      /*num_neighbors=*/{1, 1},
       /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
@@ -65,15 +61,13 @@ TEST(WithReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  auto seed = at::arange(2, 4, options);
-  std::vector<int64_t> num_neighbors = {1, 1};
 
   at::manual_seed(123456);
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/seed,
-      /*num_neighbors=*/num_neighbors,
+      /*seed=*/at::arange(2, 4, options),
+      /*num_neighbors=*/{1, 1},
       /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
@@ -94,14 +88,12 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  auto seed = at::arange(2, 4, options);
-  std::vector<int64_t> num_neighbors = {2, 2};
 
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/seed,
-      /*num_neighbors=*/num_neighbors,
+      /*seed=*/at::arange(2, 4, options),
+      /*num_neighbors=*/{2, 2},
       /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
@@ -128,7 +120,6 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   auto graph = cycle_graph(/*num_nodes=*/6, options);
   auto rowptr = std::get<0>(graph);
   auto col = std::get<1>(graph);
-  auto seed = at::arange(2, 4, options);
 
   // Time is equal to node ID ...
   auto time = at::arange(6, options);
@@ -138,7 +129,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   auto out1 = pyg::sampler::neighbor_sample(
       /*rowptr=*/rowptr,
       /*col=*/col,
-      /*seed=*/seed,
+      /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{2, 2},
       /*time=*/time,
       /*seed_time=*/c10::nullopt,
@@ -162,7 +153,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   auto out2 = pyg::sampler::neighbor_sample(
       /*rowptr=*/rowptr,
       /*col=*/col,
-      /*seed=*/seed,
+      /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{1, 2},
       /*time=*/time,
       /*seed_time=*/c10::nullopt,
@@ -224,8 +215,6 @@ TEST(BiasedNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
-  auto seed = at::arange(0, 2, options);
-  std::vector<int64_t> num_neighbors = {1};
 
   auto ones = at::ones(6).view({-1, 1});
   auto zeros = at::zeros(6).view({-1, 1});
@@ -235,8 +224,8 @@ TEST(BiasedNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/seed,
-      /*num_neighbors=*/num_neighbors,
+      /*seed=*/at::arange(0, 2, options),
+      /*num_neighbors=*/{1},
       /*time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/edge_weight);
