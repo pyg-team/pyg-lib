@@ -165,6 +165,43 @@ def hetero_neighbor_sample(
             num_nodes_per_hop_dict, num_edges_per_hop_dict)
 
 
+def dist_neighbor_sample(
+    rowptr: Tensor,
+    col: Tensor,
+    seed: Tensor,
+    one_hop_num: int,
+    time: Optional[Tensor] = None,
+    seed_time: Optional[Tensor] = None,
+    edge_weight: Optional[Tensor] = None,
+    csc: bool = False,
+    replace: bool = False,
+    directed: bool = True,
+    disjoint: bool = False,
+    temporal_strategy: str = 'uniform',
+    return_edge_id: bool = True,
+) -> Tuple[Tensor, Optional[Tensor], List[int]]:
+    r"""For distributed sampling purpose. Leverages the
+    :meth:`neighbor_sample`. Samples one hop neighborhood with duplicates from
+    all node indices in :obj:`seed` in the graph given by :obj:`(rowptr, col)`.
+
+    Args:
+        one_hop_num (int): Max number of neighbors to sample in the current
+            layer.
+        kwargs: Arguments of :meth:`neighbor_sample`.
+
+    Returns:
+        (torch.Tensor, Optional[torch.Tensor], List[int]):
+        Returns original node indices for all sampled nodes and in addition,
+        the indices of edges of the original graph. Lastly, returns cummulative
+        sum of the amount of sampled neighbors by each node in the :obj:`seed`.
+    """
+    return torch.ops.pyg.dist_neighbor_sample(rowptr, col, seed, one_hop_num,
+                                              time, seed_time, edge_weight,
+                                              csc, replace, directed, disjoint,
+                                              temporal_strategy,
+                                              return_edge_id)
+
+
 def subgraph(
     rowptr: Tensor,
     col: Tensor,
@@ -218,6 +255,7 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
 __all__ = [
     'neighbor_sample',
     'hetero_neighbor_sample',
+    'dist_neighbor_sample',
     'subgraph',
     'random_walk',
 ]
