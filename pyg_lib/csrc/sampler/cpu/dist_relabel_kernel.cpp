@@ -98,15 +98,15 @@ std::tuple<at::Tensor, at::Tensor> relabel(
 
 template <bool disjoint>
 std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>>
-relabel(const std::vector<node_type>& node_types,
-        const std::vector<edge_type>& edge_types,
-        const c10::Dict<node_type, at::Tensor>& seed_dict,
-        const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
-        const c10::Dict<node_type, std::vector<int64_t>>&
-            sampled_nbrs_per_node_dict,
-        const c10::Dict<node_type, int64_t> num_nodes_dict,
-        const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
-        const bool csc) {
+relabel(
+    const std::vector<node_type>& node_types,
+    const std::vector<edge_type>& edge_types,
+    const c10::Dict<node_type, at::Tensor>& seed_dict,
+    const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>& sampled_nbrs_per_node_dict,
+    const c10::Dict<node_type, int64_t> num_nodes_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
+    const bool csc) {
   if (disjoint) {
     TORCH_CHECK(batch_dict.has_value(),
                 "Batch needs to be specified to create disjoint subgraphs");
@@ -177,10 +177,12 @@ relabel(const std::vector<node_type>& node_types,
         for (const auto& k : edge_types) {
           const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
           const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
-          for (auto i = 0; i < sampled_nbrs_per_node_dict.at(dst).size(); i++) {
+          for (auto i = 0;
+               i < sampled_nbrs_per_node_dict.at(to_rel_type(k)).size(); i++) {
             auto& dst_mapper = mapper_dict.at(dst);
             auto& dst_sampled_nodes_data = sampled_nodes_data_dict.at(dst);
-            slice_dict.at(dst).second += sampled_nbrs_per_node_dict.at(dst)[i];
+            slice_dict.at(dst).second +=
+                sampled_nbrs_per_node_dict.at(to_rel_type(k))[i];
             size_t begin, end;
             std::tie(begin, end) = slice_dict.at(dst);
 
@@ -236,8 +238,7 @@ hetero_relabel_neighborhood_kernel(
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
-    const c10::Dict<node_type, std::vector<int64_t>>&
-        sampled_nbrs_per_node_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>& sampled_nbrs_per_node_dict,
     const c10::Dict<node_type, int64_t> num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
