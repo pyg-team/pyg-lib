@@ -74,7 +74,8 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     bool replace = false,
     bool directed = true,
     bool disjoint = false,
-    std::string strategy = "uniform");
+    std::string strategy = "uniform",
+    bool return_edge_id = true);
 
 }  // namespace sampler
 }  // namespace pyg

@@ -178,6 +178,7 @@ def dist_neighbor_sample(
     directed: bool = True,
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
+    return_edge_id: bool = True,
 ) -> Tuple[Tensor, Tensor, List[int]]:
     r"""For distributed sampling purpose. Leverages the
     :meth:`neighbor_sample`. Samples one hop neighborhood with duplicates from
@@ -206,6 +207,7 @@ def dist_neighbor_sample(
         directed,
         disjoint,
         temporal_strategy,
+        return_edge_id,
     )
 
 

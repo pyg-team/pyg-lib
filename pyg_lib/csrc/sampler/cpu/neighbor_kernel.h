@@ -60,7 +60,8 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             bool replace,
                             bool directed,
                             bool disjoint,
-                            std::string temporal_strategy);
+                            std::string temporal_strategy,
+                            bool return_edge_id);
 
 }  // namespace sampler
 }  // namespace pyg
