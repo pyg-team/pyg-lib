@@ -30,13 +30,37 @@ merge_outputs(
   at::Tensor out_node;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
   c10::optional<at::Tensor> out_batch = c10::nullopt;
+  int64_t offset = one_hop_num;
+
+  if (one_hop_num < 0) {
+    // find maximum population
+    std::vector<int64_t> population;
+    std::vector<int64_t> max_populations(partitions_num);
+
+    at::parallel_for(0, partitions_num, 1, [&](size_t _s, size_t _e) {
+      for (auto p_id = _s; p_id < _e; p_id++) {
+        auto cummsum1 =
+            std::vector<int64_t>(cumm_sampled_nbrs_per_node[p_id].begin() + 1,
+                                 cumm_sampled_nbrs_per_node[p_id].end());
+        auto cummsum2 =
+            std::vector<int64_t>(cumm_sampled_nbrs_per_node[p_id].begin(),
+                                 cumm_sampled_nbrs_per_node[p_id].end() - 1);
+        std::transform(cummsum1.begin(), cummsum1.end(), cummsum2.begin(),
+                       std::back_inserter(population),
+                       [](int64_t a, int64_t b) { return std::abs(a - b); });
+        auto max = *max_element(population.begin(), population.end());
+        max_populations[p_id] = max;
+      }
+    });
+    offset = *max_element(max_populations.begin(), max_populations.end());
+  }
 
   const auto p_size = partition_ids.size();
   std::vector<int64_t> sampled_nbrs_per_node(p_size);
 
   const auto scalar_type = nodes[0].scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "merge_outputs_kernel", [&] {
-    std::vector<scalar_t> sampled_nodes(p_size * one_hop_num, -1);
+    std::vector<scalar_t> sampled_nodes(p_size * offset, -1);
     std::vector<scalar_t> sampled_edge_ids;
     std::vector<scalar_t> sampled_batch;
     std::vector<std::vector<scalar_t>> sampled_nodes_vec(p_size);
@@ -44,11 +68,11 @@ merge_outputs(
     std::vector<std::vector<scalar_t>> batch_vec(p_size);
 
     if constexpr (with_edge) {
-      sampled_edge_ids = std::vector<scalar_t>(p_size * one_hop_num, -1);
+      sampled_edge_ids = std::vector<scalar_t>(p_size * offset, -1);
       edge_ids_vec = std::vector<std::vector<scalar_t>>(p_size);
     }
     if constexpr (disjoint) {
-      sampled_batch = std::vector<scalar_t>(p_size * one_hop_num, -1);
+      sampled_batch = std::vector<scalar_t>(p_size * offset, -1);
       batch_vec = std::vector<std::vector<scalar_t>>(p_size);
     }
 
@@ -77,15 +101,15 @@ merge_outputs(
 
         std::copy(sampled_nodes_vec[p_id].begin() + begin,
                   sampled_nodes_vec[p_id].begin() + end,
-                  sampled_nodes.begin() + j * one_hop_num);
+                  sampled_nodes.begin() + j * offset);
         if constexpr (with_edge)
           std::copy(edge_ids_vec[p_id].begin() + begin_edge,
                     edge_ids_vec[p_id].begin() + end_edge,
-                    sampled_edge_ids.begin() + j * one_hop_num);
+                    sampled_edge_ids.begin() + j * offset);
         if constexpr (disjoint)
           std::copy(batch_vec[p_id].begin() + begin,
                     batch_vec[p_id].begin() + end,
-                    sampled_batch.begin() + j * one_hop_num);
+                    sampled_batch.begin() + j * offset);
 
         sampled_nbrs_per_node[j] = end - begin;
       }
