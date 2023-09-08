@@ -261,11 +261,11 @@ def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
 
 def merge_sampler_outputs(
     nodes: List[Tensor],
-    cumm_sampled_nbrs_per_node: List[List[int]],
+    cumsum_neighbors_per_node: List[List[int]],
     partition_ids: List[int],
     partition_orders: List[int],
     partitions_num: int,
-    one_hop_num: int,
+    num_neighbors: int,
     edge_ids: Optional[List[Tensor]] = None,
     batch: Optional[List[Tensor]] = None,
     disjoint: bool = False,
@@ -275,18 +275,18 @@ def merge_sampler_outputs(
     different partitions, so that they are sorted according to the sampling
     order. Removes seed nodes from sampled nodes and calculates how many
     neighbors were sampled by each src node based on the
-    :obj:`cumm_sampled_nbrs_per_node`.
+    :obj:`cumsum_neighbors_per_node`.
 
     Args:
         nodes (List[torch.Tensor]): A list of nodes sampled by all machines.
-        cumm_sampled_nbrs_per_node (List[List[int]]): For each sampled node,
+        cumsum_neighbors_per_node (List[List[int]]): For each sampled node,
             it contains information of how many neighbors it has sampled.
             Represented as a cumulative sum for the nodes in a given partition.
         partition_ids (torch.Tensor): Contains information on which
             partition src nodes are located on.
         partition_orders (torch.Tensor): Contains information about the
                 order of src nodes in each partition.
-        one_hop_num (int): Max number of neighbors sampled in the current
+        num_neighbors (int): Max number of neighbors sampled in the current
                 layer.
         edge_ids (List[Tensor], optional): A list of edge_ids sampled by all
             machines. (default: :obj:`None`)
@@ -303,9 +303,9 @@ def merge_sampler_outputs(
             as well as number of sampled neighbors per each :obj:`node`.
     """
     return torch.ops.pyg.merge_sampler_outputs(nodes, edge_ids, batch,
-                                               cumm_sampled_nbrs_per_node,
+                                               cumsum_neighbors_per_node,
                                                partition_ids, partition_orders,
-                                               partitions_num, one_hop_num,
+                                               partitions_num, num_neighbors,
                                                disjoint, with_edge)
 
 

@@ -55,7 +55,7 @@ class CMakeBuild(build_ext):
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
 
         cmake_args = [
-            '-DBUILD_TEST=OFF',
+            '-DBUILD_TEST=ON',
             '-DBUILD_BENCHMARK=OFF',
             '-DUSE_PYTHON=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
