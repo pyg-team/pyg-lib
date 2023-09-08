@@ -26,7 +26,7 @@ merge_outputs(
     const int64_t partitions_num,
     const int64_t one_hop_num,
     const c10::optional<std::vector<at::Tensor>>& edge_ids,
-    const c10::optional<std::vector<at::Tensor>>& batch) {
+    const c10::optional<at::Tensor>& batch) {
   at::Tensor out_node;
   c10::optional<at::Tensor> out_edge_id = c10::nullopt;
   c10::optional<at::Tensor> out_batch = c10::nullopt;
@@ -65,7 +65,6 @@ merge_outputs(
     std::vector<scalar_t> sampled_batch;
     std::vector<std::vector<scalar_t>> sampled_nodes_vec(p_size);
     std::vector<std::vector<scalar_t>> edge_ids_vec;
-    std::vector<std::vector<scalar_t>> batch_vec(p_size);
 
     if constexpr (with_edge) {
       sampled_edge_ids = std::vector<scalar_t>(p_size * offset, -1);
@@ -73,8 +72,9 @@ merge_outputs(
     }
     if constexpr (disjoint) {
       sampled_batch = std::vector<scalar_t>(p_size * offset, -1);
-      batch_vec = std::vector<std::vector<scalar_t>>(p_size);
     }
+    const auto batch_data =
+        disjoint ? batch.value().data_ptr<scalar_t>() : nullptr;
 
     for (auto p_id = 0; p_id < partitions_num; p_id++) {
       sampled_nodes_vec[p_id] = pyg::utils::to_vector<scalar_t>(nodes[p_id]);
@@ -82,9 +82,6 @@ merge_outputs(
       if constexpr (with_edge)
         edge_ids_vec[p_id] =
             pyg::utils::to_vector<scalar_t>(edge_ids.value()[p_id]);
-
-      if constexpr (disjoint)
-        batch_vec[p_id] = pyg::utils::to_vector<scalar_t>(batch.value()[p_id]);
     }
     at::parallel_for(0, p_size, 1, [&](size_t _s, size_t _e) {
       for (auto j = _s; j < _e; j++) {
@@ -107,9 +104,9 @@ merge_outputs(
                     edge_ids_vec[p_id].begin() + end_edge,
                     sampled_edge_ids.begin() + j * offset);
         if constexpr (disjoint)
-          std::copy(batch_vec[p_id].begin() + begin,
-                    batch_vec[p_id].begin() + end,
-                    sampled_batch.begin() + j * offset);
+          std::fill(sampled_batch.begin() + j * offset,
+                    sampled_batch.begin() + j * offset + end - begin,
+                    batch_data[j]);
 
         sampled_nbrs_per_node[j] = end - begin;
       }
@@ -164,7 +161,7 @@ merge_sampler_outputs_kernel(
     const int64_t partitions_num,
     const int64_t one_hop_num,
     const c10::optional<std::vector<at::Tensor>>& edge_ids,
-    const c10::optional<std::vector<at::Tensor>>& batch,
+    const c10::optional<at::Tensor>& batch,
     bool disjoint,
     bool with_edge) {
   DISPATCH_MERGE_OUTPUTS(disjoint, with_edge, nodes, cumm_sampled_nbrs_per_node,

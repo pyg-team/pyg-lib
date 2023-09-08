@@ -24,7 +24,7 @@ merge_sampler_outputs(
     const int64_t partitions_num,
     const int64_t one_hop_num,
     const c10::optional<std::vector<at::Tensor>>& edge_ids = c10::nullopt,
-    const c10::optional<std::vector<at::Tensor>>& batch = c10::nullopt,
+    const c10::optional<at::Tensor>& batch = c10::nullopt,
     bool disjoint = false,
     bool with_edge = true);
 
