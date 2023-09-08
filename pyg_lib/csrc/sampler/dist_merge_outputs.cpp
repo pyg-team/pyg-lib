@@ -20,7 +20,7 @@ merge_sampler_outputs(
     const int64_t partitions_num,
     const int64_t one_hop_num,
     const c10::optional<std::vector<at::Tensor>>& edge_ids,
-    const c10::optional<std::vector<at::Tensor>>& batch,
+    const c10::optional<at::Tensor>& batch,
     bool disjoint,
     bool with_edge) {
   std::vector<at::TensorArg> nodes_args;
@@ -32,9 +32,12 @@ merge_sampler_outputs(
   TORCH_CHECK(partition_ids.size() == partition_orders.size(),
               "Each id must be assigned a sampling order'");
 
-  if (disjoint)
+  if (disjoint) {
     TORCH_CHECK(batch.has_value(),
                 "I case of disjoint sampling batch needs to be specified");
+    TORCH_CHECK(batch.value().numel() == partition_ids.size(),
+                "Each src node must belong to a subgraph'");
+  }
 
   if (with_edge)
     TORCH_CHECK(edge_ids.has_value(), "No edge ids specified");
@@ -52,7 +55,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "pyg::merge_sampler_outputs(Tensor[] nodes, "
       "int[][] cumm_sampled_nbrs_per_node, int[] partition_ids, int[] "
       "partition_orders, int partitions_num, int one_hop_num, Tensor[]? "
-      "edge_ids, Tensor[]? batch, bool disjoint, bool with_edge) -> (Tensor, "
+      "edge_ids, Tensor? batch, bool disjoint, bool with_edge) -> (Tensor, "
       "Tensor?, Tensor?, int[])"));
 }
 

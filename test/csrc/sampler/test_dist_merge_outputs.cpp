@@ -88,9 +88,7 @@ TEST(DistDisjointMergeOutputsTest, BasicAssertions) {
   const std::vector<at::Tensor> nodes = {at::tensor({2, 7, 8}, options),
                                          at::tensor({0, 1, 4, 5, 6}, options),
                                          at::tensor({3, 9, 10}, options)};
-  const std::vector<at::Tensor> batch = {at::tensor({2, 2, 2}, options),
-                                         at::tensor({0, 1, 0, 0, 1}, options),
-                                         at::tensor({3, 3, 3}, options)};
+  const auto batch = at::tensor({0, 1, 2, 3}, options);
 
   const std::vector<std::vector<int64_t>> cumm_sampled_nbrs_per_node = {
       {1, 3}, {2, 4, 5}, {1, 3}};
