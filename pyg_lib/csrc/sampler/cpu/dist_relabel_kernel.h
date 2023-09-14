@@ -21,7 +21,7 @@ hetero_relabel_neighborhood_kernel(
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& sampled_nbrs_per_node_dict,
-    const c10::Dict<node_type, int64_t> num_nodes_dict,
+    const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint);

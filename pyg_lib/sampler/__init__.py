@@ -302,9 +302,10 @@ def relabel_neighborhood(
 
 
 def hetero_relabel_neighborhood(
-    edge_types: List[EdgeType], seed_dict: Dict[NodeType, Tensor],
-    sampled_nodes_with_dupl_dict: Dict[NodeType, Tensor],
-    sampled_nbrs_per_node_dict: Dict[NodeType,
+    seed_dict: Dict[NodeType,
+                    Tensor], sampled_nodes_with_dupl_dict: Dict[NodeType,
+                                                                Tensor],
+    sampled_nbrs_per_node_dict: Dict[EdgeType,
                                      List[int]], num_nodes_dict: Dict[NodeType,
                                                                       int],
     batch_dict: Optional[Dict[NodeType, Tensor]] = None, csc: bool = False,
@@ -325,10 +326,26 @@ def hetero_relabel_neighborhood(
     src_node_types = {k[0] for k in sampled_nodes_with_dupl_dict.keys()}
     dst_node_types = {k[-1] for k in sampled_nodes_with_dupl_dict.keys()}
     node_types = list(src_node_types | dst_node_types)
+    edge_types = list(sampled_nbrs_per_node_dict.keys())
 
-    return torch.ops.pyg.hetero_relabel_neighborhood(
+    TO_REL_TYPE = {key: '__'.join(key) for key in edge_types}
+    TO_EDGE_TYPE = {'__'.join(key): key for key in edge_types}
+
+    sampled_nbrs_per_node_dict = {
+        TO_REL_TYPE[k]: v
+        for k, v in sampled_nbrs_per_node_dict.items()
+    }
+
+    out = torch.ops.pyg.hetero_relabel_neighborhood(
         node_types, edge_types, seed_dict, sampled_nodes_with_dupl_dict,
         sampled_nbrs_per_node_dict, num_nodes_dict, batch_dict, csc, disjoint)
+
+    (row_dict, col_dict) = out
+
+    row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
+    col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
+
+    return (row_dict, col_dict)
 
 
 __all__ = [
