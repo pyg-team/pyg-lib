@@ -20,7 +20,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 merge_outputs(
     const std::vector<at::Tensor>& nodes,
-    const std::vector<std::vector<int64_t>>& cumm_sampled_nbrs_per_node,
+    const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
     const int64_t partitions_num,
@@ -40,11 +40,11 @@ merge_outputs(
     at::parallel_for(0, partitions_num, 1, [&](size_t _s, size_t _e) {
       for (auto p_id = _s; p_id < _e; p_id++) {
         auto cummsum1 =
-            std::vector<int64_t>(cumm_sampled_nbrs_per_node[p_id].begin() + 1,
-                                 cumm_sampled_nbrs_per_node[p_id].end());
+            std::vector<int64_t>(cumsum_neighbors_per_node[p_id].begin() + 1,
+                                 cumsum_neighbors_per_node[p_id].end());
         auto cummsum2 =
-            std::vector<int64_t>(cumm_sampled_nbrs_per_node[p_id].begin(),
-                                 cumm_sampled_nbrs_per_node[p_id].end() - 1);
+            std::vector<int64_t>(cumsum_neighbors_per_node[p_id].begin(),
+                                 cumsum_neighbors_per_node[p_id].end() - 1);
         std::transform(cummsum1.begin(), cummsum1.end(), cummsum2.begin(),
                        std::back_inserter(population),
                        [](int64_t a, int64_t b) { return std::abs(a - b); });
@@ -90,11 +90,11 @@ merge_outputs(
 
         // When it comes to node and batch, we omit seed nodes.
         // In the case of edges, we take into account all sampled edge ids.
-        auto begin = cumm_sampled_nbrs_per_node[p_id][p_order];
-        auto begin_edge = begin - cumm_sampled_nbrs_per_node[p_id][0];
+        auto begin = cumsum_neighbors_per_node[p_id][p_order];
+        auto begin_edge = begin - cumsum_neighbors_per_node[p_id][0];
 
-        auto end = cumm_sampled_nbrs_per_node[p_id][p_order + 1];
-        auto end_edge = end - cumm_sampled_nbrs_per_node[p_id][0];
+        auto end = cumsum_neighbors_per_node[p_id][p_order + 1];
+        auto end_edge = end - cumsum_neighbors_per_node[p_id][0];
 
         std::copy(sampled_nodes_vec[p_id].begin() + begin,
                   sampled_nodes_vec[p_id].begin() + end,
@@ -155,7 +155,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 merge_sampler_outputs_kernel(
     const std::vector<at::Tensor>& nodes,
-    const std::vector<std::vector<int64_t>>& cumm_sampled_nbrs_per_node,
+    const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
     const int64_t partitions_num,
@@ -164,7 +164,7 @@ merge_sampler_outputs_kernel(
     const c10::optional<at::Tensor>& batch,
     bool disjoint,
     bool with_edge) {
-  DISPATCH_MERGE_OUTPUTS(disjoint, with_edge, nodes, cumm_sampled_nbrs_per_node,
+  DISPATCH_MERGE_OUTPUTS(disjoint, with_edge, nodes, cumsum_neighbors_per_node,
                          partition_ids, partition_orders, partitions_num,
                          one_hop_num, edge_ids, batch);
 }

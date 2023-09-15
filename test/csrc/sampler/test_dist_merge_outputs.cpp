@@ -20,13 +20,13 @@ TEST(DistMergeOutputsTest, BasicAssertions) {
                                             at::tensor({14, 15, 16}, options),
                                             at::tensor({19, 20}, options)};
 
-  const std::vector<std::vector<int64_t>> cumm_sampled_nbrs_per_node = {
+  const std::vector<std::vector<int64_t>> cumsum_neighbors_per_node = {
       {1, 3}, {2, 4, 5}, {1, 3}};
   const std::vector<int64_t> partition_ids = {1, 1, 0, 2};
   const std::vector<int64_t> partition_orders = {0, 1, 0, 0};
 
   auto out = pyg::sampler::merge_sampler_outputs(
-      nodes, cumm_sampled_nbrs_per_node, partition_ids, partition_orders,
+      nodes, cumsum_neighbors_per_node, partition_ids, partition_orders,
       partitions_num, one_hop_num, edge_ids, /*batch=*/c10::nullopt, disjoint,
       with_edge);
 
@@ -56,13 +56,13 @@ TEST(DistMergeOutputsAllNeighborsTest, BasicAssertions) {
                                             at::tensor({14, 15, 16}, options),
                                             at::tensor({19, 20, 21}, options)};
 
-  const std::vector<std::vector<int64_t>> cumm_sampled_nbrs_per_node = {
+  const std::vector<std::vector<int64_t>> cumsum_neighbors_per_node = {
       {1, 3}, {2, 4, 5}, {1, 4}};
   const std::vector<int64_t> partition_ids = {1, 1, 0, 2};
   const std::vector<int64_t> partition_orders = {0, 1, 0, 0};
 
   auto out = pyg::sampler::merge_sampler_outputs(
-      nodes, cumm_sampled_nbrs_per_node, partition_ids, partition_orders,
+      nodes, cumsum_neighbors_per_node, partition_ids, partition_orders,
       partitions_num, one_hop_num, edge_ids, /*batch=*/c10::nullopt, disjoint,
       with_edge);
 
@@ -90,13 +90,13 @@ TEST(DistDisjointMergeOutputsTest, BasicAssertions) {
                                          at::tensor({3, 9, 10}, options)};
   const auto batch = at::tensor({0, 1, 2, 3}, options);
 
-  const std::vector<std::vector<int64_t>> cumm_sampled_nbrs_per_node = {
+  const std::vector<std::vector<int64_t>> cumsum_neighbors_per_node = {
       {1, 3}, {2, 4, 5}, {1, 3}};
   const std::vector<int64_t> partition_ids = {1, 1, 0, 2};
   const std::vector<int64_t> partition_orders = {0, 1, 0, 0};
 
   auto out = pyg::sampler::merge_sampler_outputs(
-      nodes, cumm_sampled_nbrs_per_node, partition_ids, partition_orders,
+      nodes, cumsum_neighbors_per_node, partition_ids, partition_orders,
       partitions_num, one_hop_num, /*edge_ids=*/c10::nullopt, batch, disjoint,
       with_edge);
 

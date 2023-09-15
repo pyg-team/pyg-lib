@@ -10,7 +10,7 @@ namespace sampler {
 // For distributed training purpose. Merges samplers outputs from different
 // partitions, so that they are sorted according to the sampling order.
 // Removes seed nodes from sampled nodes and calculates how many neighbors
-// were sampled by each src node based on the :obj:`cumm_sampled_nbrs_per_node`.
+// were sampled by each src node based on the :obj:`cumsum_neighbors_per_node`.
 PYG_API
 std::tuple<at::Tensor,
            c10::optional<at::Tensor>,
@@ -18,7 +18,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 merge_sampler_outputs(
     const std::vector<at::Tensor>& nodes,
-    const std::vector<std::vector<int64_t>>& cumm_sampled_nbrs_per_node,
+    const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
     const int64_t partitions_num,

@@ -14,7 +14,7 @@ std::tuple<at::Tensor,
            std::vector<int64_t>>
 merge_sampler_outputs(
     const std::vector<at::Tensor>& nodes,
-    const std::vector<std::vector<int64_t>>& cumm_sampled_nbrs_per_node,
+    const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
     const int64_t partitions_num,
@@ -45,7 +45,7 @@ merge_sampler_outputs(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::merge_sampler_outputs", "")
                        .typed<decltype(merge_sampler_outputs)>();
-  return op.call(nodes, cumm_sampled_nbrs_per_node, partition_ids,
+  return op.call(nodes, cumsum_neighbors_per_node, partition_ids,
                  partition_orders, partitions_num, one_hop_num, edge_ids, batch,
                  disjoint, with_edge);
 }
@@ -53,7 +53,7 @@ merge_sampler_outputs(
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::merge_sampler_outputs(Tensor[] nodes, "
-      "int[][] cumm_sampled_nbrs_per_node, int[] partition_ids, int[] "
+      "int[][] cumsum_neighbors_per_node, int[] partition_ids, int[] "
       "partition_orders, int partitions_num, int one_hop_num, Tensor[]? "
       "edge_ids, Tensor? batch, bool disjoint, bool with_edge) -> (Tensor, "
       "Tensor?, Tensor?, int[])"));
