@@ -13,31 +13,32 @@ namespace sampler {
 
 namespace {
 
-template <bool disjoint, bool with_edge>
+template <bool disjoint>
 std::tuple<at::Tensor,
-           c10::optional<at::Tensor>,
+           at::Tensor,
            c10::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_outputs(
-    const std::vector<at::Tensor>& nodes,
+    const std::vector<at::Tensor>& node_ids,
+    const std::vector<at::Tensor>& edge_ids,
     const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
-    const int64_t partitions_num,
-    const int64_t one_hop_num,
-    const c10::optional<std::vector<at::Tensor>>& edge_ids,
+    const int64_t num_partitions,
+    const int64_t num_neighbors,
     const c10::optional<at::Tensor>& batch) {
-  at::Tensor out_node;
-  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
+  at::Tensor out_node_id;
+  at::Tensor out_edge_id;
   c10::optional<at::Tensor> out_batch = c10::nullopt;
-  int64_t offset = one_hop_num;
 
-  if (one_hop_num < 0) {
+  auto offset = num_neighbors;
+
+  if (num_neighbors < 0) {
     // find maximum population
-    std::vector<std::vector<int64_t>> population(partitions_num);
-    std::vector<int64_t> max_populations(partitions_num);
+    std::vector<std::vector<int64_t>> population(num_partitions);
+    std::vector<int64_t> max_populations(num_partitions);
 
-    at::parallel_for(0, partitions_num, 1, [&](size_t _s, size_t _e) {
+    at::parallel_for(0, num_partitions, 1, [&](size_t _s, size_t _e) {
       for (auto p_id = _s; p_id < _e; p_id++) {
         auto cummsum1 =
             std::vector<int64_t>(cumsum_neighbors_per_node[p_id].begin() + 1,
@@ -57,32 +58,27 @@ merge_outputs(
   }
 
   const auto p_size = partition_ids.size();
-  std::vector<int64_t> sampled_nbrs_per_node(p_size);
+  std::vector<int64_t> sampled_neighbors_per_node(p_size);
 
-  const auto scalar_type = nodes[0].scalar_type();
+  const auto scalar_type = node_ids[0].scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "merge_outputs_kernel", [&] {
-    std::vector<scalar_t> sampled_nodes(p_size * offset, -1);
-    std::vector<scalar_t> sampled_edge_ids;
-    std::vector<scalar_t> sampled_batch;
-    std::vector<std::vector<scalar_t>> sampled_nodes_vec(p_size);
-    std::vector<std::vector<scalar_t>> edge_ids_vec;
+    std::vector<scalar_t> sampled_node_ids(p_size * offset, -1);
+    std::vector<scalar_t> sampled_edge_ids(p_size * offset, -1);
+    std::vector<std::vector<scalar_t>> sampled_node_ids_vec(p_size);
+    std::vector<std::vector<scalar_t>> sampled_edge_ids_vec(p_size);
 
-    if constexpr (with_edge) {
-      sampled_edge_ids = std::vector<scalar_t>(p_size * offset, -1);
-      edge_ids_vec = std::vector<std::vector<scalar_t>>(p_size);
-    }
+    std::vector<scalar_t> sampled_batch;
     if constexpr (disjoint) {
       sampled_batch = std::vector<scalar_t>(p_size * offset, -1);
     }
     const auto batch_data =
         disjoint ? batch.value().data_ptr<scalar_t>() : nullptr;
 
-    for (auto p_id = 0; p_id < partitions_num; p_id++) {
-      sampled_nodes_vec[p_id] = pyg::utils::to_vector<scalar_t>(nodes[p_id]);
-
-      if constexpr (with_edge)
-        edge_ids_vec[p_id] =
-            pyg::utils::to_vector<scalar_t>(edge_ids.value()[p_id]);
+    for (auto p_id = 0; p_id < num_partitions; p_id++) {
+      sampled_node_ids_vec[p_id] =
+          pyg::utils::to_vector<scalar_t>(node_ids[p_id]);
+      sampled_edge_ids_vec[p_id] =
+          pyg::utils::to_vector<scalar_t>(edge_ids[p_id]);
     }
     at::parallel_for(0, p_size, 1, [&](size_t _s, size_t _e) {
       for (auto j = _s; j < _e; j++) {
@@ -91,83 +87,75 @@ merge_outputs(
 
         // When it comes to node and batch, we omit seed nodes.
         // In the case of edges, we take into account all sampled edge ids.
-        auto begin = cumsum_neighbors_per_node[p_id][p_order];
-        auto begin_edge = begin - cumsum_neighbors_per_node[p_id][0];
+        auto begin_node = cumsum_neighbors_per_node[p_id][p_order];
+        auto begin_edge = begin_node - cumsum_neighbors_per_node[p_id][0];
 
-        auto end = cumsum_neighbors_per_node[p_id][p_order + 1];
-        auto end_edge = end - cumsum_neighbors_per_node[p_id][0];
+        auto end_node = cumsum_neighbors_per_node[p_id][p_order + 1];
+        auto end_edge = end_node - cumsum_neighbors_per_node[p_id][0];
 
-        std::copy(sampled_nodes_vec[p_id].begin() + begin,
-                  sampled_nodes_vec[p_id].begin() + end,
-                  sampled_nodes.begin() + j * offset);
-        if constexpr (with_edge)
-          std::copy(edge_ids_vec[p_id].begin() + begin_edge,
-                    edge_ids_vec[p_id].begin() + end_edge,
-                    sampled_edge_ids.begin() + j * offset);
-        if constexpr (disjoint)
+        std::copy(sampled_node_ids_vec[p_id].begin() + begin_node,
+                  sampled_node_ids_vec[p_id].begin() + end_node,
+                  sampled_node_ids.begin() + j * offset);
+        std::copy(sampled_edge_ids_vec[p_id].begin() + begin_edge,
+                  sampled_edge_ids_vec[p_id].begin() + end_edge,
+                  sampled_edge_ids.begin() + j * offset);
+
+        if constexpr (disjoint) {
           std::fill(sampled_batch.begin() + j * offset,
-                    sampled_batch.begin() + j * offset + end - begin,
+                    sampled_batch.begin() + j * offset + end_node - begin_node,
                     batch_data[j]);
+        }
 
-        sampled_nbrs_per_node[j] = end - begin;
+        sampled_neighbors_per_node[j] = end_node - begin_node;
       }
     });
 
-    // remove auxilary -1 numbers
-    auto neg = std::remove(sampled_nodes.begin(), sampled_nodes.end(), -1);
-    sampled_nodes.erase(neg, sampled_nodes.end());
+    // Remove auxilary -1 numbers:
+    auto neg =
+        std::remove(sampled_node_ids.begin(), sampled_node_ids.end(), -1);
+    sampled_node_ids.erase(neg, sampled_node_ids.end());
+    out_node_id = pyg::utils::from_vector(sampled_node_ids);
 
-    out_node = pyg::utils::from_vector(sampled_nodes);
-
-    if constexpr (with_edge) {
-      neg = std::remove(sampled_edge_ids.begin(), sampled_edge_ids.end(), -1);
-      sampled_edge_ids.erase(neg, sampled_edge_ids.end());
-
-      out_edge_id = pyg::utils::from_vector(sampled_edge_ids);
-    }
+    neg = std::remove(sampled_edge_ids.begin(), sampled_edge_ids.end(), -1);
+    sampled_edge_ids.erase(neg, sampled_edge_ids.end());
+    out_edge_id = pyg::utils::from_vector(sampled_edge_ids);
 
     if constexpr (disjoint) {
       neg = std::remove(sampled_batch.begin(), sampled_batch.end(), -1);
       sampled_batch.erase(neg, sampled_batch.end());
-
       out_batch = pyg::utils::from_vector(sampled_batch);
     }
   });
 
-  return std::make_tuple(out_node, out_edge_id, out_batch,
-                         sampled_nbrs_per_node);
+  return std::make_tuple(out_node_id, out_edge_id, out_batch,
+                         sampled_neighbors_per_node);
 }
 
-#define DISPATCH_MERGE_OUTPUTS(disjoint, with_edge, ...) \
-  if (disjoint && with_edge)                             \
-    return merge_outputs<true, true>(__VA_ARGS__);       \
-  if (!disjoint && with_edge)                            \
-    return merge_outputs<false, true>(__VA_ARGS__);      \
-  if (disjoint && !with_edge)                            \
-    return merge_outputs<true, false>(__VA_ARGS__);      \
-  if (!disjoint && !with_edge)                           \
-    return merge_outputs<false, false>(__VA_ARGS__);
+#define DISPATCH_MERGE_OUTPUTS(disjoint, ...) \
+  if (disjoint)                               \
+    return merge_outputs<true>(__VA_ARGS__);  \
+  if (!disjoint)                              \
+    return merge_outputs<false>(__VA_ARGS__);
 
 }  // namespace
 
 std::tuple<at::Tensor,
-           c10::optional<at::Tensor>,
+           at::Tensor,
            c10::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_sampler_outputs_kernel(
-    const std::vector<at::Tensor>& nodes,
+    const std::vector<at::Tensor>& node_ids,
+    const std::vector<at::Tensor>& edge_ids,
     const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
-    const int64_t partitions_num,
-    const int64_t one_hop_num,
-    const c10::optional<std::vector<at::Tensor>>& edge_ids,
+    const int64_t num_partitions,
+    const int64_t num_neighbors,
     const c10::optional<at::Tensor>& batch,
-    bool disjoint,
-    bool with_edge) {
-  DISPATCH_MERGE_OUTPUTS(disjoint, with_edge, nodes, cumsum_neighbors_per_node,
-                         partition_ids, partition_orders, partitions_num,
-                         one_hop_num, edge_ids, batch);
+    bool disjoint) {
+  DISPATCH_MERGE_OUTPUTS(
+      disjoint, node_ids, edge_ids, cumsum_neighbors_per_node, partition_ids,
+      partition_orders, num_partitions, num_neighbors, batch);
 }
 
 // We use `BackendSelect` as a fallback to the dispatcher logic as automatic

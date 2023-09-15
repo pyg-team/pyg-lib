@@ -16,20 +16,19 @@ namespace sampler {
 // cummulative sum of sampled neighbors.
 PYG_API
 std::tuple<at::Tensor,
-           c10::optional<at::Tensor>,
+           at::Tensor,
            c10::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_sampler_outputs(
-    const std::vector<at::Tensor>& nodes,
+    const std::vector<at::Tensor>& node_ids,
+    const std::vector<at::Tensor>& edge_ids,
     const std::vector<std::vector<int64_t>>& cumsum_neighbors_per_node,
     const std::vector<int64_t>& partition_ids,
     const std::vector<int64_t>& partition_orders,
-    const int64_t partitions_num,
-    const int64_t one_hop_num,
-    const c10::optional<std::vector<at::Tensor>>& edge_ids = c10::nullopt,
+    const int64_t num_partitions,
+    const int64_t num_neighbors,
     const c10::optional<at::Tensor>& batch = c10::nullopt,
-    bool disjoint = false,
-    bool with_edge = true);
+    bool disjoint = false);
 
 }  // namespace sampler
 }  // namespace pyg
