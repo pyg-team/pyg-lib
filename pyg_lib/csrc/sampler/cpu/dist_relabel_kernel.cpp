@@ -4,7 +4,6 @@
 
 #include "parallel_hashmap/phmap.h"
 
-#include "pyg_lib/csrc/sampler/cpu/dist_relabel_kernel.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
 #include "pyg_lib/csrc/utils/cpu/convert.h"
 #include "pyg_lib/csrc/utils/types.h"
@@ -32,8 +31,8 @@ std::tuple<at::Tensor, at::Tensor> get_sampled_edges(
 template <bool disjoint>
 std::tuple<at::Tensor, at::Tensor> relabel(
     const at::Tensor& seed,
-    const at::Tensor& sampled_nodes_with_dupl,
-    const std::vector<int64_t>& num_sampled_nbrs_per_node,
+    const at::Tensor& sampled_nodes_with_duplicates,
+    const std::vector<int64_t>& num_sampled_neighbors_per_node,
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch,
     const bool csc) {
@@ -41,195 +40,190 @@ std::tuple<at::Tensor, at::Tensor> relabel(
     TORCH_CHECK(batch.has_value(),
                 "Batch needs to be specified to create disjoint subgraphs");
     TORCH_CHECK(batch.value().is_contiguous(), "Non-contiguous 'batch'");
-    TORCH_CHECK(batch.value().numel() == sampled_nodes_with_dupl.numel(),
-                "Each node must belong to a subgraph.'");
+    TORCH_CHECK(batch.value().numel() == sampled_nodes_with_duplicates.numel(),
+                "Each node must belong to a subgraph");
   }
   TORCH_CHECK(seed.is_contiguous(), "Non-contiguous 'seed'");
-  TORCH_CHECK(sampled_nodes_with_dupl.is_contiguous(),
-              "Non-contiguous 'sampled_nodes_with_dupl'");
+  TORCH_CHECK(sampled_nodes_with_duplicates.is_contiguous(),
+              "Non-contiguous 'sampled_nodes_with_duplicates'");
 
   at::Tensor out_row, out_col;
 
-  AT_DISPATCH_INTEGRAL_TYPES(
-      seed.scalar_type(), "relabel_neighborhood_kernel", [&] {
-        typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
-        typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
+  AT_DISPATCH_INTEGRAL_TYPES(seed.scalar_type(), "relabel_kernel", [&] {
+    typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
+    typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
 
-        const auto sampled_nodes_data =
-            sampled_nodes_with_dupl.data_ptr<scalar_t>();
-        const auto batch_data =
-            !disjoint ? nullptr : batch.value().data_ptr<scalar_t>();
+    const auto sampled_nodes_data =
+        sampled_nodes_with_duplicates.data_ptr<scalar_t>();
+    const auto batch_data =
+        !disjoint ? nullptr : batch.value().data_ptr<scalar_t>();
 
-        std::vector<scalar_t> sampled_rows;
-        std::vector<scalar_t> sampled_cols;
-        auto mapper = Mapper<node_t, scalar_t>(num_nodes);
+    std::vector<scalar_t> sampled_rows;
+    std::vector<scalar_t> sampled_cols;
+    auto mapper = Mapper<node_t, scalar_t>(num_nodes);
 
-        const auto seed_data = seed.data_ptr<scalar_t>();
-        if constexpr (!disjoint) {
-          mapper.fill(seed);
-        } else {
-          for (size_t i = 0; i < seed.numel(); ++i) {
-            mapper.insert({i, seed_data[i]});
-          }
-        }
-        size_t begin = 0;
-        size_t end = 0;
-        for (auto i = 0; i < num_sampled_nbrs_per_node.size(); i++) {
-          end += num_sampled_nbrs_per_node[i];
+    const auto seed_data = seed.data_ptr<scalar_t>();
+    if constexpr (!disjoint) {
+      mapper.fill(seed);
+    } else {
+      for (size_t i = 0; i < seed.numel(); ++i) {
+        mapper.insert({i, seed_data[i]});
+      }
+    }
+    size_t begin = 0, end = 0;
+    for (auto i = 0; i < num_sampled_neighbors_per_node.size(); i++) {
+      end += num_sampled_neighbors_per_node[i];
 
-          for (auto j = begin; j < end; j++) {
-            std::pair<scalar_t, bool> res;
-            if constexpr (!disjoint)
-              res = mapper.insert(sampled_nodes_data[j]);
-            else
-              res = mapper.insert({batch_data[j], sampled_nodes_data[j]});
-            sampled_rows.push_back(i);
-            sampled_cols.push_back(res.first);
-          }
+      for (auto j = begin; j < end; j++) {
+        std::pair<scalar_t, bool> res;
+        if constexpr (!disjoint)
+          res = mapper.insert(sampled_nodes_data[j]);
+        else
+          res = mapper.insert({batch_data[j], sampled_nodes_data[j]});
+        sampled_rows.push_back(i);
+        sampled_cols.push_back(res.first);
+      }
 
-          begin = end;
-        }
+      begin = end;
+    }
 
-        std::tie(out_row, out_col) =
-            get_sampled_edges<scalar_t>(sampled_rows, sampled_cols, csc);
-      });
+    std::tie(out_row, out_col) =
+        get_sampled_edges<scalar_t>(sampled_rows, sampled_cols, csc);
+  });
 
   return std::make_tuple(out_row, out_col);
 }
 
 template <bool disjoint>
 std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>>
-relabel(const std::vector<node_type>& node_types,
-        const std::vector<edge_type>& edge_types,
-        const c10::Dict<node_type, at::Tensor>& seed_dict,
-        const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
-        const c10::Dict<rel_type, std::vector<int64_t>>&
-            num_sampled_nbrs_per_node_dict,
-        const c10::Dict<node_type, int64_t>& num_nodes_dict,
-        const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
-        const bool csc) {
+relabel(
+    const std::vector<node_type>& node_types,
+    const std::vector<edge_type>& edge_types,
+    const c10::Dict<node_type, at::Tensor>& seed_dict,
+    const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_duplicates_dict,
+    const c10::Dict<rel_type, std::vector<int64_t>>&
+        num_sampled_neighbors_per_node_dict,
+    const c10::Dict<node_type, int64_t>& num_nodes_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
+    const bool csc) {
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
 
-  AT_DISPATCH_INTEGRAL_TYPES(
-      seed_dict.begin()->value().scalar_type(),
-      "hetero_relabel_neighborhood_kernel", [&] {
-        typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
-        typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
+  auto scalar_type = seed_dict.begin()->value().scalar_type();
+  AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "hetero_relabel_kernel", [&] {
+    typedef std::pair<scalar_t, scalar_t> pair_scalar_t;
+    typedef std::conditional_t<!disjoint, scalar_t, pair_scalar_t> node_t;
 
-        phmap::flat_hash_map<node_type, scalar_t*> sampled_nodes_data_dict;
-        phmap::flat_hash_map<node_type, scalar_t*> batch_data_dict;
-        phmap::flat_hash_map<edge_type, std::vector<scalar_t>>
-            sampled_rows_dict;
-        phmap::flat_hash_map<edge_type, std::vector<scalar_t>>
-            sampled_cols_dict;
+    phmap::flat_hash_map<node_type, scalar_t*> sampled_nodes_data_dict;
+    phmap::flat_hash_map<node_type, scalar_t*> batch_data_dict;
+    phmap::flat_hash_map<edge_type, std::vector<scalar_t>> sampled_rows_dict;
+    phmap::flat_hash_map<edge_type, std::vector<scalar_t>> sampled_cols_dict;
 
-        phmap::flat_hash_map<node_type, Mapper<node_t, scalar_t>> mapper_dict;
-        phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
+    phmap::flat_hash_map<node_type, Mapper<node_t, scalar_t>> mapper_dict;
+    phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
 
-        const bool parallel =
-            at::get_num_threads() > 1 && edge_types.size() > 1;
-        std::vector<std::vector<edge_type>> threads_edge_types;
+    const bool parallel = at::get_num_threads() > 1 && edge_types.size() > 1;
+    std::vector<std::vector<edge_type>> threads_edge_types;
 
-        for (const auto& k : edge_types) {
-          // Initialize empty vectors.
-          sampled_rows_dict[k];
-          sampled_cols_dict[k];
+    for (const auto& k : edge_types) {
+      // Initialize empty vectors.
+      sampled_rows_dict[k];
+      sampled_cols_dict[k];
 
-          if (parallel) {
-            // Each thread is assigned edge types that have the same dst node
-            // type. Thanks to this, each thread will operate on a separate
-            // mapper and separate sampler.
-            bool added = false;
-            const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
-            for (auto& e : threads_edge_types) {
-              if ((!csc ? std::get<2>(e[0]) : std::get<0>(e[0])) == dst) {
-                e.push_back(k);
-                added = true;
-                break;
+      if (parallel) {
+        // Each thread is assigned edge types that have the same dst node
+        // type. Thanks to this, each thread will operate on a separate
+        // mapper and separate sampler.
+        bool added = false;
+        const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
+        for (auto& e : threads_edge_types) {
+          if ((!csc ? std::get<2>(e[0]) : std::get<0>(e[0])) == dst) {
+            e.push_back(k);
+            added = true;
+            break;
+          }
+        }
+        if (!added)
+          threads_edge_types.push_back({k});
+      }
+    }
+    if (!parallel) {
+      // If not parallel then one thread handles all edge types.
+      threads_edge_types.push_back({edge_types});
+    }
+
+    int64_t N = 0;
+    for (const auto& kv : num_nodes_dict) {
+      N += kv.value() > 0 ? kv.value() : 0;
+    }
+
+    for (const auto& k : node_types) {
+      sampled_nodes_data_dict.insert(
+          {k, sampled_nodes_with_duplicates_dict.at(k).data_ptr<scalar_t>()});
+      mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
+      slice_dict[k] = {0, 0};
+      if constexpr (disjoint) {
+        batch_data_dict.insert(
+            {k, batch_dict.value().at(k).data_ptr<scalar_t>()});
+      }
+    }
+    for (const auto& kv : seed_dict) {
+      const at::Tensor& seed = kv.value();
+      if constexpr (!disjoint) {
+        mapper_dict.at(kv.key()).fill(seed);
+      } else {
+        auto& mapper = mapper_dict.at(kv.key());
+        const auto seed_data = seed.data_ptr<scalar_t>();
+        for (size_t i = 0; i < seed.numel(); ++i) {
+          mapper.insert({i, seed_data[i]});
+        }
+      }
+    }
+    at::parallel_for(
+        0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
+          for (auto j = _s; j < _e; j++) {
+            for (const auto& k : threads_edge_types[j]) {
+              const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
+              const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
+
+              const auto num_sampled_neighbors_size =
+                  num_sampled_neighbors_per_node_dict.at(to_rel_type(k)).size();
+
+              if (num_sampled_neighbors_size == 0) {
+                continue;
               }
-            }
-            if (!added)
-              threads_edge_types.push_back({k});
-          }
-        }
-        if (!parallel) {
-          // If not parallel then one thread handles all edge types.
-          threads_edge_types.push_back({edge_types});
-        }
 
-        int64_t N = 0;
-        for (const auto& kv : num_nodes_dict) {
-          N += kv.value() > 0 ? kv.value() : 0;
-        }
+              for (auto i = 0; i < num_sampled_neighbors_size; i++) {
+                auto& dst_mapper = mapper_dict.at(dst);
+                auto& dst_sampled_nodes_data = sampled_nodes_data_dict.at(dst);
 
-        for (const auto& k : node_types) {
-          sampled_nodes_data_dict.insert(
-              {k, sampled_nodes_with_dupl_dict.at(k).data_ptr<scalar_t>()});
-          mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
-          slice_dict[k] = {0, 0};
-          if constexpr (disjoint) {
-            batch_data_dict.insert(
-                {k, batch_dict.value().at(k).data_ptr<scalar_t>()});
-          }
-        }
-        for (const auto& kv : seed_dict) {
-          const at::Tensor& seed = kv.value();
-          if constexpr (!disjoint) {
-            mapper_dict.at(kv.key()).fill(seed);
-          } else {
-            auto& mapper = mapper_dict.at(kv.key());
-            const auto seed_data = seed.data_ptr<scalar_t>();
-            for (size_t i = 0; i < seed.numel(); ++i) {
-              mapper.insert({i, seed_data[i]});
-            }
-          }
-        }
-        at::parallel_for(
-            0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
-              for (auto j = _s; j < _e; j++) {
-                for (const auto& k : threads_edge_types[j]) {
-                  const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
-                  const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
+                slice_dict.at(dst).second +=
+                    num_sampled_neighbors_per_node_dict.at(to_rel_type(k))[i];
+                auto [begin, end] = slice_dict.at(dst);
 
-                  const auto num_sampled_nbrs_size =
-                      num_sampled_nbrs_per_node_dict.at(to_rel_type(k)).size();
-                  if (num_sampled_nbrs_size == 0) {
-                    continue;
+                for (auto j = begin; j < end; j++) {
+                  std::pair<scalar_t, bool> res;
+                  if constexpr (!disjoint) {
+                    res = dst_mapper.insert(dst_sampled_nodes_data[j]);
+                  } else {
+                    res = dst_mapper.insert({batch_data_dict.at(dst)[j],
+                                             dst_sampled_nodes_data[j]});
                   }
-
-                  for (auto i = 0; i < num_sampled_nbrs_size; i++) {
-                    auto& dst_mapper = mapper_dict.at(dst);
-                    auto& dst_sampled_nodes_data =
-                        sampled_nodes_data_dict.at(dst);
-
-                    slice_dict.at(dst).second +=
-                        num_sampled_nbrs_per_node_dict.at(to_rel_type(k))[i];
-                    auto [begin, end] = slice_dict.at(dst);
-
-                    for (auto j = begin; j < end; j++) {
-                      std::pair<scalar_t, bool> res;
-                      if constexpr (!disjoint) {
-                        res = dst_mapper.insert(dst_sampled_nodes_data[j]);
-                      } else {
-                        res = dst_mapper.insert({batch_data_dict.at(dst)[j],
-                                                 dst_sampled_nodes_data[j]});
-                      }
-                      sampled_rows_dict.at(k).push_back(i);
-                      sampled_cols_dict.at(k).push_back(res.first);
-                    }
-                    slice_dict.at(dst).first = end;
-                  }
+                  sampled_rows_dict.at(k).push_back(i);
+                  sampled_cols_dict.at(k).push_back(res.first);
                 }
+                slice_dict.at(dst).first = end;
               }
-            });
+            }
+          }
+        });
 
-        for (const auto& k : edge_types) {
-          const auto edges = get_sampled_edges<scalar_t>(
-              sampled_rows_dict.at(k), sampled_cols_dict.at(k), csc);
-          out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
-          out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
-        }
-      });
+    for (const auto& k : edge_types) {
+      const auto edges = get_sampled_edges<scalar_t>(
+          sampled_rows_dict.at(k), sampled_cols_dict.at(k), csc);
+      out_row_dict.insert(to_rel_type(k), std::get<0>(edges));
+      out_col_dict.insert(to_rel_type(k), std::get<1>(edges));
+    }
+  });
 
   return std::make_tuple(out_row_dict, out_col_dict);
 }
@@ -244,14 +238,14 @@ relabel(const std::vector<node_type>& node_types,
 
 std::tuple<at::Tensor, at::Tensor> relabel_neighborhood_kernel(
     const at::Tensor& seed,
-    const at::Tensor& sampled_nodes_with_dupl,
-    const std::vector<int64_t>& num_sampled_nbrs_per_node,
+    const at::Tensor& sampled_nodes_with_duplicates,
+    const std::vector<int64_t>& num_sampled_neighbors_per_node,
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch,
     bool csc,
     bool disjoint) {
-  DISPATCH_RELABEL(disjoint, seed, sampled_nodes_with_dupl,
-                   num_sampled_nbrs_per_node, num_nodes, batch, csc);
+  DISPATCH_RELABEL(disjoint, seed, sampled_nodes_with_duplicates,
+                   num_sampled_neighbors_per_node, num_nodes, batch, csc);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>>
@@ -259,17 +253,18 @@ hetero_relabel_neighborhood_kernel(
     const std::vector<node_type>& node_types,
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
-    const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_dupl_dict,
+    const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_duplicates_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>&
-        num_sampled_nbrs_per_node_dict,
+        num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint) {
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   DISPATCH_RELABEL(disjoint, node_types, edge_types, seed_dict,
-                   sampled_nodes_with_dupl_dict, num_sampled_nbrs_per_node_dict,
-                   num_nodes_dict, batch_dict, csc);
+                   sampled_nodes_with_duplicates_dict,
+                   num_sampled_neighbors_per_node_dict, num_nodes_dict,
+                   batch_dict, csc);
 }
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
