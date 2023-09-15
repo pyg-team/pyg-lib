@@ -34,7 +34,7 @@ merge_outputs(
 
   if (one_hop_num < 0) {
     // find maximum population
-    std::vector<int64_t> population;
+    std::vector<std::vector<int64_t>> population(partitions_num);
     std::vector<int64_t> max_populations(partitions_num);
 
     at::parallel_for(0, partitions_num, 1, [&](size_t _s, size_t _e) {
@@ -46,9 +46,10 @@ merge_outputs(
             std::vector<int64_t>(cumsum_neighbors_per_node[p_id].begin(),
                                  cumsum_neighbors_per_node[p_id].end() - 1);
         std::transform(cummsum1.begin(), cummsum1.end(), cummsum2.begin(),
-                       std::back_inserter(population),
+                       std::back_inserter(population[p_id]),
                        [](int64_t a, int64_t b) { return std::abs(a - b); });
-        auto max = *max_element(population.begin(), population.end());
+        auto max =
+            *max_element(population[p_id].begin(), population[p_id].end());
         max_populations[p_id] = max;
       }
     });
