@@ -755,39 +755,23 @@ sample(const std::vector<node_type>& node_types,
   if (!replace && !directed && !disjoint && !return_edge_id)              \
     return sample<false, false, false, false, false>(__VA_ARGS__);
 
-#define DISPATCH_DIST_SAMPLE(replace, directed, disjoint, return_edge_id, ...) \
-  if (replace && directed && disjoint && return_edge_id)                       \
-    return sample<true, true, true, true, true>(__VA_ARGS__);                  \
-  if (replace && directed && disjoint && !return_edge_id)                      \
-    return sample<true, true, true, false, true>(__VA_ARGS__);                 \
-  if (replace && directed && !disjoint && return_edge_id)                      \
-    return sample<true, true, false, true, true>(__VA_ARGS__);                 \
-  if (replace && directed && !disjoint && !return_edge_id)                     \
-    return sample<true, true, false, false, true>(__VA_ARGS__);                \
-  if (replace && !directed && disjoint && return_edge_id)                      \
-    return sample<true, false, true, true, true>(__VA_ARGS__);                 \
-  if (replace && !directed && disjoint && !return_edge_id)                     \
-    return sample<true, false, true, false, true>(__VA_ARGS__);                \
-  if (replace && !directed && !disjoint && return_edge_id)                     \
-    return sample<true, false, false, true, true>(__VA_ARGS__);                \
-  if (replace && !directed && !disjoint && !return_edge_id)                    \
-    return sample<true, false, false, false, true>(__VA_ARGS__);               \
-  if (!replace && directed && disjoint && return_edge_id)                      \
-    return sample<false, true, true, true, true>(__VA_ARGS__);                 \
-  if (!replace && directed && disjoint && !return_edge_id)                     \
-    return sample<false, true, true, false, true>(__VA_ARGS__);                \
-  if (!replace && directed && !disjoint && return_edge_id)                     \
-    return sample<false, true, false, true, true>(__VA_ARGS__);                \
-  if (!replace && directed && !disjoint && !return_edge_id)                    \
-    return sample<false, true, false, false, true>(__VA_ARGS__);               \
-  if (!replace && !directed && disjoint && return_edge_id)                     \
-    return sample<false, false, true, true, true>(__VA_ARGS__);                \
-  if (!replace && !directed && disjoint && !return_edge_id)                    \
-    return sample<false, false, true, false, true>(__VA_ARGS__);               \
-  if (!replace && !directed && !disjoint && return_edge_id)                    \
-    return sample<false, false, false, true, true>(__VA_ARGS__);               \
-  if (!replace && !directed && !disjoint && !return_edge_id)                   \
-    return sample<false, false, false, false, true>(__VA_ARGS__);
+#define DISPATCH_DIST_SAMPLE(replace, directed, disjoint, ...)  \
+  if (replace && directed && disjoint)                          \
+    return sample<true, true, true, true, true>(__VA_ARGS__);   \
+  if (replace && directed && !disjoint)                         \
+    return sample<true, true, false, true, true>(__VA_ARGS__);  \
+  if (replace && !directed && disjoint)                         \
+    return sample<true, false, true, true, true>(__VA_ARGS__);  \
+  if (replace && !directed && !disjoint)                        \
+    return sample<true, false, false, true, true>(__VA_ARGS__); \
+  if (!replace && directed && disjoint)                         \
+    return sample<false, true, true, true, true>(__VA_ARGS__);  \
+  if (!replace && directed && !disjoint)                        \
+    return sample<false, true, false, true, true>(__VA_ARGS__); \
+  if (!replace && !directed && disjoint)                        \
+    return sample<false, false, true, true, true>(__VA_ARGS__); \
+  if (!replace && !directed && !disjoint)                       \
+    return sample<false, false, false, true, true>(__VA_ARGS__);
 
 }  // namespace
 
@@ -859,12 +843,11 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             bool replace,
                             bool directed,
                             bool disjoint,
-                            std::string temporal_strategy,
-                            bool return_edge_id) {
+                            std::string temporal_strategy) {
   const auto out = [&] {
-    DISPATCH_DIST_SAMPLE(replace, directed, disjoint, return_edge_id, rowptr,
-                         col, seed, {num_neighbors}, time, seed_time,
-                         edge_weight, csc, temporal_strategy);
+    DISPATCH_DIST_SAMPLE(replace, directed, disjoint, rowptr, col, seed,
+                         {num_neighbors}, time, seed_time, edge_weight, csc,
+                         temporal_strategy);
   }();
   return std::make_tuple(std::get<2>(out), std::get<3>(out).value(),
                          std::get<6>(out));

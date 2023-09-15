@@ -7,10 +7,13 @@
 namespace pyg {
 namespace sampler {
 
-// For distributed training purpose. Merges samplers outputs from different
+// For distributed training purposes. Merges sampler outputs from different
 // partitions, so that they are sorted according to the sampling order.
 // Removes seed nodes from sampled nodes and calculates how many neighbors
-// were sampled by each src node based on the :obj:`cumsum_neighbors_per_node`.
+// were sampled by each source node based on the cummulative sum of sampled
+// neighbors for each input node.
+// Returns the unified node, edge and batch indices as well as the merged
+// cummulative sum of sampled neighbors.
 PYG_API
 std::tuple<at::Tensor,
            c10::optional<at::Tensor>,

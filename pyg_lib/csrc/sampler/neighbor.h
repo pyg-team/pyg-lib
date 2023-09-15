@@ -61,6 +61,11 @@ hetero_neighbor_sample(
     std::string strategy = "uniform",
     bool return_edge_id = true);
 
+// For distributed sampling purposes. Leverages the `neighbor_sample` function
+// internally. Samples one-hop neighborhoods with duplicates from all node
+// indices in `seed` in the graph given by `(rowptr, col)`.
+// Returns the original node and edge indices for all sampled nodes and edges.
+// Lastly, returns the cummulative sum of sampled neighbors for each input node.
 PYG_API
 std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     const at::Tensor& rowptr,
@@ -74,8 +79,7 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     bool replace = false,
     bool directed = true,
     bool disjoint = false,
-    std::string strategy = "uniform",
-    bool return_edge_id = true);
+    std::string strategy = "uniform");
 
 }  // namespace sampler
 }  // namespace pyg

@@ -106,8 +106,7 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     bool replace,
     bool directed,
     bool disjoint,
-    std::string temporal_strategy,
-    bool return_edge_id) {
+    std::string temporal_strategy) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg seed_t{seed, "seed", 1};
@@ -120,8 +119,7 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
                        .findSchemaOrThrow("pyg::dist_neighbor_sample", "")
                        .typed<decltype(dist_neighbor_sample)>();
   return op.call(rowptr, col, seed, num_neighbors, time, seed_time, edge_weight,
-                 csc, replace, directed, disjoint, temporal_strategy,
-                 return_edge_id);
+                 csc, replace, directed, disjoint, temporal_strategy);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
@@ -147,7 +145,7 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? "
       "edge_weight = None, bool csc = False, bool replace = False, bool "
       "directed = True, bool disjoint = False, str temporal_strategy = "
-      "'uniform', bool return_edge_id = True) -> (Tensor, Tensor, int[])"));
+      "'uniform') -> (Tensor, Tensor, int[])"));
 }
 
 }  // namespace sampler
