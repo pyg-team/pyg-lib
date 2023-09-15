@@ -230,7 +230,8 @@ TEST(DistHeteroDisjointRelabelNeighborhoodTest, BasicAssertions) {
       /*sampled_neighbors_per_node=*/sampled_neighbors_per_node_dict,
       /*num_nodes_dict=*/num_nodes_dict,
       /*batch_dict=*/batch_dict,
-      /*csc=*/false, /*disjoint=*/true);
+      /*csc=*/false,
+      /*disjoint=*/true);
 
   auto expected_row = at::tensor({0, 0, 1, 1}, options);
   EXPECT_TRUE(at::equal(std::get<0>(relabel_out).at(rel_key), expected_row));
