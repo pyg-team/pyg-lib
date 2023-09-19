@@ -332,6 +332,52 @@ def index_sort(
     return torch.ops.pyg.index_sort(inputs, max_value)
 
 
+def softmax(
+    src: Tensor,
+    index: Optional[Tensor] = None,
+    ptr: Optional[Tensor] = None,
+    num_nodes: Optional[int] = None,
+    dim: int = 0,
+) -> Tensor:
+    r"""Computes a sparsely evaluated softmax.
+    Given a value tensor :attr:`src`, this function first groups the values
+    along the given dimension :attr:`dim`, based on the indices specified in
+    :attr:`index`, and then proceeds to compute the softmax individually for
+    each group.
+
+    Args:
+        src (Tensor): The source tensor.
+        index (LongTensor, optional): The indices of elements for applying the
+            softmax. (default: :obj:`None`)
+        ptr (LongTensor, optional): If given, computes the softmax based on
+            sorted inputs in CSR representation. (default: :obj:`None`)
+        num_nodes (int, optional): The number of nodes, *i.e.*
+            :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+        dim (int, optional): The dimension in which to normalize.
+            (default: :obj:`0`)
+
+    :rtype: :class:`Tensor`
+
+    Examples:
+
+        >>> src = torch.randn(4, 4)
+        >>> ptr = torch.tensor([0, 4])
+        >>> softmax(src, None, ptr)
+        tensor([[0.0157, 0.0984, 0.1250, 0.4523],
+                [0.1453, 0.2591, 0.5907, 0.2410],
+                [0.0598, 0.2923, 0.1206, 0.0921],
+                [0.7792, 0.3502, 0.1638, 0.2145]])
+    """
+    if src.dim() != 2 or not src.is_cpu or ptr is None or dim != 0:
+        # currently softmax is implemented for GAT cases:
+        # - src is of shape(X, num_heads) and associated with CPU device
+        # - ptr is given
+        # - dim is 0
+        raise NotImplementedError
+
+    return torch.ops.pyg.softmax_forward(src, index, ptr, num_nodes, dim)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -340,4 +386,5 @@ __all__ = [
     'sampled_mul',
     'sampled_div',
     'index_sort',
+    'softmax',
 ]
