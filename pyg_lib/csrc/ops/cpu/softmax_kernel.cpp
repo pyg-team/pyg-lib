@@ -127,10 +127,44 @@ at::Tensor softmax_forward_kernel(const at::Tensor& src,
 
 at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
                                                  const at::Tensor& out_grad,
-                                                 const at::Tensor& ptr) {
+                                                 const at::Tensor& groups) {
   auto in_grad = at::zeros_like(out);
 
-  // TODO: not implemented yet
+  AT_DISPATCH_FLOATING_TYPES(
+      out.scalar_type(), "softmax_backward_kernel_ptr_dim0_impl", [&] {
+        const auto n_groups = groups.size(0) - 1;
+        const auto n_heads = out.size(-1);
+
+        const auto out_ptr = out.data_ptr<scalar_t>();
+        const auto out_grad_ptr = out_grad.data_ptr<scalar_t>();
+        const auto groups_ptr = groups.data_ptr<int64_t>();
+        auto in_grad_ptr = in_grad.data_ptr<scalar_t>();
+        const auto new_groups = std::move(
+            create_per_thread_groups(groups_ptr, n_groups, out.size(0)));
+
+        at::parallel_for(
+            0, new_groups.size() - 1, 1, [&](int64_t beg, int64_t end) {
+              for (auto group_id = new_groups[beg]; group_id < new_groups[end];
+                   ++group_id) {
+                const auto row_beg = groups_ptr[group_id];
+                const auto row_end = groups_ptr[group_id + 1];
+                const auto rows_in_group = row_end - row_beg;
+                const auto offset = row_beg * n_heads;
+                const auto out_beg_ptr = out_ptr + offset;
+                const auto out_grad_beg_ptr = out_grad_ptr + offset;
+                auto in_grad_beg_ptr = in_grad_ptr + offset;
+
+                for (int64_t i = 0; i < rows_in_group; ++i) {
+                  for (int64_t j = 0; j < rows_in_group * n_heads; ++j) {
+                    const auto id = i * n_heads + j % n_heads;
+                    in_grad_beg_ptr[id] +=
+                        out_grad_beg_ptr[j] * out_beg_ptr[j] *
+                        ((i == (j / n_heads)) - out_beg_ptr[id]);
+                  }
+                }
+              }
+            });
+      });
 
   return in_grad;
 }
