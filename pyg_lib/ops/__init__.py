@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -332,6 +332,33 @@ def index_sort(
     return torch.ops.pyg.index_sort(inputs, max_value)
 
 
+class Softmax(torch.autograd.Function):
+    @staticmethod
+    def forward(
+        ctx,
+        src: Tensor,
+        index: Optional[Tensor] = None,
+        ptr: Optional[Tensor] = None,
+        num_nodes: Optional[int] = None,
+        dim: int = 0,
+    ) -> Tensor:
+        out = torch.ops.pyg.softmax_forward(src, index, ptr, num_nodes, dim)
+        ctx.save_for_backward(out, index, ptr)
+        ctx.num_nodes = num_nodes
+        ctx.dim = dim
+
+        return out
+
+    @staticmethod
+    def backward(ctx, out_grad: Tensor) -> Tuple[Union[Tensor, int]]:
+        out, index, ptr = ctx.saved_tensors
+        in_grad = torch.ops.pyg.softmax_backward(
+            out, out_grad, index, ptr, ctx.num_nodes, ctx.dim
+        )
+
+        return in_grad, None, None, None, None
+
+
 def softmax(
     src: Tensor,
     index: Optional[Tensor] = None,
@@ -375,7 +402,7 @@ def softmax(
         # - dim is 0
         raise NotImplementedError
 
-    return torch.ops.pyg.softmax_forward(src, index, ptr, num_nodes, dim)
+    return Softmax.apply(src, index, ptr, num_nodes, dim)
 
 
 __all__ = [
