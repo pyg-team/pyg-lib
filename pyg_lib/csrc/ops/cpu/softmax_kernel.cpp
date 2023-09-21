@@ -134,11 +134,13 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
       out.scalar_type(), "softmax_backward_kernel_ptr_dim0_impl", [&] {
         const auto n_groups = groups.size(0) - 1;
         const auto n_heads = out.size(-1);
+        auto sum = at::zeros({n_groups, n_heads});
 
         const auto out_ptr = out.data_ptr<scalar_t>();
         const auto out_grad_ptr = out_grad.data_ptr<scalar_t>();
         const auto groups_ptr = groups.data_ptr<int64_t>();
         auto in_grad_ptr = in_grad.data_ptr<scalar_t>();
+        auto sum_ptr = sum.data_ptr<scalar_t>();
         const auto new_groups = std::move(
             create_per_thread_groups(groups_ptr, n_groups, out.size(0)));
 
@@ -150,17 +152,23 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
                 const auto row_end = groups_ptr[group_id + 1];
                 const auto rows_in_group = row_end - row_beg;
                 const auto offset = row_beg * n_heads;
+                const auto aux_offset = group_id * n_heads;
                 const auto out_beg_ptr = out_ptr + offset;
                 const auto out_grad_beg_ptr = out_grad_ptr + offset;
                 auto in_grad_beg_ptr = in_grad_ptr + offset;
+                auto sum_beg_ptr = sum_ptr + aux_offset;
 
-                for (int64_t i = 0; i < rows_in_group; ++i) {
-                  for (int64_t j = 0; j < rows_in_group * n_heads; ++j) {
-                    const auto id = i * n_heads + j % n_heads;
-                    in_grad_beg_ptr[id] +=
-                        out_grad_beg_ptr[j] * out_beg_ptr[j] *
-                        ((i == (j / n_heads)) - out_beg_ptr[id]);
-                  }
+                // calculate sum of out * out_grad
+                for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
+                  const auto aux_id = i % n_heads;
+                  sum_beg_ptr[aux_id] += out_beg_ptr[i] * out_grad_beg_ptr[i];
+                }
+
+                // calculate out * (out_grad - sum)
+                for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
+                  const auto aux_id = i % n_heads;
+                  in_grad_beg_ptr[i] = out_beg_ptr[i] * (out_grad_beg_ptr[i] -
+                                                         sum_beg_ptr[aux_id]);
                 }
               }
             });
