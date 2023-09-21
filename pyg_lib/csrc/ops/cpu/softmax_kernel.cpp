@@ -61,11 +61,11 @@ at::Tensor softmax_forward_kernel_ptr_dim0_impl(const at::Tensor& src,
                             std::numeric_limits<scalar_t>::lowest());
         auto sum = at::zeros({n_groups, n_heads});
 
-        const auto src_ptr = src.data_ptr<scalar_t>();
         const auto groups_ptr = groups.data_ptr<int64_t>();
-        auto out_ptr = out.data_ptr<scalar_t>();
-        auto max_ptr = max.data_ptr<scalar_t>();
-        auto sum_ptr = sum.data_ptr<scalar_t>();
+        const auto src_base_ptr = src.data_ptr<scalar_t>();
+        auto out_base_ptr = out.data_ptr<scalar_t>();
+        auto max_base_ptr = max.data_ptr<scalar_t>();
+        auto sum_base_ptr = sum.data_ptr<scalar_t>();
         const auto new_groups = std::move(
             create_per_thread_groups(groups_ptr, n_groups, src.size(0)));
 
@@ -79,33 +79,32 @@ at::Tensor softmax_forward_kernel_ptr_dim0_impl(const at::Tensor& src,
                 const auto rows_in_group = row_end - row_beg;
                 const auto inout_offset = row_beg * n_heads;
                 const auto aux_offset = group_id * n_heads;
-                const auto src_beg_ptr = src_ptr + inout_offset;
-                auto out_beg_ptr = out_ptr + inout_offset;
-                auto max_beg_ptr = max_ptr + aux_offset;
-                auto sum_beg_ptr = sum_ptr + aux_offset;
+
+                const auto src_ptr = src_base_ptr + inout_offset;
+                auto out_ptr = out_base_ptr + inout_offset;
+                auto max_ptr = max_base_ptr + aux_offset;
+                auto sum_ptr = sum_base_ptr + aux_offset;
 
                 if (rows_in_group == 1) {
-                  std::fill(out_beg_ptr, out_beg_ptr + n_heads,
+                  std::fill(out_ptr, out_ptr + n_heads,
                             static_cast<scalar_t>(1.0));
                 } else {
                   // calculate max
                   for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
                     const auto aux_id = i % n_heads;
-                    max_beg_ptr[aux_id] =
-                        std::max(max_beg_ptr[aux_id], src_beg_ptr[i]);
+                    max_ptr[aux_id] = std::max(max_ptr[aux_id], src_ptr[i]);
                   }
                   // calculate sum
                   for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
                     const auto aux_id = i % n_heads;
-                    const auto value =
-                        std::exp(src_beg_ptr[i] - max_beg_ptr[aux_id]);
-                    sum_beg_ptr[aux_id] += value;
-                    out_beg_ptr[i] = value;
+                    const auto value = std::exp(src_ptr[i] - max_ptr[aux_id]);
+                    sum_ptr[aux_id] += value;
+                    out_ptr[i] = value;
                   }
                   // unify
                   for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
                     const auto aux_id = i % n_heads;
-                    out_beg_ptr[i] /= sum_beg_ptr[aux_id];
+                    out_ptr[i] /= sum_ptr[aux_id];
                   }
                 }
               }
@@ -136,11 +135,11 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
         const auto n_heads = out.size(-1);
         auto sum = at::zeros({n_groups, n_heads});
 
-        const auto out_ptr = out.data_ptr<scalar_t>();
-        const auto out_grad_ptr = out_grad.data_ptr<scalar_t>();
         const auto groups_ptr = groups.data_ptr<int64_t>();
-        auto in_grad_ptr = in_grad.data_ptr<scalar_t>();
-        auto sum_ptr = sum.data_ptr<scalar_t>();
+        const auto out_base_ptr = out.data_ptr<scalar_t>();
+        const auto out_grad_base_ptr = out_grad.data_ptr<scalar_t>();
+        auto in_grad_base_ptr = in_grad.data_ptr<scalar_t>();
+        auto sum_base_ptr = sum.data_ptr<scalar_t>();
         const auto new_groups = std::move(
             create_per_thread_groups(groups_ptr, n_groups, out.size(0)));
 
@@ -151,24 +150,25 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
                 const auto row_beg = groups_ptr[group_id];
                 const auto row_end = groups_ptr[group_id + 1];
                 const auto rows_in_group = row_end - row_beg;
-                const auto offset = row_beg * n_heads;
-                const auto aux_offset = group_id * n_heads;
-                const auto out_beg_ptr = out_ptr + offset;
-                const auto out_grad_beg_ptr = out_grad_ptr + offset;
-                auto in_grad_beg_ptr = in_grad_ptr + offset;
-                auto sum_beg_ptr = sum_ptr + aux_offset;
+                const auto inout_offset = row_beg * n_heads;
+                const auto sum_offset = group_id * n_heads;
+
+                const auto out_ptr = out_base_ptr + inout_offset;
+                const auto out_grad_ptr = out_grad_base_ptr + inout_offset;
+                auto in_grad_ptr = in_grad_base_ptr + inout_offset;
+                auto sum_ptr = sum_base_ptr + sum_offset;
 
                 // calculate sum of out * out_grad
                 for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
                   const auto aux_id = i % n_heads;
-                  sum_beg_ptr[aux_id] += out_beg_ptr[i] * out_grad_beg_ptr[i];
+                  sum_ptr[aux_id] += out_ptr[i] * out_grad_ptr[i];
                 }
 
                 // calculate out * (out_grad - sum)
                 for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
                   const auto aux_id = i % n_heads;
-                  in_grad_beg_ptr[i] = out_beg_ptr[i] * (out_grad_beg_ptr[i] -
-                                                         sum_beg_ptr[aux_id]);
+                  in_grad_ptr[i] =
+                      out_ptr[i] * (out_grad_ptr[i] - sum_ptr[aux_id]);
                 }
               }
             });
