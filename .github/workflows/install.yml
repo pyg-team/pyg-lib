@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        cuda-version: ['cpu', 'cu117']
+        cuda-version: ['cpu', 'cu121']
 
     steps:
       - name: Checkout repository
