@@ -39,9 +39,9 @@ jobs:
             cuda-version: 'cu121'
           - torch-version: 2.1.0
             cuda-version: 'cu113'
-          - torch-version: 2.0.0
+          - torch-version: 2.1.0
             cuda-version: 'cu116'
-          - torch-version: 1.13.0
+          - torch-version: 2.1.0
             cuda-version: 'cu117'
           - os: macos-10.15
             cuda-version: 'cu113'
