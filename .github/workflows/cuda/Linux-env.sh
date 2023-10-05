@@ -1,6 +1,10 @@
 #!/bin/bash
 
 case ${1} in
+  cu121)
+    export FORCE_CUDA=1
+    export PATH=/usr/local/cuda-12.1/bin:${PATH}
+    ;;
   cu118)
     export FORCE_CUDA=1
     export PATH=/usr/local/cuda-11.8/bin:${PATH}
