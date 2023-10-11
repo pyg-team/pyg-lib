@@ -3,7 +3,12 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [0.3.0] - 2023-MM-DD
+## [0.4.0] - 2023-MM-DD
+### Added
+### Changed
+### Removed
+
+## [0.3.0] - 2023-10-11
 ### Added
 - Added PyTorch 2.1 support ([#256](https://github.com/pyg-team/pyg-lib/pull/256))
 - Added low-level support for distributed neighborhood sampling ([#246](https://github.com/pyg-team/pyg-lib/pull/246), [#252](https://github.com/pyg-team/pyg-lib/pull/252), [#253](https://github.com/pyg-team/pyg-lib/pull/253), [#254](https://github.com/pyg-team/pyg-lib/pull/254))
