@@ -4,10 +4,10 @@ import torch
 import pyg_lib
 
 from time import perf_counter as timestamp
-from torch_geometric.utils import scatter, segment
+from torch_geometric.utils import segment
 
 
-def softmax_reference(src, ptr, dim=0):
+def softmax_reference_ptr(src, ptr, dim=0):
     dim = dim + src.dim() if dim < 0 else dim
     size = ([1] * dim) + [-1]
     count = ptr[1:] - ptr[:-1]
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     func_args = [ptr, out_grad, num_warmups, num_steps, args.backward]
 
-    t_fwd, t_bwd = measure_perf(softmax_reference, *func_args)
+    t_fwd, t_bwd = measure_perf(softmax_reference_ptr, *func_args)
     print(f'Vanilla forward: {t_fwd:.4f}s')
     if args.backward:
         print(f'Vanilla backward: {t_bwd:.4f}s')
