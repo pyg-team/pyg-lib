@@ -352,9 +352,8 @@ class Softmax(torch.autograd.Function):
     @staticmethod
     def backward(ctx, out_grad: Tensor) -> Tuple[Union[Tensor, int]]:
         out, index, ptr = ctx.saved_tensors
-        in_grad = torch.ops.pyg.softmax_backward(
-            out, out_grad, index, ptr, ctx.num_nodes, ctx.dim
-        )
+        in_grad = torch.ops.pyg.softmax_backward(out, out_grad, index, ptr,
+                                                 ctx.num_nodes, ctx.dim)
 
         return in_grad, None, None, None, None
 

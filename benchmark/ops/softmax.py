@@ -1,10 +1,10 @@
 import argparse
+from time import perf_counter as timestamp
 
 import torch
-import pyg_lib
-
-from time import perf_counter as timestamp
 from torch_geometric.utils import segment
+
+import pyg_lib
 
 
 def softmax_reference_ptr(src, ptr, dim=0):
@@ -66,4 +66,3 @@ if __name__ == '__main__':
     print(f'pyg_lib forward:  {t_fwd:.4f}s')
     if args.backward:
         print(f'pyg_lib backward: {t_bwd:.4f}s')
-
