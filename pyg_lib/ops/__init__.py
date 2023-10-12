@@ -372,6 +372,12 @@ def softmax(
     :attr:`index`, and then proceeds to compute the softmax individually for
     each group.
 
+    .. note::
+
+        This operation is currently implemented only for 2D data, where
+        segments are created along the first dimension and are defined using
+        ptr.
+
     Args:
         src (Tensor): The source tensor.
         index (LongTensor, optional): The indices of elements for applying the
