@@ -46,7 +46,10 @@ def test_neighbor(dataset, **kwargs):
         raise ValueError(
             "Temporal sampling needs to create disjoint subgraphs")
 
-    (rowptr, col), num_nodes, num_edges = dataset, dataset[0].size(0) - 1, dataset[1].size(0) - 1
+    (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
+    num_edges = col.size(0)
+    
+    print(rowptr, col)
     if 'dgl' in args.libraries:
         import dgl
         dgl_graph = dgl.graph(
