@@ -65,7 +65,7 @@ def test_hetero_neighbor(dataset, **kwargs):
     if args.biased:
         ones = torch.ones(num_edges_dict['paper']).view(-1, 1)
         zeros = torch.zeros(num_edges_dict['paper']).view(-1, 1)
-        edge_weights_dict = {k: torch.cat([ones, zeros], -1).view(-1) for k, v in row_dict.items()}
+        edge_weights_dict = {k: torch.cat([ones, zeros], -1).view(-1) for k in row_dict.keys()}
     else:
         edge_weights_dict = None
 
