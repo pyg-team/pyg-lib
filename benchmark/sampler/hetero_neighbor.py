@@ -33,6 +33,7 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
 # TODO(kgajdamo): Enable sampling with replacement
 # argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
+argparser.add_argument('--biased', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
 argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
                        default='uniform')
@@ -51,6 +52,7 @@ def test_hetero_neighbor(dataset, **kwargs):
 
     colptr_dict, row_dict = dataset
     num_nodes_dict = {k[-1]: v.size(0) - 1 for k, v in colptr_dict.items()}
+    num_edges_dict = {k: v.size(0) for k, v in row_dict.items()}
 
     if args.temporal:
         # generate random timestamps
@@ -59,6 +61,13 @@ def test_hetero_neighbor(dataset, **kwargs):
         node_time_dict = {'paper': node_time}
     else:
         node_time_dict = None
+
+    edge_weight_dict = None
+    if args.biased:
+        edge_weight_dict = {
+            edge_type: torch.rand(num_edges)
+            for edge_type, num_edges in num_edges_dict.items()
+        }
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes_dict['paper'])
@@ -86,6 +95,7 @@ def test_hetero_neighbor(dataset, **kwargs):
                     num_neighbors_dict,
                     node_time_dict,
                     seed_time_dict=None,
+                    edge_weight_dict=edge_weight_dict,
                     csc=True,
                     replace=False,
                     directed=True,

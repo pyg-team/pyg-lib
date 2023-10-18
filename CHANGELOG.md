@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ## [0.4.0] - 2023-MM-DD
 ### Added
 ### Changed
+- Added `--biased` parameter to run benchmarks for biased sampling ([#267](https://github.com/pyg-team/pyg-lib/pull/267))
 ### Removed
 
 ## [0.3.0] - 2023-10-11

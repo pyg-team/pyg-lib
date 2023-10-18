@@ -29,6 +29,7 @@ argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
 ])
 argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
+argparser.add_argument('--biased', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
 argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
                        default='uniform')
@@ -45,7 +46,10 @@ def test_neighbor(dataset, **kwargs):
         raise ValueError(
             "Temporal sampling needs to create disjoint subgraphs")
 
-    (rowptr, col), num_nodes = dataset, dataset[0].size(0) - 1
+    rowptr, col = dataset
+    num_nodes = rowptr.numel() - 1
+    num_edges = col.numel()
+
     if 'dgl' in args.libraries:
         import dgl
         dgl_graph = dgl.graph(
@@ -56,6 +60,10 @@ def test_neighbor(dataset, **kwargs):
         node_time, _ = torch.sort(torch.randint(0, 100000, (num_nodes, )))
     else:
         node_time = None
+
+    edge_weight = None
+    if args.biased:
+        edge_weight = torch.rand(num_edges)
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes)
@@ -80,6 +88,7 @@ def test_neighbor(dataset, **kwargs):
                     num_neighbors,
                     time=node_time,
                     seed_time=None,
+                    edge_weight=edge_weight,
                     replace=args.replace,
                     directed=args.directed,
                     disjoint=args.disjoint,
