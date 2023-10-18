@@ -52,7 +52,7 @@ def test_hetero_neighbor(dataset, **kwargs):
 
     colptr_dict, row_dict = dataset
     num_nodes_dict = {k[-1]: v.size(0) - 1 for k, v in colptr_dict.items()}
-    num_edges_dict = {k[-1]: v.size(0) for k, v in row_dict.items()}
+    num_edges_dict = {k: v.size(0) for k, v in row_dict.items()}
 
     if args.temporal:
         # generate random timestamps
@@ -62,15 +62,12 @@ def test_hetero_neighbor(dataset, **kwargs):
     else:
         node_time_dict = None
 
+    edge_weight_dict = None
     if args.biased:
-        ones = torch.ones(num_edges_dict['paper']).view(-1, 1)
-        zeros = torch.zeros(num_edges_dict['paper']).view(-1, 1)
-        edge_weights_dict = {
-            k: torch.cat([ones, zeros], -1).view(-1)
-            for k in row_dict.keys()
+        edge_weight_dict = {
+            edge_type: torch.rand(num_edges)
+            for edge_type, num_edges in num_edges_dict.items()
         }
-    else:
-        edge_weights_dict = None
 
     if args.shuffle:
         node_perm = torch.randperm(num_nodes_dict['paper'])
@@ -98,7 +95,7 @@ def test_hetero_neighbor(dataset, **kwargs):
                     num_neighbors_dict,
                     node_time_dict,
                     seed_time_dict=None,
-                    edge_weight_dict=edge_weights_dict,
+                    edge_weight_dict=edge_weight_dict,
                     csc=True,
                     replace=False,
                     directed=True,
