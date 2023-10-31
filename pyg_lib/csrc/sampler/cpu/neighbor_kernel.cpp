@@ -233,8 +233,8 @@ class NeighborSampler {
       }
       else {
         const auto rand = at::empty_like(weight).uniform_();
-        const auto a = (rand.log() / weight);
-        const auto index = std::get<1>(a.topk(count));
+        const auto key = (rand.log() / weight);
+        const auto index = std::get<1>(key.topk(count));
         const auto index_data = index.data_ptr<int64_t>();
         for (size_t i = 0; i < index.numel(); ++i) {
           add(row_start + index_data[i], global_src_node, local_src_node,
