@@ -223,23 +223,19 @@ class NeighborSampler {
 
     // Case 2: Multinomial sampling:
     else {
+      at::Tensor index;
       if (replace) {
-        const auto index = at::multinomial(weight, count, replace);
-        const auto index_data = index.data_ptr<int64_t>();
-        for (size_t i = 0; i < index.numel(); ++i) {
-          add(row_start + index_data[i], global_src_node, local_src_node,
-              dst_mapper, out_global_dst_nodes);
-        }
+        index = at::multinomial(weight, count, replace);
       }
-      else {
+      else { // An Efficient Algorithm for Biased Sampling: https://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
         const auto rand = at::empty_like(weight).uniform_();
         const auto key = (rand.log() / weight);
-        const auto index = std::get<1>(key.topk(count));
-        const auto index_data = index.data_ptr<int64_t>();
-        for (size_t i = 0; i < index.numel(); ++i) {
-          add(row_start + index_data[i], global_src_node, local_src_node,
-              dst_mapper, out_global_dst_nodes);
-        }
+        index = std::get<1>(key.topk(count));
+      }
+      const auto index_data = index.data_ptr<int64_t>();
+      for (size_t i = 0; i < index.numel(); ++i) {
+        add(row_start + index_data[i], global_src_node, local_src_node,
+            dst_mapper, out_global_dst_nodes);
       }
     }
   }
