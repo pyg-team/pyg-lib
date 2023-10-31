@@ -223,7 +223,19 @@ class NeighborSampler {
 
     // Case 2: Multinomial sampling:
     else {
-      const auto index = at::multinomial(weight, count, replace);
+      at::Tensor index;
+      if (replace) {
+        // at::multinomial only has good perfomance for `replace=true`, see:
+        // https://github.com/pytorch/pytorch/issues/11931
+        index = at::multinomial(weight, count, replace);
+      } else {
+        // For `replace=false`, we make use of the implementation of the
+        // "Weighted Random Sampling" paper:
+        // https://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
+        const auto rand = at::empty_like(weight).uniform_();
+        const auto key = (rand.log() / weight);
+        index = std::get<1>(key.topk(count));
+      }
       const auto index_data = index.data_ptr<int64_t>();
       for (size_t i = 0; i < index.numel(); ++i) {
         add(row_start + index_data[i], global_src_node, local_src_node,
