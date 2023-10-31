@@ -224,7 +224,7 @@ class NeighborSampler {
     // Case 2: Multinomial sampling:
     else {
       at::Tensor index;
-      if (replace) {
+      if (replace) { // at::multinomial has good perfomance only when replace=true, e.g. https://github.com/pytorch/pytorch/issues/11931#top
         index = at::multinomial(weight, count, replace);
       }
       else { // An Efficient Algorithm for Biased Sampling: https://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
