@@ -224,12 +224,14 @@ class NeighborSampler {
     // Case 2: Multinomial sampling:
     else {
       at::Tensor index;
-      if (replace) {  // at::multinomial has good perfomance only when
-                      // replace=true, e.g.
-                      // https://github.com/pytorch/pytorch/issues/11931#top
+      if (replace) {
+        // at::multinomial only has good perfomance for `replace=true`, see:
+        // https://github.com/pytorch/pytorch/issues/11931
         index = at::multinomial(weight, count, replace);
-      } else {  // An Efficient Algorithm for Biased Sampling:
-                // https://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
+      } else {
+        // For `replace=false`, we make use of the implementation of the
+        // "Weighted Random Sampling" paper:
+        // https://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
         const auto rand = at::empty_like(weight).uniform_();
         const auto key = (rand.log() / weight);
         index = std::get<1>(key.topk(count));
