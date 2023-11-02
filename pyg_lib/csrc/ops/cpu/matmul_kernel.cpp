@@ -297,7 +297,8 @@ std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
         {input_contig[i].size(0), other_contig[i].size(-1)}));
   }
 
-  AT_DISPATCH_ALL_TYPES(
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16,
       input_contig.front().scalar_type(), "grouped_matmul_kernel", [&] {
         if (mkl_path_available<scalar_t>() &&
             mkl_path_possible(input_contig, other_contig)) {
@@ -413,7 +414,8 @@ at::Tensor segment_matmul_kernel(const at::Tensor& input,
   const auto other_contig = other.contiguous();
   auto out = input_contig.new_empty({input.size(0), other.size(-1)});
 
-  AT_DISPATCH_ALL_TYPES(
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16,
       input_contig.scalar_type(), "segment_matmul_kernel", [&] {
         const auto n = other_contig.size(-1);
         const auto k = input_contig.size(-1);

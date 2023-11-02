@@ -1,5 +1,6 @@
 import os
 
+import pytest
 import torch
 
 import pyg_lib
@@ -11,11 +12,17 @@ torch.set_float32_matmul_precision('highest')  # Enforce FP32
 
 
 @withCUDA
-def test_segment_matmul_autograd(device):
-    inputs = torch.randn((8, 16), requires_grad=True, device=device)
+@pytest.mark.parametrize('dtype', [torch.float, torch.bfloat16])
+def test_segment_matmul_autograd(dtype, device):
+    if device.type == 'cuda' and dtype == torch.bfloat16:
+        pytest.skip('CUDA does not support bfloat16')
+
+    inputs = torch.randn((8, 16), requires_grad=True, device=device,
+                         dtype=dtype)
     ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
-    other = torch.randn((2, 16, 32), requires_grad=True, device=device)
-    bias = torch.randn((2, 32), requires_grad=True, device=device)
+    other = torch.randn((2, 16, 32), requires_grad=True, device=device,
+                        dtype=dtype)
+    bias = torch.randn((2, 32), requires_grad=True, device=device, dtype=dtype)
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other, bias)
     assert out.size() == (8, 32)
 
@@ -31,7 +38,11 @@ def test_segment_matmul_autograd(device):
 
 
 @withCUDA
-def test_grouped_matmul_autograd(device):
+@pytest.mark.parametrize('dtype', [torch.float, torch.bfloat16])
+def test_grouped_matmul_autograd(dtype, device):
+    if device.type == 'cuda' and dtype == torch.bfloat16:
+        pytest.skip('CUDA does not support bfloat16')
+
     inputs = [
         torch.randn(5, 16, device=device, requires_grad=True),
         torch.randn(6, 9, device=device, requires_grad=True),
