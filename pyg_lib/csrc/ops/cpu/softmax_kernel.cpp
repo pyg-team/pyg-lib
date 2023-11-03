@@ -13,29 +13,11 @@ namespace ops {
 
 namespace {
 
-void check_arguments(const at::Tensor& values,
-                     const at::optional<at::Tensor> ptr,
-                     const int64_t dim) {
-  TORCH_CHECK(values.dim() == 2, "Only 2D `values` are currently supported.");
-  TORCH_CHECK(ptr.has_value(),
-              "`ptr` is currently only way to specify groups.");
-  TORCH_CHECK(dim == 0, "Only first dimension is currently supported.");
-}
-
-void check_arguments(const at::Tensor& values,
-                     const at::Tensor& values_grad,
-                     const at::optional<at::Tensor> ptr,
-                     const int64_t dim) {
-  TORCH_CHECK(values_grad.dim() == 2,
-              "Only 2D `values_grad` is currently supported.");
-  check_arguments(values, ptr, dim);
-}
-
 std::vector<int64_t> create_per_thread_groups(const int64_t* groups_ptr,
                                               const int64_t n_groups,
-                                              const int64_t n_rows) {
+                                              const int64_t dim_size) {
   std::vector<int64_t> new_groups = {0};
-  const auto avg_work_per_thread = at::divup(n_rows, at::get_num_threads());
+  const auto avg_work_per_thread = at::divup(dim_size, at::get_num_threads());
   int64_t cur_work = 0;
   for (int64_t i = 0; i < n_groups; ++i) {
     cur_work += groups_ptr[i + 1] - groups_ptr[i];
@@ -49,35 +31,67 @@ std::vector<int64_t> create_per_thread_groups(const int64_t* groups_ptr,
   return new_groups;
 }
 
-at::Tensor softmax_forward_kernel_ptr_dim0_impl(const at::Tensor& src,
-                                                const at::Tensor& groups) {
+std::pair<std::vector<int64_t>, std::vector<int64_t>>
+precompute_data_access_patterns(const int64_t outer_range,
+                                const int64_t inner_range,
+                                const int64_t global_dim_size,
+                                const int64_t dim_stride) {
+  std::vector<int64_t> data_ids(outer_range * inner_range);
+  std::vector<int64_t> aux_ids(outer_range * inner_range);
+  for (int64_t i = 0; i < outer_range; ++i) {
+    const auto contiguous_offset = i * global_dim_size * dim_stride;
+    for (int64_t j = 0; j < inner_range; ++j) {
+      const auto k = i * inner_range + j;
+      const auto data_id = j + contiguous_offset;
+      const auto aux_id = k % dim_stride + (dim_stride * (k / inner_range));
+      data_ids[k] = data_id;
+      aux_ids[k] = aux_id;
+    }
+  }
+
+  return {std::move(data_ids), std::move(aux_ids)};
+}
+
+at::Tensor softmax_csr_forward_kernel_impl(const at::Tensor& src,
+                                           const at::Tensor& groups,
+                                           const int64_t dim) {
   auto out = at::zeros_like(src);
 
   AT_DISPATCH_FLOATING_TYPES(
-      src.scalar_type(), "softmax_forward_kernel_ptr_dim0_impl", [&] {
+      src.scalar_type(), "softmax_csr_forward_kernel_impl", [&] {
         const auto n_groups = groups.size(0) - 1;
-        const auto n_heads = src.size(-1);
+        const auto n_heads = src.numel() / src.size(dim);
         auto max = at::full({n_groups, n_heads},
                             std::numeric_limits<scalar_t>::lowest());
         auto sum = at::zeros({n_groups, n_heads});
-
         const auto groups_ptr = groups.data_ptr<int64_t>();
         const auto src_base_ptr = src.data_ptr<scalar_t>();
         auto out_base_ptr = out.data_ptr<scalar_t>();
         auto max_base_ptr = max.data_ptr<scalar_t>();
         auto sum_base_ptr = sum.data_ptr<scalar_t>();
+        const auto global_dim_size = src.size(dim);
         const auto new_groups = std::move(
-            create_per_thread_groups(groups_ptr, n_groups, src.size(0)));
+            create_per_thread_groups(groups_ptr, n_groups, global_dim_size));
 
         at::parallel_for(
             0, new_groups.size() - 1, 1, [&](int64_t beg, int64_t end) {
               // each thread may cover several groups
               for (auto group_id = new_groups[beg]; group_id < new_groups[end];
                    ++group_id) {
-                const auto row_beg = groups_ptr[group_id];
-                const auto row_end = groups_ptr[group_id + 1];
-                const auto rows_in_group = row_end - row_beg;
-                const auto inout_offset = row_beg * n_heads;
+                const auto dim_beg = groups_ptr[group_id];
+                const auto dim_end = groups_ptr[group_id + 1];
+                const auto local_dim_size = dim_end - dim_beg;
+                const auto dim_stride = src.stride(dim);
+                // outer_range says how many data jumps we need to make
+                const auto outer_range = [&src, dim]() {
+                  int64_t range = 1;
+                  for (int64_t i = 0; i < dim; ++i)
+                    range *= src.size(i);
+                  return range;
+                }();
+                // inner_range says how many contigous elements we can visit
+                const auto inner_range = local_dim_size * dim_stride;
+                const auto inout_offset = dim_beg * dim_stride;
                 const auto aux_offset = group_id * n_heads;
 
                 const auto src_ptr = src_base_ptr + inout_offset;
@@ -85,26 +99,52 @@ at::Tensor softmax_forward_kernel_ptr_dim0_impl(const at::Tensor& src,
                 auto max_ptr = max_base_ptr + aux_offset;
                 auto sum_ptr = sum_base_ptr + aux_offset;
 
-                if (rows_in_group == 1) {
-                  std::fill(out_ptr, out_ptr + n_heads,
-                            static_cast<scalar_t>(1.0));
+                const auto indices = precompute_data_access_patterns(
+                    outer_range, inner_range, global_dim_size, dim_stride);
+                const auto& data_ids = indices.first;
+                const auto& aux_ids = indices.second;
+
+                if (local_dim_size == 1) {
+                  for (int64_t i = 0; i < outer_range; ++i) {
+                    const auto k = i * inner_range;
+                    const auto data_id = data_ids[k];
+                    std::fill(out_ptr + data_id,
+                              out_ptr + data_id + inner_range,
+                              static_cast<scalar_t>(1.0));
+                  }
                 } else {
                   // calculate max
-                  for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
-                    const auto aux_id = i % n_heads;
-                    max_ptr[aux_id] = std::max(max_ptr[aux_id], src_ptr[i]);
+                  for (int64_t i = 0; i < outer_range; ++i) {
+                    for (int64_t j = 0; j < inner_range; ++j) {
+                      const auto k = i * inner_range + j;
+                      const auto data_id = data_ids[k];
+                      const auto aux_id = aux_ids[k];
+                      max_ptr[aux_id] =
+                          std::max(max_ptr[aux_id], src_ptr[data_id]);
+                    }
                   }
+
                   // calculate sum
-                  for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
-                    const auto aux_id = i % n_heads;
-                    const auto value = std::exp(src_ptr[i] - max_ptr[aux_id]);
-                    sum_ptr[aux_id] += value;
-                    out_ptr[i] = value;
+                  for (int64_t i = 0; i < outer_range; ++i) {
+                    for (int64_t j = 0; j < inner_range; ++j) {
+                      const auto k = i * inner_range + j;
+                      const auto data_id = data_ids[k];
+                      const auto aux_id = aux_ids[k];
+                      const auto value =
+                          std::exp(src_ptr[data_id] - max_ptr[aux_id]);
+                      sum_ptr[aux_id] += value;
+                      out_ptr[data_id] = value;
+                    }
                   }
+
                   // unify
-                  for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
-                    const auto aux_id = i % n_heads;
-                    out_ptr[i] /= sum_ptr[aux_id];
+                  for (int64_t i = 0; i < outer_range; ++i) {
+                    for (int64_t j = 0; j < inner_range; ++j) {
+                      const auto k = i * inner_range + j;
+                      const auto data_id = data_ids[k];
+                      const auto aux_id = aux_ids[k];
+                      out_ptr[data_id] /= sum_ptr[aux_id];
+                    }
                   }
                 }
               }
@@ -114,43 +154,44 @@ at::Tensor softmax_forward_kernel_ptr_dim0_impl(const at::Tensor& src,
   return out;
 }
 
-at::Tensor softmax_forward_kernel(const at::Tensor& src,
-                                  const at::optional<at::Tensor> index,
-                                  const at::optional<at::Tensor> ptr,
-                                  const at::optional<int64_t> num_nodes,
-                                  const int64_t dim) {
-  check_arguments(src, ptr, dim);
-
-  return softmax_forward_kernel_ptr_dim0_impl(src, ptr.value());
-}
-
-at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
-                                                 const at::Tensor& out_grad,
-                                                 const at::Tensor& groups) {
+at::Tensor softmax_csr_backward_kernel_impl(const at::Tensor& out,
+                                            const at::Tensor& out_grad,
+                                            const at::Tensor& groups,
+                                            const int64_t dim) {
   auto in_grad = at::zeros_like(out);
 
   AT_DISPATCH_FLOATING_TYPES(
-      out.scalar_type(), "softmax_backward_kernel_ptr_dim0_impl", [&] {
+      out.scalar_type(), "softmax_csr_backward_kernel_impl", [&] {
         const auto n_groups = groups.size(0) - 1;
-        const auto n_heads = out.size(-1);
+        const auto n_heads = out.numel() / out.size(dim);
         auto sum = at::zeros({n_groups, n_heads});
-
         const auto groups_ptr = groups.data_ptr<int64_t>();
         const auto out_base_ptr = out.data_ptr<scalar_t>();
         const auto out_grad_base_ptr = out_grad.data_ptr<scalar_t>();
         auto in_grad_base_ptr = in_grad.data_ptr<scalar_t>();
         auto sum_base_ptr = sum.data_ptr<scalar_t>();
+        const auto global_dim_size = out.size(dim);
         const auto new_groups = std::move(
-            create_per_thread_groups(groups_ptr, n_groups, out.size(0)));
+            create_per_thread_groups(groups_ptr, n_groups, global_dim_size));
 
         at::parallel_for(
             0, new_groups.size() - 1, 1, [&](int64_t beg, int64_t end) {
               for (auto group_id = new_groups[beg]; group_id < new_groups[end];
                    ++group_id) {
-                const auto row_beg = groups_ptr[group_id];
-                const auto row_end = groups_ptr[group_id + 1];
-                const auto rows_in_group = row_end - row_beg;
-                const auto inout_offset = row_beg * n_heads;
+                const auto dim_beg = groups_ptr[group_id];
+                const auto dim_end = groups_ptr[group_id + 1];
+                const auto local_dim_size = dim_end - dim_beg;
+                const auto dim_stride = out.stride(dim);
+                // outer_range says how many data jumps we need to make
+                const auto outer_range = [&out, dim]() {
+                  int64_t range = 1;
+                  for (int64_t i = 0; i < dim; ++i)
+                    range *= out.size(i);
+                  return range;
+                }();
+                // inner_range says how many contigous elements we can visit
+                const auto inner_range = local_dim_size * dim_stride;
+                const auto inout_offset = dim_beg * dim_stride;
                 const auto sum_offset = group_id * n_heads;
 
                 const auto out_ptr = out_base_ptr + inout_offset;
@@ -158,17 +199,31 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
                 auto in_grad_ptr = in_grad_base_ptr + inout_offset;
                 auto sum_ptr = sum_base_ptr + sum_offset;
 
+                const auto indices = precompute_data_access_patterns(
+                    outer_range, inner_range, global_dim_size, dim_stride);
+                const auto& data_ids = indices.first;
+                const auto& aux_ids = indices.second;
+
                 // calculate sum of out * out_grad
-                for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
-                  const auto aux_id = i % n_heads;
-                  sum_ptr[aux_id] += out_ptr[i] * out_grad_ptr[i];
+                for (int64_t i = 0; i < outer_range; ++i) {
+                  for (int64_t j = 0; j < inner_range; ++j) {
+                    const auto k = i * inner_range + j;
+                    const auto data_id = data_ids[k];
+                    const auto aux_id = aux_ids[k];
+                    sum_ptr[aux_id] += out_ptr[data_id] * out_grad_ptr[data_id];
+                  }
                 }
 
                 // calculate out * (out_grad - sum)
-                for (int64_t i = 0; i < rows_in_group * n_heads; ++i) {
-                  const auto aux_id = i % n_heads;
-                  in_grad_ptr[i] =
-                      out_ptr[i] * (out_grad_ptr[i] - sum_ptr[aux_id]);
+                for (int64_t i = 0; i < outer_range; ++i) {
+                  for (int64_t j = 0; j < inner_range; ++j) {
+                    const auto k = i * inner_range + j;
+                    const auto data_id = data_ids[k];
+                    const auto aux_id = aux_ids[k];
+                    in_grad_ptr[data_id] =
+                        out_ptr[data_id] *
+                        (out_grad_ptr[data_id] - sum_ptr[aux_id]);
+                  }
                 }
               }
             });
@@ -177,24 +232,26 @@ at::Tensor softmax_backward_kernel_ptr_dim0_impl(const at::Tensor& out,
   return in_grad;
 }
 
-at::Tensor softmax_backward_kernel(const at::Tensor& out,
-                                   const at::Tensor& out_grad,
-                                   const at::optional<at::Tensor> index,
-                                   const at::optional<at::Tensor> ptr,
-                                   const at::optional<int64_t> num_nodes,
-                                   const int64_t dim) {
-  check_arguments(out, out_grad, ptr, dim);
+at::Tensor softmax_csr_forward_kernel(const at::Tensor& src,
+                                      const at::Tensor& ptr,
+                                      const int64_t dim) {
+  return softmax_csr_forward_kernel_impl(src, ptr, dim);
+}
 
-  return softmax_backward_kernel_ptr_dim0_impl(out, out_grad, ptr.value());
+at::Tensor softmax_csr_backward_kernel(const at::Tensor& out,
+                                       const at::Tensor& out_grad,
+                                       const at::Tensor& ptr,
+                                       const int64_t dim) {
+  return softmax_csr_backward_kernel_impl(out, out_grad, ptr, dim);
 }
 
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_forward"),
-         TORCH_FN(softmax_forward_kernel));
-  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_backward"),
-         TORCH_FN(softmax_backward_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr_forward"),
+         TORCH_FN(softmax_csr_forward_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr_backward"),
+         TORCH_FN(softmax_csr_backward_kernel));
 }
 
 }  // namespace ops

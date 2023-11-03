@@ -62,7 +62,7 @@ if __name__ == '__main__':
         print(f'Vanilla backward: {t_bwd:.4f}s')
     print('=========================')
 
-    t_fwd, t_bwd = measure_perf(pyg_lib.ops.softmax, *func_args)
+    t_fwd, t_bwd = measure_perf(pyg_lib.ops.softmax_csr, *func_args)
     print(f'pyg_lib forward:  {t_fwd:.4f}s')
     if args.backward:
         print(f'pyg_lib backward: {t_bwd:.4f}s')

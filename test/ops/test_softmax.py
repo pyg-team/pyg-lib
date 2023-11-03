@@ -1,26 +1,49 @@
+import pytest
 import torch
-import torch.nn.functional as F
 
 import pyg_lib
 
 
-def softmax_reference_ptr_dim0(src, ptr):
-    out = torch.empty_like(src)
-    for beg, end in zip(ptr[:-1], ptr[1:]):
-        for col in range(src.size(-1)):
-            out[beg:end, col] = F.softmax(src[beg:end, col], dim=0)
-    return out
+def ptr2index(ptr):
+    group_sizes = ptr[1:] - ptr[:-1]
+    return torch.repeat_interleave(
+        torch.arange(0, group_sizes.numel(), dtype=group_sizes.dtype),
+        group_sizes)
 
 
-def test_softmax_ptr_dim0_autograd():
-    src1 = torch.rand((16, 2), requires_grad=True)
+def broadcast(src, ref, dim):
+    size = ((1, ) * dim) + (-1, ) + ((1, ) * (ref.dim() - dim - 1))
+    return src.view(size).expand_as(ref)
+
+
+def softmax_reference(src, ptr, dim):
+    index = ptr2index(ptr)
+    N = int(index.max()) + 1 if index.numel() > 0 else 0
+    size = src.size()[:dim] + (N, ) + src.size()[dim + 1:]
+    src_max = src.detach().new_zeros(size).scatter_reduce_(
+        dim, broadcast(index, src, dim), src, reduce='amax',
+        include_self=False)
+    out = src - src_max.index_select(dim, index)
+    out = out.exp()
+    out_sum = out.new_zeros(size).scatter_add_(dim, broadcast(index, out, dim),
+                                               out)
+    out_sum = out_sum.index_select(dim, index)
+
+    return out / out_sum
+
+
+@pytest.mark.parametrize('dim', list(range(3)))
+def test_softmax_csr_autograd(dim):
+    sizes = (16, 32, 64)
+    src1 = torch.rand(sizes, requires_grad=True)
     src2 = src1.detach().clone()
     src2.requires_grad = True
-    ptr = torch.tensor([0, 7, 15, 16])
-    out_grad = torch.randn((16, 2))
+    dim_size = sizes[dim]
+    ptr = torch.tensor([0, 1, 4, 5, dim_size - 1, dim_size])
+    out_grad = torch.randn(sizes)
 
-    expected_out = softmax_reference_ptr_dim0(src1, ptr)
-    out = pyg_lib.ops.softmax(src=src2, ptr=ptr)
+    expected_out = softmax_reference(src1, ptr, dim)
+    out = pyg_lib.ops.softmax_csr(src2, ptr, dim)
     assert torch.allclose(expected_out, out, atol=1e-6)
 
     expected_out.backward(out_grad)

@@ -1,9 +1,8 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-from torch import Tensor
-
 import torch.utils._pytree as pytree
+from torch import Tensor
 
 
 def pytreeify(cls):
@@ -337,54 +336,38 @@ class Softmax(torch.autograd.Function):
     def forward(
         ctx,
         src: Tensor,
-        index: Optional[Tensor] = None,
-        ptr: Optional[Tensor] = None,
-        num_nodes: Optional[int] = None,
+        ptr: Tensor,
         dim: int = 0,
     ) -> Tensor:
-        out = torch.ops.pyg.softmax_forward(src, index, ptr, num_nodes, dim)
-        ctx.save_for_backward(out, index, ptr)
-        ctx.num_nodes = num_nodes
+        out = torch.ops.pyg.softmax_csr_forward(src, ptr, dim)
+        ctx.save_for_backward(out, ptr)
         ctx.dim = dim
 
         return out
 
     @staticmethod
     def backward(ctx, out_grad: Tensor) -> Tuple[Union[Tensor, int]]:
-        out, index, ptr = ctx.saved_tensors
-        in_grad = torch.ops.pyg.softmax_backward(out, out_grad, index, ptr,
-                                                 ctx.num_nodes, ctx.dim)
+        out, ptr = ctx.saved_tensors
+        in_grad = torch.ops.pyg.softmax_csr_backward(out, out_grad, ptr,
+                                                     ctx.dim)
 
-        return in_grad, None, None, None, None
+        return in_grad, None, None
 
 
-def softmax(
+def softmax_csr(
     src: Tensor,
-    index: Optional[Tensor] = None,
-    ptr: Optional[Tensor] = None,
-    num_nodes: Optional[int] = None,
+    ptr: Tensor,
     dim: int = 0,
 ) -> Tensor:
     r"""Computes a sparsely evaluated softmax.
     Given a value tensor :attr:`src`, this function first groups the values
-    along the given dimension :attr:`dim`, based on the indices specified in
-    :attr:`index`, and then proceeds to compute the softmax individually for
+    along the given dimension :attr:`dim`, based on the indices specified via
+    :attr:`ptr`, and then proceeds to compute the softmax individually for
     each group.
-
-    .. note::
-
-        This operation is currently implemented only for 2D data, where
-        segments are created along the first dimension and are defined using
-        ptr.
 
     Args:
         src (Tensor): The source tensor.
-        index (LongTensor, optional): The indices of elements for applying the
-            softmax. (default: :obj:`None`)
-        ptr (LongTensor, optional): If given, computes the softmax based on
-            sorted inputs in CSR representation. (default: :obj:`None`)
-        num_nodes (int, optional): The number of nodes, *i.e.*
-            :obj:`max_val + 1` of :attr:`index`. (default: :obj:`None`)
+        ptr (LongTensor): Groups defined by CSR representation.
         dim (int, optional): The dimension in which to normalize.
             (default: :obj:`0`)
 
@@ -394,20 +377,13 @@ def softmax(
 
         >>> src = torch.randn(4, 4)
         >>> ptr = torch.tensor([0, 4])
-        >>> softmax(src, None, ptr)
+        >>> softmax(src, ptr)
         tensor([[0.0157, 0.0984, 0.1250, 0.4523],
                 [0.1453, 0.2591, 0.5907, 0.2410],
                 [0.0598, 0.2923, 0.1206, 0.0921],
                 [0.7792, 0.3502, 0.1638, 0.2145]])
     """
-    if src.dim() != 2 or not src.is_cpu or ptr is None or dim != 0:
-        # currently softmax is implemented for GAT cases:
-        # - src is of shape(X, num_heads) and associated with CPU device
-        # - ptr is given
-        # - dim is 0
-        raise NotImplementedError
-
-    return Softmax.apply(src, index, ptr, num_nodes, dim)
+    return Softmax.apply(src, ptr, dim)
 
 
 __all__ = [
@@ -418,5 +394,5 @@ __all__ = [
     'sampled_mul',
     'sampled_div',
     'index_sort',
-    'softmax',
+    'softmax_csr',
 ]
