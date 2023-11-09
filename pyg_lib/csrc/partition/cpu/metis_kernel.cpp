@@ -1,6 +1,10 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
+#if defined(__linux__) && defined(__x86_64__)
+__asm__(".symver pow,pow@GLIBC_2.2.5");
+#endif
+
 #include <metis.h>
 
 namespace pyg {
@@ -14,6 +18,8 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         const c10::optional<at::Tensor>& node_weight,
                         const c10::optional<at::Tensor>& edge_weight,
                         bool recursive) {
+  return rowptr;
+
   int64_t nvtxs = rowptr.numel() - 1;
   int64_t ncon = 1;
   auto* xadj = rowptr.data_ptr<int64_t>();
