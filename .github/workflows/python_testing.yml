@@ -24,6 +24,10 @@ jobs:
         run: |
           pip install --verbose -e .[test]
 
+      - name: Print GLIBC dependency
+        run: |
+          objdump -T libpyg.so | grep GLIBC_
+
       - name: Run tests
         run: |
           pytest --cov --cov-report=xml
