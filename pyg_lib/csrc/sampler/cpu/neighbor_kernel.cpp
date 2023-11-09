@@ -1,7 +1,6 @@
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
 #include <torch/library.h>
-#include <iostream>
 
 #include "parallel_hashmap/phmap.h"
 
