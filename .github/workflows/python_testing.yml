@@ -27,3 +27,4 @@ jobs:
       - name: Run tests
         run: |
           pytest --cov --cov-report=xml
+          objdump -T libpyg.so | grep GLIBC_
