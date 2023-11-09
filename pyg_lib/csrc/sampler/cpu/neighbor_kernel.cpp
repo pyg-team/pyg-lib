@@ -174,7 +174,9 @@ class NeighborSampler {
     // Case 3: Sample without replacement:
     else {
       auto index_tracker = IndexTracker<scalar_t>(population);
-      if (population < (1 << 16)) {
+      if (false) {
+        // This logic is currently flawed since `arr` is not guaranteed to
+        // only contain unique values.
         const auto arr =
             std::move(generator.generate_range_of_ints(0, population, count));
         for (auto i = 0; i < arr.size(); ++i) {
