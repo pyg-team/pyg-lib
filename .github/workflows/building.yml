@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-11]  # windows-2019
+        os: [macos-11]  # windows-2019
         python-version: ['3.8', '3.9', '3.10', '3.11']
         torch-version: [1.12.0, 1.13.0, 2.0.0, 2.1.0]
         cuda-version: ['cpu', 'cu113', 'cu116', 'cu117', 'cu118', 'cu121']
