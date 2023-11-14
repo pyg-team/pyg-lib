@@ -125,7 +125,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   auto col = std::get<1>(graph);
 
   // Time is equal to node ID ...
-  auto time = at::arange(6, options);
+  auto node_time = at::arange(6, options);
   // ... so we need to sort the column vector by time/node ID:
   col = std::get<0>(at::sort(col.view({-1, 2}), /*dim=*/1)).flatten();
 
@@ -134,7 +134,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
       /*col=*/col,
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{2, 2},
-      /*node_time=*/time,
+      /*node_time=*/node_time,
       /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
@@ -159,7 +159,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
       /*col=*/col,
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{1, 2},
-      /*node_time=*/time,
+      /*node_time=*/node_time,
       /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
@@ -234,7 +234,6 @@ TEST(BiasedNeighborTest, BasicAssertions) {
       /*node_time=*/c10::nullopt,
       /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
-      /*edge_time=*/edge_weight,
       /*edge_weight=*/edge_weight);
 
   auto expected_row = at::tensor({0, 1}, options);
