@@ -138,10 +138,7 @@ def hetero_neighbor_sample(
             for k, v in edge_weight_dict.items()
         }
     if edge_time_dict is not None:
-        edge_time_dict = {
-            TO_REL_TYPE[k]: v
-            for k, v in edge_time_dict.items()
-        }
+        edge_time_dict = {TO_REL_TYPE[k]: v for k, v in edge_time_dict.items()}
 
     out = torch.ops.pyg.hetero_neighbor_sample(
         node_types,
