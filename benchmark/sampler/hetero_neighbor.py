@@ -94,6 +94,7 @@ def test_hetero_neighbor(dataset, **kwargs):
                     seed_dict,
                     num_neighbors_dict,
                     node_time_dict,
+                    edge_time_dict=None,
                     seed_time_dict=None,
                     edge_weight_dict=edge_weight_dict,
                     csc=True,

@@ -41,7 +41,8 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
       /*col=*/std::get<1>(graph),
       /*seed=*/at ::arange(2, 4, options),
       /*num_neighbors=*/{1, 1},
-      /*time=*/c10::nullopt,
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/false,
@@ -68,7 +69,8 @@ TEST(WithReplacementNeighborTest, BasicAssertions) {
       /*col=*/std::get<1>(graph),
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{1, 1},
-      /*time=*/c10::nullopt,
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/false,
@@ -94,7 +96,8 @@ TEST(DisjointNeighborTest, BasicAssertions) {
       /*col=*/std::get<1>(graph),
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{2, 2},
-      /*time=*/c10::nullopt,
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/false,
@@ -114,7 +117,7 @@ TEST(DisjointNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
-TEST(TemporalNeighborTest, BasicAssertions) {
+TEST(NodeLevelTemporalNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
   auto graph = cycle_graph(/*num_nodes=*/6, options);
@@ -122,7 +125,7 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   auto col = std::get<1>(graph);
 
   // Time is equal to node ID ...
-  auto time = at::arange(6, options);
+  auto node_time = at::arange(6, options);
   // ... so we need to sort the column vector by time/node ID:
   col = std::get<0>(at::sort(col.view({-1, 2}), /*dim=*/1)).flatten();
 
@@ -131,7 +134,8 @@ TEST(TemporalNeighborTest, BasicAssertions) {
       /*col=*/col,
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{2, 2},
-      /*time=*/time,
+      /*node_time=*/node_time,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/false,
@@ -155,7 +159,8 @@ TEST(TemporalNeighborTest, BasicAssertions) {
       /*col=*/col,
       /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{1, 2},
-      /*time=*/time,
+      /*node_time=*/node_time,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/false,
@@ -168,6 +173,42 @@ TEST(TemporalNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<1>(out1), std::get<1>(out2)));
   EXPECT_TRUE(at::equal(std::get<2>(out1), std::get<2>(out2)));
   EXPECT_TRUE(at::equal(std::get<3>(out1).value(), std::get<3>(out2).value()));
+}
+
+TEST(EdgeLevelTemporalNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  auto graph = cycle_graph(/*num_nodes=*/6, options);
+  auto rowptr = std::get<0>(graph);
+  auto col = std::get<1>(graph);
+
+  // Time is equal to edge ID:
+  auto edge_time = at::arange(col.numel(), options);
+
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/at::arange(2, 4, options),
+      /*num_neighbors=*/{2, 2},
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/edge_time,
+      /*seed_time=*/at::arange(5, 7, options),
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/false,
+      /*directed=*/true,
+      /*disjoint=*/true);
+
+  // Expect only the earlier neighbors or the same node to be sampled:
+  auto expected_row = at::tensor({0, 0, 1, 2, 2, 4, 4}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 3, 4, 5, 0, 6, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes =
+      at::tensor({0, 2, 1, 3, 0, 1, 0, 3, 1, 2, 0, 0, 1, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({-1, 2})));
+  auto expected_edges = at::tensor({4, 5, 6, 2, 3, 4, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
 TEST(HeteroNeighborTest, BasicAssertions) {
@@ -226,7 +267,8 @@ TEST(BiasedNeighborTest, BasicAssertions) {
       /*col=*/std::get<1>(graph),
       /*seed=*/at::arange(0, 2, options),
       /*num_neighbors=*/{1},
-      /*time=*/c10::nullopt,
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
       /*edge_weight=*/edge_weight);
 
@@ -274,7 +316,8 @@ TEST(HeteroBiasedNeighborTest, BasicAssertions) {
       /*col_dict=*/col_dict,
       /*seed_dict=*/seed_dict,
       /*num_neighbors_dict=*/num_neighbors_dict,
-      /*time_dict=*/c10::nullopt,
+      /*node_time_dict=*/c10::nullopt,
+      /*edge_time_dict=*/c10::nullopt,
       /*seed_time_dict=*/c10::nullopt,
       /*edge_weight_dict=*/edge_weight_dict);
 

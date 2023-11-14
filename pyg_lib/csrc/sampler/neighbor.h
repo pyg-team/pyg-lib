@@ -21,7 +21,8 @@ neighbor_sample(const at::Tensor& rowptr,
                 const at::Tensor& col,
                 const at::Tensor& seed,
                 const std::vector<int64_t>& num_neighbors,
-                const c10::optional<at::Tensor>& time = c10::nullopt,
+                const c10::optional<at::Tensor>& node_time = c10::nullopt,
+                const c10::optional<at::Tensor>& edge_time = c10::nullopt,
                 const c10::optional<at::Tensor>& seed_time = c10::nullopt,
                 const c10::optional<at::Tensor>& edge_weight = c10::nullopt,
                 bool csc = false,
@@ -48,7 +49,9 @@ hetero_neighbor_sample(
     const c10::Dict<rel_type, at::Tensor>& col_dict,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& time_dict =
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& node_time_dict =
+        c10::nullopt,
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_time_dict =
         c10::nullopt,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict =
         c10::nullopt,
@@ -72,7 +75,8 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
     const at::Tensor& col,
     const at::Tensor& seed,
     const int64_t num_neighbors,
-    const c10::optional<at::Tensor>& time = c10::nullopt,
+    const c10::optional<at::Tensor>& node_time = c10::nullopt,
+    const c10::optional<at::Tensor>& edge_time = c10::nullopt,
     const c10::optional<at::Tensor>& seed_time = c10::nullopt,
     const c10::optional<at::Tensor>& edge_weight = c10::nullopt,
     bool csc = false,
