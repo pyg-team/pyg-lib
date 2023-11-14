@@ -233,7 +233,7 @@ TEST(BiasedNeighborTest, BasicAssertions) {
       /*num_neighbors=*/{1},
       /*node_time=*/c10::nullopt,
       /*seed_time=*/c10::nullopt,
-      /*edge_time=*/edge_weight);
+      /*edge_time=*/edge_weight,
       /*edge_weight=*/edge_weight);
 
   auto expected_row = at::tensor({0, 1}, options);
