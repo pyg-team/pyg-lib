@@ -39,9 +39,9 @@ neighbor_sample(const at::Tensor& rowptr,
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::neighbor_sample", "")
                        .typed<decltype(neighbor_sample)>();
-  return op.call(rowptr, col, seed, num_neighbors, node_time, seed_time, edge_time, edge_weight,
-                 csc, replace, directed, disjoint, temporal_strategy,
-                 return_edge_id);
+  return op.call(rowptr, col, seed, num_neighbors, node_time, seed_time,
+                 edge_time, edge_weight, csc, replace, directed, disjoint,
+                 temporal_strategy, return_edge_id);
 }
 
 std::tuple<c10::Dict<rel_type, at::Tensor>,
@@ -92,8 +92,8 @@ hetero_neighbor_sample(
                        .typed<decltype(hetero_neighbor_sample)>();
   return op.call(node_types, edge_types, rowptr_dict, col_dict, seed_dict,
                  num_neighbors_dict, node_time_dict, seed_time_dict,
-                 edge_time_dict, edge_weight_dict, csc, replace, directed, disjoint,
-                 temporal_strategy, return_edge_id);
+                 edge_time_dict, edge_weight_dict, csc, replace, directed,
+                 disjoint, temporal_strategy, return_edge_id);
 }
 
 std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
@@ -121,14 +121,16 @@ std::tuple<at::Tensor, at::Tensor, std::vector<int64_t>> dist_neighbor_sample(
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::dist_neighbor_sample", "")
                        .typed<decltype(dist_neighbor_sample)>();
-  return op.call(rowptr, col, seed, num_neighbors, node_time, seed_time, edge_time, edge_weight,
-                 csc, replace, directed, disjoint, temporal_strategy);
+  return op.call(rowptr, col, seed, num_neighbors, node_time, seed_time,
+                 edge_time, edge_weight, csc, replace, directed, disjoint,
+                 temporal_strategy);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int[] "
-      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? edge_time = None, Tensor? "
+      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? "
+      "edge_time = None, Tensor? "
       "edge_weight = None, bool csc = False, bool replace = False, bool "
       "directed = True, bool disjoint = False, str temporal_strategy = "
       "'uniform', bool return_edge_id = True) -> "
@@ -146,7 +148,8 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "Dict(str, Tensor)?, Dict(str, int[]), Dict(str, int[]))"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::dist_neighbor_sample(Tensor rowptr, Tensor col, Tensor seed, int "
-      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? edge_time = None, Tensor? "
+      "num_neighbors, Tensor? time = None, Tensor? seed_time = None, Tensor? "
+      "edge_time = None, Tensor? "
       "edge_weight = None, bool csc = False, bool replace = False, bool "
       "directed = True, bool disjoint = False, str temporal_strategy = "
       "'uniform') -> (Tensor, Tensor, int[])"));
