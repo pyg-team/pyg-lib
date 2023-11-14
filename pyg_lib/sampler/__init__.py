@@ -13,8 +13,9 @@ def neighbor_sample(
     col: Tensor,
     seed: Tensor,
     num_neighbors: List[int],
-    time: Optional[Tensor] = None,
+    node_time: Optional[Tensor] = None,
     seed_time: Optional[Tensor] = None,
+    edge_time: Optional[Tensor] = None,
     edge_weight: Optional[Tensor] = None,
     csc: bool = False,
     replace: bool = False,
@@ -39,7 +40,7 @@ def neighbor_sample(
         num_neighbors (List[int]): The number of neighbors to sample for each
             node in each iteration. If an entry is set to :obj:`-1`, all
             neighbors will be included.
-        time (torch.Tensor, optional): Timestamps for the nodes in the graph.
+        node_time (torch.Tensor, optional): Timestamps for the nodes in the graph.
             If set, temporal sampling will be used such that neighbors are
             guaranteed to fulfill temporal constraints, *i.e.* neighbors have
             an earlier or equal timestamp than the seed node.
@@ -49,6 +50,13 @@ def neighbor_sample(
         seed_time (torch.Tensor, optional): Optional values to override the
             timestamp for seed nodes. If not set, will use timestamps in
             :obj:`time` as default for seed nodes. (default: :obj:`None`)
+        edge_time (torch.Tensor, optional): Timestamps for the edges in the graph.
+            If set, temporal sampling will be used such that edges connecting the neighbors are
+            guaranteed to fulfill temporal constraints, *i.e.* edges connecting the neighbors have
+            an earlier or equal timestamp than the seed node.
+            If used, the :obj:`col` vector needs to be sorted according to time
+            within individual neighborhoods. Requires :obj:`disjoint=True`.
+            (default: :obj:`None`)
         edge-weight (torch.Tensor, optional): If given, will perform biased
             sampling based on the weight of each edge. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
@@ -86,8 +94,9 @@ def hetero_neighbor_sample(
     col_dict: Dict[EdgeType, Tensor],
     seed_dict: Dict[NodeType, Tensor],
     num_neighbors_dict: Dict[EdgeType, List[int]],
-    time_dict: Optional[Dict[NodeType, Tensor]] = None,
+    node_time_dict: Optional[Dict[NodeType, Tensor]] = None,
     seed_time_dict: Optional[Dict[NodeType, Tensor]] = None,
+    edge_time_dict: Optional[Dict[EdgeType, Tensor]] = None,
     edge_weight_dict: Optional[Dict[EdgeType, Tensor]] = None,
     csc: bool = False,
     replace: bool = False,
@@ -128,6 +137,11 @@ def hetero_neighbor_sample(
             TO_REL_TYPE[k]: v
             for k, v in edge_weight_dict.items()
         }
+    if edge_time_dict is not None:
+        edge_time_dict = {
+            TO_REL_TYPE[k]: v
+            for k, v in edge_time_dict.items()
+        }
 
     out = torch.ops.pyg.hetero_neighbor_sample(
         node_types,
@@ -136,8 +150,9 @@ def hetero_neighbor_sample(
         col_dict,
         seed_dict,
         num_neighbors_dict,
-        time_dict,
+        node_time_dict,
         seed_time_dict,
+        edge_time_dict,
         edge_weight_dict,
         csc,
         replace,
