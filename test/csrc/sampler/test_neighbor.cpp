@@ -236,14 +236,14 @@ TEST(BiasedNeighborTest, BasicAssertions) {
       /*edge_time=*/edge_weight,
       /*edge_weight=*/edge_weight);
 
-      auto expected_row = at::tensor({0, 1}, options);
-      EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
-      auto expected_col = at::tensor({2, 0}, options);
-      EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
-      auto expected_nodes = at::tensor({0, 1, 5}, options);
-      EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
-      auto expected_edges = at::tensor({0, 2}, options);
-      EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+  auto expected_row = at::tensor({0, 1}, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = at::tensor({2, 0}, options);
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::tensor({0, 1, 5}, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::tensor({0, 2}, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
 }
 
 TEST(HeteroBiasedNeighborTest, BasicAssertions) {
