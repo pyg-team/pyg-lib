@@ -469,7 +469,7 @@ sample(const at::Tensor& rowptr,
               cumsum_neighbors_per_node.push_back(sampled_nodes.size());
           }
         } else {
-          const auto time_data = node_time.value().data_ptr<temporal_t>();
+          const auto node_time_data = node_time.value().data_ptr<temporal_t>();
           for (size_t i = begin; i < end; ++i) {
             const auto batch_idx = sampled_nodes[i].first;
             sampler.node_temporal_sample(
@@ -477,7 +477,7 @@ sample(const at::Tensor& rowptr,
                 /*local_src_node=*/i,
                 /*count=*/count,
                 /*seed_time=*/seed_times[batch_idx],
-                /*time=*/time_data,
+                /*time=*/node_time_data,
                 /*dst_mapper=*/mapper,
                 /*generator=*/generator,
                 /*out_global_dst_nodes=*/sampled_nodes);
