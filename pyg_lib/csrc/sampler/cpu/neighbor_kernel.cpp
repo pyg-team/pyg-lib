@@ -362,6 +362,7 @@ sample(const at::Tensor& rowptr,
   if (edge_time.has_value()) {
     TORCH_CHECK(edge_time.value().is_contiguous(),
                 "Non-contiguous 'edge_time'");
+    TORCH_CHECK(seed_time.has_value(), "Seed time needs to be specified");
   }
   if (seed_time.has_value()) {
     TORCH_CHECK(seed_time.value().is_contiguous(),
@@ -561,6 +562,7 @@ sample(const std::vector<node_type>& node_types,
       const at::Tensor& time = kv.value();
       TORCH_CHECK(time.is_contiguous(), "Non-contiguous 'edge_time'");
     }
+    TORCH_CHECK(seed_time_dict.has_value(), "Seed time needs to be specified");
   }
   if (seed_time_dict.has_value()) {
     for (const auto& kv : seed_time_dict.value()) {
