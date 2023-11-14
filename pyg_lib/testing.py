@@ -37,12 +37,13 @@ def onlyTriton(func: Callable) -> Callable:
 
 
 def withCUDA(func: Callable) -> Callable:
-    def wrapper(*args, **kwargs):
-        func(*args, device=torch.device('cpu'), **kwargs)
-        if torch.cuda.is_available():
-            func(*args, device=torch.device('cuda:0'), **kwargs)
+    import pytest
 
-    return wrapper
+    devices = [torch.device('cpu')]
+    if torch.cuda.is_available():
+        devices.append(torch.device('cuda:0'))
+
+    return pytest.mark.parametrize('device', devices)(func)
 
 
 def withDataset(group: str, name: str) -> Callable:
