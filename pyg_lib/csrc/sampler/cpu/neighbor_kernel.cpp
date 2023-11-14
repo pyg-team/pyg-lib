@@ -349,7 +349,7 @@ sample(const at::Tensor& rowptr,
               "Temporal sampling needs to create disjoint subgraphs");
   TORCH_CHECK(!edge_time.has_value() || disjoint,
               "Temporal sampling needs to create disjoint subgraphs");
-  TORCH_CHECK(node_time.has_value() && edge_time.has_value(),
+  TORCH_CHECK(!(node_time.has_value() && edge_time.has_value()),
               "Only one of node-level or edge-level sampling is supported ");
 
   TORCH_CHECK(rowptr.is_contiguous(), "Non-contiguous 'rowptr'");
@@ -535,7 +535,7 @@ sample(const std::vector<node_type>& node_types,
               "Node temporal sampling needs to create disjoint subgraphs");
   TORCH_CHECK(!edge_time_dict.has_value() || disjoint,
               "Edge temporal sampling needs to create disjoint subgraphs");
-  TORCH_CHECK(node_time_dict.has_value() && edge_time_dict.has_value(),
+  TORCH_CHECK(!(node_time_dict.has_value() && edge_time_dict.has_value()),
               "Only one of node-level or edge-level sampling is supported ");
 
   for (const auto& kv : rowptr_dict) {
