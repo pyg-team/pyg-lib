@@ -383,6 +383,7 @@ def softmax_csr(
                 [0.0598, 0.2923, 0.1206, 0.0921],
                 [0.7792, 0.3502, 0.1638, 0.2145]])
     """
+    dim = dim + src.dim() if dim < 0 else dim
     return Softmax.apply(src, ptr, dim)
 
 
