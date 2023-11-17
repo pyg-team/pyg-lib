@@ -1,9 +1,8 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
-from torch import Tensor
-
 import torch.utils._pytree as pytree
+from torch import Tensor
 
 
 def pytreeify(cls):
@@ -332,6 +331,62 @@ def index_sort(
     return torch.ops.pyg.index_sort(inputs, max_value)
 
 
+class Softmax(torch.autograd.Function):
+    @staticmethod
+    def forward(
+        ctx,
+        src: Tensor,
+        ptr: Tensor,
+        dim: int = 0,
+    ) -> Tensor:
+        out = torch.ops.pyg.softmax_csr_forward(src, ptr, dim)
+        ctx.save_for_backward(out, ptr)
+        ctx.dim = dim
+
+        return out
+
+    @staticmethod
+    def backward(ctx, out_grad: Tensor) -> Tuple[Union[Tensor, int]]:
+        out, ptr = ctx.saved_tensors
+        in_grad = torch.ops.pyg.softmax_csr_backward(out, out_grad, ptr,
+                                                     ctx.dim)
+
+        return in_grad, None, None
+
+
+def softmax_csr(
+    src: Tensor,
+    ptr: Tensor,
+    dim: int = 0,
+) -> Tensor:
+    r"""Computes a sparsely evaluated softmax.
+    Given a value tensor :attr:`src`, this function first groups the values
+    along the given dimension :attr:`dim`, based on the indices specified via
+    :attr:`ptr`, and then proceeds to compute the softmax individually for
+    each group.
+
+    Args:
+        src (Tensor): The source tensor.
+        ptr (LongTensor): Groups defined by CSR representation.
+        dim (int, optional): The dimension in which to normalize.
+            (default: :obj:`0`)
+
+    :rtype: :class:`Tensor`
+
+    Examples:
+
+        >>> src = torch.randn(4, 4)
+        >>> ptr = torch.tensor([0, 4])
+        >>> softmax(src, ptr)
+        tensor([[0.0157, 0.0984, 0.1250, 0.4523],
+                [0.1453, 0.2591, 0.5907, 0.2410],
+                [0.0598, 0.2923, 0.1206, 0.0921],
+                [0.7792, 0.3502, 0.1638, 0.2145]])
+    """
+    dim = dim + src.dim() if dim < 0 else dim
+    return Softmax.apply(src, ptr, dim)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -340,4 +395,5 @@ __all__ = [
     'sampled_mul',
     'sampled_div',
     'index_sort',
+    'softmax_csr',
 ]
