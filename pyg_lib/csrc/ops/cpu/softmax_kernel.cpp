@@ -248,7 +248,7 @@ at::Tensor softmax_csr_backward_kernel(const at::Tensor& out,
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr_forward"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr"),
          TORCH_FN(softmax_csr_forward_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr_backward"),
          TORCH_FN(softmax_csr_backward_kernel));

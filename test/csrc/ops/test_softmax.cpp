@@ -34,7 +34,7 @@ TEST_P(CPUTest, SoftmaxCSRForward) {
   const auto ptr = at::tensor({0, 3, 4, 7, 8}, at::kLong);
   const auto expected_out = softmax2D_ref_impl(src, ptr, dim);
 
-  const auto out = pyg::ops::softmax_csr_forward(src, ptr, dim);
+  const auto out = pyg::ops::softmax_csr(src, ptr, dim);
   EXPECT_EQ(expected_out.size(0), out.size(0));
   EXPECT_EQ(expected_out.size(1), out.size(1));
   EXPECT_TRUE(at::allclose(expected_out, out, 1e-04, 1e-04));
@@ -58,7 +58,7 @@ TEST_P(CPUTest, SoftmaxCSRAutogradBackward) {
   // use softmax backward via autograd module
   const auto src2 = src.detach().clone();
   src2.set_requires_grad(true);
-  const auto out2 = pyg::ops::softmax_csr_forward(src2, ptr, dim);
+  const auto out2 = pyg::ops::softmax_csr(src2, ptr, dim);
   out2.backward(out_grad);
   EXPECT_EQ(src.grad().size(0), src2.grad().size(0));
   EXPECT_EQ(src.grad().size(1), src2.grad().size(1));

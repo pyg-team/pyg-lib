@@ -18,7 +18,7 @@ class SoftmaxCSR : public torch::autograd::Function<SoftmaxCSR> {
                                const int64_t dim) {
     at::AutoDispatchBelowADInplaceOrView g;
 
-    Variable out = softmax_csr_forward(src, ptr, dim);
+    Variable out = softmax_csr(src, ptr, dim);
     ctx->saved_data["dim"] = dim;
     ctx->save_for_backward({src, out, ptr});
 
@@ -52,7 +52,7 @@ at::Tensor softmax_csr_autograd(const at::Tensor& src,
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr_forward"),
+  m.impl(TORCH_SELECTIVE_NAME("pyg::softmax_csr"),
          TORCH_FN(softmax_csr_autograd));
 }
 
