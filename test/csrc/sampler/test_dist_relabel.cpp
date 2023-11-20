@@ -11,12 +11,12 @@ TEST(DistRelabelNeighborhoodTest, BasicAssertions) {
 
   auto seed = at::arange(2, 4, options);
   auto sampled_nodes_with_duplicates = at::tensor({1, 3, 2, 4}, options);
-  std::vector<int64_t> sampled_neighbors_per_node = {2, 2};
+  std::vector<int64_t> num_sampled_neighbors_per_node = {2, 2};
 
   auto relabel_out = pyg::sampler::relabel_neighborhood(
       /*seed=*/seed,
       /*sampled_nodes_with_duplicates=*/sampled_nodes_with_duplicates,
-      /*sampled_neighbors_per_node=*/sampled_neighbors_per_node,
+      /*num_sampled_neighbors_per_node=*/num_sampled_neighbors_per_node,
       /*num_nodes=*/6);
 
   auto expected_row = at::tensor({0, 0, 1, 1}, options);
@@ -41,13 +41,13 @@ TEST(DistDisjointRelabelNeighborhoodTest, BasicAssertions) {
 
   auto seed = at::arange(2, 4, options);
   auto sampled_nodes_with_duplicates = at::tensor({1, 3, 2, 4}, options);
-  std::vector<int64_t> sampled_neighbors_per_node = {2, 2};
+  std::vector<int64_t> num_sampled_neighbors_per_node = {2, 2};
   auto batch = at::tensor({0, 0, 1, 1}, options);
 
   auto relabel_out = pyg::sampler::relabel_neighborhood(
       /*seed=*/seed,
       /*sampled_nodes_with_duplicates=*/sampled_nodes_with_duplicates,
-      /*sampled_neighbors_per_node=*/sampled_neighbors_per_node,
+      /*num_sampled_neighbors_per_node=*/num_sampled_neighbors_per_node,
       /*num_nodes=*/6,
       /*batch=*/batch,
       /*csc=*/false,
@@ -100,17 +100,21 @@ TEST(DistHeteroRelabelNeighborhoodTest, BasicAssertions) {
   num_nodes_dict.insert(node_key, 6);
 
   c10::Dict<node_type, at::Tensor> sampled_nodes_with_duplicates_dict;
-  c10::Dict<rel_type, std::vector<int64_t>> sampled_neighbors_per_node_dict;
+  c10::Dict<rel_type, std::vector<std::vector<int64_t>>>
+      num_sampled_neighbors_per_node_dict;
   sampled_nodes_with_duplicates_dict.insert(node_key,
                                             at::tensor({1, 3, 2, 4}, options));
-  sampled_neighbors_per_node_dict.insert(rel_key, std::vector<int64_t>(2, 2));
+  std::vector<std::vector<int64_t>> num_sampled_neighbors_per_node_vec(
+      2, std::vector<int64_t>(1, 2));
+  num_sampled_neighbors_per_node_dict.insert(
+      rel_key, num_sampled_neighbors_per_node_vec);
 
   auto relabel_out = pyg::sampler::hetero_relabel_neighborhood(
       /*node_types=*/node_types,
       /*edge_types=*/edge_types,
       /*seed_dict=*/seed_dict,
       /*sampled_nodes_with_duplicates_dict=*/sampled_nodes_with_duplicates_dict,
-      /*sampled_neighbors_per_node=*/sampled_neighbors_per_node_dict,
+      /*num_sampled_neighbors_per_node=*/num_sampled_neighbors_per_node_dict,
       /*num_nodes_dict=*/num_nodes_dict);
 
   auto expected_row = at::tensor({0, 0, 1, 1}, options);
@@ -155,17 +159,21 @@ TEST(DistHeteroRelabelNeighborhoodCscTest, BasicAssertions) {
   num_nodes_dict.insert(node_key, 6);
 
   c10::Dict<node_type, at::Tensor> sampled_nodes_with_duplicates_dict;
-  c10::Dict<rel_type, std::vector<int64_t>> sampled_neighbors_per_node_dict;
+  c10::Dict<rel_type, std::vector<std::vector<int64_t>>>
+      num_sampled_neighbors_per_node_dict;
   sampled_nodes_with_duplicates_dict.insert(node_key,
                                             at::tensor({1, 3, 2, 4}, options));
-  sampled_neighbors_per_node_dict.insert(rel_key, std::vector<int64_t>(2, 2));
+  std::vector<std::vector<int64_t>> num_sampled_neighbors_per_node_vec(
+      2, std::vector<int64_t>(1, 2));
+  num_sampled_neighbors_per_node_dict.insert(
+      rel_key, num_sampled_neighbors_per_node_vec);
 
   auto relabel_out = pyg::sampler::hetero_relabel_neighborhood(
       /*node_types=*/node_types,
       /*edge_types=*/edge_types,
       /*seed_dict=*/seed_dict,
       /*sampled_nodes_with_duplicates_dict=*/sampled_nodes_with_duplicates_dict,
-      /*sampled_neighbors_per_node=*/sampled_neighbors_per_node_dict,
+      /*num_sampled_neighbors_per_node=*/num_sampled_neighbors_per_node_dict,
       /*num_nodes_dict=*/num_nodes_dict,
       /*batch_dict=*/c10::nullopt,
       /*csc=*/true);
@@ -217,11 +225,15 @@ TEST(DistHeteroDisjointRelabelNeighborhoodTest, BasicAssertions) {
   num_nodes_dict.insert(node_key, 6);
 
   c10::Dict<node_type, at::Tensor> sampled_nodes_with_duplicates_dict;
-  c10::Dict<rel_type, std::vector<int64_t>> sampled_neighbors_per_node_dict;
+  c10::Dict<rel_type, std::vector<std::vector<int64_t>>>
+      num_sampled_neighbors_per_node_dict;
   c10::Dict<node_type, at::Tensor> batch_dict;
   sampled_nodes_with_duplicates_dict.insert(node_key,
                                             at::tensor({1, 3, 2, 4}, options));
-  sampled_neighbors_per_node_dict.insert(rel_key, std::vector<int64_t>(2, 2));
+  std::vector<std::vector<int64_t>> num_sampled_neighbors_per_node_vec(
+      2, std::vector<int64_t>(1, 2));
+  num_sampled_neighbors_per_node_dict.insert(
+      rel_key, num_sampled_neighbors_per_node_vec);
   batch_dict.insert(node_key, at::tensor({0, 0, 1, 1}, options));
 
   auto relabel_out = pyg::sampler::hetero_relabel_neighborhood(
@@ -229,7 +241,7 @@ TEST(DistHeteroDisjointRelabelNeighborhoodTest, BasicAssertions) {
       /*edge_types=*/edge_types,
       /*seed_dict=*/seed_dict,
       /*sampled_nodes_with_duplicates_dict=*/sampled_nodes_with_duplicates_dict,
-      /*sampled_neighbors_per_node=*/sampled_neighbors_per_node_dict,
+      /*num_sampled_neighbors_per_node=*/num_sampled_neighbors_per_node_dict,
       /*num_nodes_dict=*/num_nodes_dict,
       /*batch_dict=*/batch_dict,
       /*csc=*/false,

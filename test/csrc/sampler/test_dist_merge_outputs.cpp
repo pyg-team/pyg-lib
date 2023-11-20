@@ -41,8 +41,9 @@ TEST(DistMergeOutputsTest, BasicAssertions) {
   auto expected_edges = at::tensor({14, 15, 16, 17, 18, 19, 20}, options);
   EXPECT_TRUE(at::equal(std::get<1>(out), expected_edges));
 
-  const std::vector<int64_t> expected_sampled_neighbors_per_node = {2, 1, 2, 2};
-  EXPECT_EQ(std::get<3>(out), expected_sampled_neighbors_per_node);
+  const std::vector<int64_t> expected_num_sampled_neighbors_per_node = {2, 1, 2,
+                                                                        2};
+  EXPECT_EQ(std::get<3>(out), expected_num_sampled_neighbors_per_node);
 }
 
 TEST(DistMergeOutputsAllNeighborsTest, BasicAssertions) {
@@ -82,8 +83,9 @@ TEST(DistMergeOutputsAllNeighborsTest, BasicAssertions) {
   auto expected_edges = at::tensor({14, 15, 16, 17, 18, 19, 20, 21}, options);
   EXPECT_TRUE(at::equal(std::get<1>(out), expected_edges));
 
-  const std::vector<int64_t> expected_sampled_neighbors_per_node = {2, 1, 2, 3};
-  EXPECT_EQ(std::get<3>(out), expected_sampled_neighbors_per_node);
+  const std::vector<int64_t> expected_num_sampled_neighbors_per_node = {2, 1, 2,
+                                                                        3};
+  EXPECT_EQ(std::get<3>(out), expected_num_sampled_neighbors_per_node);
 }
 
 TEST(DistDisjointMergeOutputsTest, BasicAssertions) {
@@ -124,6 +126,7 @@ TEST(DistDisjointMergeOutputsTest, BasicAssertions) {
   auto expected_batch = at::tensor({0, 0, 1, 2, 2, 3, 3}, options);
   EXPECT_TRUE(at::equal(std::get<2>(out).value(), expected_batch));
 
-  const std::vector<int64_t> expected_sampled_neighbors_per_node = {2, 1, 2, 2};
-  EXPECT_EQ(std::get<3>(out), expected_sampled_neighbors_per_node);
+  const std::vector<int64_t> expected_num_sampled_neighbors_per_node = {2, 1, 2,
+                                                                        2};
+  EXPECT_EQ(std::get<3>(out), expected_num_sampled_neighbors_per_node);
 }
