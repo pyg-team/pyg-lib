@@ -361,7 +361,7 @@ def softmax_csr(
                 [0.7792, 0.3502, 0.1638, 0.2145]])
     """
     dim = dim + src.dim() if dim < 0 else dim
-    return torch.ops.pyg.softmax_csr_forward(src, ptr, dim)
+    return torch.ops.pyg.softmax_csr(src, ptr, dim)
 
 
 __all__ = [
