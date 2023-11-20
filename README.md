@@ -1,5 +1,7 @@
-[testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/testing.yml/badge.svg
-[testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/testing.yml
+[python-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml/badge.svg
+[python-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml
+[cpp-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml/badge.svg
+[cpp-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml
 [docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
 [docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
 [coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
@@ -7,7 +9,8 @@
 
 # pyg-lib
 
-[![Testing Status][testing-image]][testing-url]
+[![Python Testing Status][python-testing-image]][python-testing-url]
+[![CPP Testing Status][cpp-testing-image]][cpp-testing-url]
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
 
@@ -66,5 +69,6 @@ pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.h
 ### From master
 
 ```
+pip install ninja wheel
 pip install git+https://github.com/pyg-team/pyg-lib.git
 ```
