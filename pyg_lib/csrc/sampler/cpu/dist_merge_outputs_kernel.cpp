@@ -58,7 +58,7 @@ merge_outputs(
   }
 
   const auto p_size = partition_ids.size();
-  std::vector<int64_t> sampled_neighbors_per_node(p_size);
+  std::vector<int64_t> num_sampled_neighbors_per_node(p_size);
 
   const auto scalar_type = node_ids[0].scalar_type();
   AT_DISPATCH_INTEGRAL_TYPES(scalar_type, "merge_outputs_kernel", [&] {
@@ -106,7 +106,7 @@ merge_outputs(
                     batch_data[j]);
         }
 
-        sampled_neighbors_per_node[j] = end_node - begin_node;
+        num_sampled_neighbors_per_node[j] = end_node - begin_node;
       }
     });
 
@@ -128,7 +128,7 @@ merge_outputs(
   });
 
   return std::make_tuple(out_node_id, out_edge_id, out_batch,
-                         sampled_neighbors_per_node);
+                         num_sampled_neighbors_per_node);
 }
 
 #define DISPATCH_MERGE_OUTPUTS(disjoint, ...) \

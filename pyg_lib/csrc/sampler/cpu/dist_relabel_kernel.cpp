@@ -101,7 +101,7 @@ relabel(
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_duplicates_dict,
-    const c10::Dict<rel_type, std::vector<int64_t>>&
+    const c10::Dict<rel_type, std::vector<std::vector<int64_t>>>&
         num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
@@ -117,9 +117,16 @@ relabel(
     phmap::flat_hash_map<node_type, scalar_t*> batch_data_dict;
     phmap::flat_hash_map<edge_type, std::vector<scalar_t>> sampled_rows_dict;
     phmap::flat_hash_map<edge_type, std::vector<scalar_t>> sampled_cols_dict;
+    // `srcs_slice_dict` defines the number of src nodes for each edge type in
+    // a given layer in the form of a range. Local src nodes (`sampled_rows`)
+    // will be created on its basis, so for a given edge type the ranges will
+    // not be repeated, and the starting value of the next layer will be the
+    // end value from the previous layer.
+    phmap::flat_hash_map<edge_type, std::pair<size_t, size_t>> srcs_slice_dict;
 
     phmap::flat_hash_map<node_type, Mapper<node_t, scalar_t>> mapper_dict;
     phmap::flat_hash_map<node_type, std::pair<size_t, size_t>> slice_dict;
+    phmap::flat_hash_map<node_type, int64_t> srcs_offset_dict;
 
     const bool parallel = at::get_num_threads() > 1 && edge_types.size() > 1;
     std::vector<std::vector<edge_type>> threads_edge_types;
@@ -128,6 +135,14 @@ relabel(
       // Initialize empty vectors.
       sampled_rows_dict[k];
       sampled_cols_dict[k];
+
+      // `num_sampled_neighbors_per_node_dict` is a dictionary where for
+      // each edge type it contains information about how many neighbors every
+      // src node has sampled. These values are saved in a separate vector for
+      // each layer.
+      size_t num_src_nodes =
+          num_sampled_neighbors_per_node_dict.at(to_rel_type(k))[0].size();
+      srcs_slice_dict[k] = {0, num_src_nodes};
 
       if (parallel) {
         // Each thread is assigned edge types that have the same dst node
@@ -161,6 +176,7 @@ relabel(
           {k, sampled_nodes_with_duplicates_dict.at(k).data_ptr<scalar_t>()});
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
+      srcs_offset_dict[k] = 0;
       if constexpr (disjoint) {
         batch_data_dict.insert(
             {k, batch_dict.value().at(k).data_ptr<scalar_t>()});
@@ -178,44 +194,71 @@ relabel(
         }
       }
     }
-    at::parallel_for(
-        0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
-          for (auto j = _s; j < _e; j++) {
-            for (const auto& k : threads_edge_types[j]) {
-              const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
-              const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
 
-              const auto num_sampled_neighbors_size =
-                  num_sampled_neighbors_per_node_dict.at(to_rel_type(k)).size();
+    size_t num_layers =
+        num_sampled_neighbors_per_node_dict.at(to_rel_type(edge_types[0]))
+            .size();
+    // Iterate over the layers
+    for (auto ell = 0; ell < num_layers; ++ell) {
+      at::parallel_for(
+          0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
+            for (auto t = _s; t < _e; t++) {
+              for (const auto& k : threads_edge_types[t]) {
+                const auto dst = !csc ? std::get<2>(k) : std::get<0>(k);
 
-              if (num_sampled_neighbors_size == 0) {
-                continue;
-              }
+                auto [src_begin, src_end] = srcs_slice_dict.at(k);
 
-              for (auto i = 0; i < num_sampled_neighbors_size; i++) {
-                auto& dst_mapper = mapper_dict.at(dst);
-                auto& dst_sampled_nodes_data = sampled_nodes_data_dict.at(dst);
+                for (auto i = src_begin; i < src_end; i++) {
+                  auto& dst_mapper = mapper_dict.at(dst);
+                  auto& dst_sampled_nodes_data =
+                      sampled_nodes_data_dict.at(dst);
 
-                slice_dict.at(dst).second +=
-                    num_sampled_neighbors_per_node_dict.at(to_rel_type(k))[i];
-                auto [begin, end] = slice_dict.at(dst);
+                  // For each edge type `slice_dict` defines the number of
+                  // nodes sampled by a src node `i` in the form of a range.
+                  // The indices in the given range point to global dst nodes
+                  // from `dst_sampled_nodes_data`.
+                  slice_dict.at(dst).second +=
+                      num_sampled_neighbors_per_node_dict.at(
+                          to_rel_type(k))[ell][i - src_begin];
+                  auto [begin, end] = slice_dict.at(dst);
 
-                for (auto j = begin; j < end; j++) {
-                  std::pair<scalar_t, bool> res;
-                  if constexpr (!disjoint) {
-                    res = dst_mapper.insert(dst_sampled_nodes_data[j]);
-                  } else {
-                    res = dst_mapper.insert({batch_data_dict.at(dst)[j],
-                                             dst_sampled_nodes_data[j]});
+                  for (auto j = begin; j < end; j++) {
+                    std::pair<scalar_t, bool> res;
+                    if constexpr (!disjoint) {
+                      res = dst_mapper.insert(dst_sampled_nodes_data[j]);
+                    } else {
+                      res = dst_mapper.insert({batch_data_dict.at(dst)[j],
+                                               dst_sampled_nodes_data[j]});
+                    }
+                    sampled_rows_dict.at(k).push_back(i);
+                    sampled_cols_dict.at(k).push_back(res.first);
                   }
-                  sampled_rows_dict.at(k).push_back(i);
-                  sampled_cols_dict.at(k).push_back(res.first);
+                  slice_dict.at(dst).first = end;
                 }
-                slice_dict.at(dst).first = end;
               }
             }
+          });
+
+      // Get local src nodes ranges for the next layer
+      if (ell < num_layers - 1) {
+        for (const auto& k : edge_types) {
+          // Edges with the same src node types will have the same src node
+          // offsets.
+          const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
+          if (srcs_offset_dict[src] < srcs_slice_dict.at(k).second) {
+            srcs_offset_dict[src] = srcs_slice_dict.at(k).second;
           }
-        });
+        }
+        for (const auto& k : edge_types) {
+          const auto src = !csc ? std::get<0>(k) : std::get<2>(k);
+          srcs_slice_dict[k] = {
+              srcs_offset_dict.at(src),
+              srcs_offset_dict.at(src) + num_sampled_neighbors_per_node_dict
+                                             .at(to_rel_type(k))[ell + 1]
+                                             .size()};
+        }
+      }
+    }
 
     for (const auto& k : edge_types) {
       const auto edges = get_sampled_edges<scalar_t>(
@@ -254,7 +297,7 @@ hetero_relabel_neighborhood_kernel(
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_duplicates_dict,
-    const c10::Dict<rel_type, std::vector<int64_t>>&
+    const c10::Dict<rel_type, std::vector<std::vector<int64_t>>>&
         num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,

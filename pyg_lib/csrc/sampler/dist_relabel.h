@@ -15,7 +15,7 @@ PYG_API
 std::tuple<at::Tensor, at::Tensor> relabel_neighborhood(
     const at::Tensor& seed,
     const at::Tensor& sampled_nodes_with_duplicates,
-    const std::vector<int64_t>& sampled_neighbors_per_node,
+    const std::vector<int64_t>& num_sampled_neighbors_per_node,
     const int64_t num_nodes,
     const c10::optional<at::Tensor>& batch = c10::nullopt,
     bool csc = false,
@@ -32,8 +32,8 @@ hetero_relabel_neighborhood(
     const std::vector<edge_type>& edge_types,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<node_type, at::Tensor>& sampled_nodes_with_duplicates_dict,
-    const c10::Dict<rel_type, std::vector<int64_t>>&
-        sampled_neighbors_per_node_dict,
+    const c10::Dict<rel_type, std::vector<std::vector<int64_t>>>&
+        num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
     const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict =
         c10::nullopt,
