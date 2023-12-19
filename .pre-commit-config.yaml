@@ -32,7 +32,7 @@ repos:
         name: Format code
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.0
+    rev: 5.13.2
     hooks:
       - id: isort
         name: Sort imports
