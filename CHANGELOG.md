@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Dropped the MKL code path when sampling neighbors with `replace=False` since it does not correctly prevent duplicates ([#275](https://github.com/pyg-team/pyg-lib/pull/275))
 - Added `--biased` parameter to run benchmarks for biased sampling ([#267](https://github.com/pyg-team/pyg-lib/pull/267))
 - Improved speed of biased sampling ([#270](https://github.com/pyg-team/pyg-lib/pull/270))
-- Fixed `grouped_matmul` when tensors are not contiguous (#290)
+- Fixed `grouped_matmul` when tensors are not contiguous ([#290](https://github.com/pyg-team/pyg-lib/pull/290))
 ### Removed
 
 ## [0.3.0] - 2023-10-11
