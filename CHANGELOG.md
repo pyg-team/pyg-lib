@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.4.0] - 2023-MM-DD
 ### Added
+- Added PyTorch 2.2 support ([#294](https://github.com/pyg-team/pyg-lib/pull/294))
 - Added `softmax_csr` implementation ([#264](https://github.com/pyg-team/pyg-lib/pull/264), [#282](https://github.com/pyg-team/pyg-lib/pull/282))
 - Added support for edge-level sampling ([#280](https://github.com/pyg-team/pyg-lib/pull/280))
 - Added support for `bfloat16` data type in `segment_matmul` and `grouped_matmul` (CPU only) ([#272](https://github.com/pyg-team/pyg-lib/pull/272))
