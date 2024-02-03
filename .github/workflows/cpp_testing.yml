@@ -11,7 +11,7 @@ jobs:
   gtest:
     runs-on: ubuntu-latest
     env:
-      MKL_VERSION: 2023.1.0
+      MKL_VERSION: 2024.0.0
 
     steps:
       - name: Checkout repostiory
