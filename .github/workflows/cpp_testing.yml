@@ -11,7 +11,7 @@ jobs:
   gtest:
     runs-on: ubuntu-latest
     env:
-      MKL_VERSION: 2024.0.0
+      MKL_VERSION: 2023.1.0
 
     steps:
       - name: Checkout repostiory
@@ -39,24 +39,28 @@ jobs:
           mkdir build
           cd build
 
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=ON -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=OFF -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
           unset _BLAS_INCLUDE_DIR
           cd ..
+
       - name: Build
         run: |
           cd build
           cmake --build .
           cd ..
+
       - name: Run tests
         run: |
           cd build
           ctest --verbose --output-on-failure
           cd ..
+
       - name: Collect coverage
         run: |
           sudo apt-get install lcov
           lcov --directory . --capture --output-file .coverage.info
           lcov --remove .coverage.info '*/test/*' --output-file .coverage.info
+
       - name: Upload coverage
         uses: codecov/codecov-action@v2
         with:
