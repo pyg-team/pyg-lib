@@ -56,5 +56,5 @@ runs:
 
     - name: Install additional dependencies
       run: |
-        pip install ninja wheel
+        pip install setuptools ninja wheel
       shell: bash
