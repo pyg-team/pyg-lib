@@ -100,8 +100,7 @@ def maybe_append_with_mkl(dependencies):
                 product_version = match.group(0).split(' ')[-1]
 
             dependencies.append(f'mkl-include=={product_version}')
-            dependencies.append(f'mkl=={product_version}')
-            dependencies.append(f'mkl-devel=={product_version}')
+            dependencies.append(f'mkl-static=={product_version}')
 
 
 install_requires = []

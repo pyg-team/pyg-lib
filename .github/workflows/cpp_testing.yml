@@ -10,8 +10,6 @@ jobs:
 
   gtest:
     runs-on: ubuntu-latest
-    env:
-      MKL_VERSION: 2023.1.0
 
     steps:
       - name: Checkout repostiory
@@ -24,22 +22,16 @@ jobs:
 
       - name: Configure
         run: |
-          pip install mkl==${MKL_VERSION} mkl-include==${MKL_VERSION} mkl-devel==${MKL_VERSION}
+          export MKL_VERSION=`python -c 'from tools.mkl_ver import compatible_mkl_ver;print(compatible_mkl_ver())'`
+          pip install mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
 
           export _BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'`
-          export LIBS_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib")'`
           export MKL_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib{os.sep}cmake{os.sep}mkl")'`
-
-          cd $LIBS_DIR
-          for library in `ls *.so.2`; do
-            ln -s ${library} ${library::-2} || true
-          done
-          cd -
 
           mkdir build
           cd build
 
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=OFF -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
+          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=ON -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
           unset _BLAS_INCLUDE_DIR
           cd ..
 
