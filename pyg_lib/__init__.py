@@ -11,7 +11,7 @@ import pyg_lib.partition  # noqa
 
 from .home import get_home_dir, set_home_dir
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 
 # * `libpyg.so`: The name of the shared library file.
 # * `torch.ops.pyg`: The used namespace.
