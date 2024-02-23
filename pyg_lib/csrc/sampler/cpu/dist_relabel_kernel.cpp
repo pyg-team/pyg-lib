@@ -166,14 +166,10 @@ relabel(
       threads_edge_types.push_back({edge_types});
     }
 
-    int64_t N = 0;
-    for (const auto& kv : num_nodes_dict) {
-      N += kv.value() > 0 ? kv.value() : 0;
-    }
-
     for (const auto& k : node_types) {
       sampled_nodes_data_dict.insert(
           {k, sampled_nodes_with_duplicates_dict.at(k).data_ptr<scalar_t>()});
+      int64_t N = num_nodes_dict.at(k);
       mapper_dict.insert({k, Mapper<node_t, scalar_t>(N)});
       slice_dict[k] = {0, 0};
       srcs_offset_dict[k] = 0;
@@ -182,6 +178,7 @@ relabel(
             {k, batch_dict.value().at(k).data_ptr<scalar_t>()});
       }
     }
+    scalar_t batch_idx = 0;
     for (const auto& kv : seed_dict) {
       const at::Tensor& seed = kv.value();
       if constexpr (!disjoint) {
@@ -190,7 +187,8 @@ relabel(
         auto& mapper = mapper_dict.at(kv.key());
         const auto seed_data = seed.data_ptr<scalar_t>();
         for (size_t i = 0; i < seed.numel(); ++i) {
-          mapper.insert({i, seed_data[i]});
+          mapper.insert({batch_idx, seed_data[i]});
+          batch_idx++;
         }
       }
     }
