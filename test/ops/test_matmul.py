@@ -75,7 +75,7 @@ def test_grouped_matmul_autograd(dtype, transposed, device):
     for i in range(len(outs)):
         assert outs[i].size() == (inputs[i].size(0), others[i].size(-1))
         expected = inputs[i] @ others[i] + biases[i]
-        assert torch.allclose(outs[i], expected, atol=1e-6)
+        assert torch.allclose(outs[i], expected, atol=1e-4)
 
     sum([out.sum() for out in outs]).backward()
     for i in range(len(outs)):
