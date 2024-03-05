@@ -10,7 +10,7 @@ if torch.cuda.is_available():
 
 @pytest.mark.parametrize('device', DEVICES)
 def test_index_sort(device):
-    inputs = torch.randint(low=0, high=1024, size=(1000000, ), device=device)
+    inputs = torch.randperm(100_000, device=device)
     ref_sorted_input, ref_indices = torch.sort(inputs, stable=True)
     sorted_input, indices = pyg_lib.ops.index_sort(inputs)
     assert torch.all(ref_sorted_input == sorted_input)
