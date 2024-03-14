@@ -161,7 +161,8 @@ std::pair<K*, V*> radix_sort_parallel(K* inp_key_buf,
                                       int64_t elements_count,
                                       int64_t max_value) {
   int maxthreads = omp_get_max_threads();
-  std::unique_ptr<int64_t[]> histogram_tmp(new int64_t[RDX_HIST_SIZE * maxthreads]);
+  std::unique_ptr<int64_t[]> histogram_tmp(
+      new int64_t[RDX_HIST_SIZE * maxthreads]);
   std::unique_ptr<int64_t[]> histogram_ps_tmp(
       new int64_t[RDX_HIST_SIZE * maxthreads + 1]);
   int64_t* histogram = histogram_tmp.get();
