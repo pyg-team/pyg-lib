@@ -68,6 +68,10 @@ jobs:
             cuda-version: 'cu118'
           - os: macos-14
             cuda-version: 'cu121'
+          - os: macos-14
+            python-version: '3.8'
+          - os: macos-14
+            python-version: '3.9'
 
     steps:
       - name: Checkout repository
