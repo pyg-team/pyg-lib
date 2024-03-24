@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(pyg)
 set(CMAKE_CXX_STANDARD 17)
 set(PYG_VERSION 0.4.0)
@@ -28,15 +28,13 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CUR
 
 if (USE_PYTHON)
   # Needed for GitHub CI in order to pick up the correct Python version:
-  if (NOT DEFINED Python3_FIND_REGISTRY)
-    set(Python_FIND_REGISTRY "LAST")
-  endif()
-  if (NOT DEFINED Python3_FIND_FRAMEWORK)
-    set(Python_FIND_FRAMEWORK "LAST")
-  endif()
+  cmake_policy(SET CMP0094 NEW)
+  set(Python3_FIND_REGISTRY "LAST")
+  set(Python3_FIND_FRAMEWORK "LAST")
+  set(Python3_FIND_VIRTUALENV "FIRST")
 
   add_definitions(-DUSE_PYTHON)
-  find_package(Python3 REQUIRED COMPONENTS Development Interpreter)
+  find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
 
 if(WITH_CUDA)
