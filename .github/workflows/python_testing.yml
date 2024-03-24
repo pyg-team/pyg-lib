@@ -23,6 +23,7 @@ jobs:
       - name: Install package
         run: |
           echo "${{ env.pythonLocation }}"
+          python -c "import sys; print(sys.executable)"
           pip install --verbose -e .[test]
 
       - name: Print GLIBC dependency
