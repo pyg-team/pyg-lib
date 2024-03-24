@@ -28,14 +28,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CUR
 
 if (USE_PYTHON)
   # Needed for GitHub CI in order to pick up the correct Python version:
-  if (POLICY CMP0094)
-    cmake_policy(SET CMP0094 NEW)
-  endif()
-  if (NOT DEFINED Python3_FIND_REGISTRY)
-    set(Python_FIND_REGISTRY "LAST")
-  endif()
-  if (NOT DEFINED Python3_FIND_FRAMEWORK)
-    set(Python_FIND_FRAMEWORK "LAST")
+  cmake_policy(SET CMP0094 NEW)
+  set(Python3_FIND_REGISTRY "LAST")
+  set(Python3_FIND_FRAMEWORK "LAST")
+  set(Python3_FIND_VIRTUALENV "FIRST")
   endif()
 
   add_definitions(-DUSE_PYTHON)
