@@ -27,6 +27,14 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h")
 
 if (USE_PYTHON)
+    # Needed for GitHub CI in order to pick up the correct Python version:
+    if (NOT DEFINED Python_FIND_REGISTRY)
+        set(Python_FIND_REGISTRY "LAST")
+    endif()
+    if (NOT DEFINED Python_FIND_FRAMEWORK)
+        set(Python_FIND_FRAMEWORK "LAST")
+    endif()
+
   add_definitions(-DUSE_PYTHON)
   find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
