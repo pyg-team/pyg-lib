@@ -326,7 +326,7 @@ def index_sort(
         A tuple containing sorted values and indices of the elements in the
         original :obj:`input` tensor.
     """
-    if inputs.is_cuda or inputs.is_xpu:
+    if not inputs.is_cpu:
         return torch.sort(inputs)
     return torch.ops.pyg.index_sort(inputs, max_value)
 
