@@ -61,6 +61,8 @@ class CMakeBuild(build_ext):
             '-DUSE_PYTHON=ON',
             f'-DPython_ROOT_DIR={sys.exec_prefix}',
             f'-DPython_EXECUTABLE={sys.executable}',
+            f'-DPython3_ROOT_DIR={sys.exec_prefix}',
+            f'-DPython3_EXECUTABLE={sys.executable}',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
