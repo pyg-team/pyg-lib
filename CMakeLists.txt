@@ -36,7 +36,7 @@ if (USE_PYTHON)
   endif()
 
   add_definitions(-DUSE_PYTHON)
-  find_package(Python3 REQUIRED COMPONENTS Development Interpreter)
+  find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
 
 if(WITH_CUDA)

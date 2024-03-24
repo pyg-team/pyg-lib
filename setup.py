@@ -59,7 +59,7 @@ class CMakeBuild(build_ext):
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             '-DUSE_PYTHON=ON',
-            f'-DPython3_EXECUTABLE={sys.executable}',
+            # f'-DPython3_EXECUTABLE={sys.executable}',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
