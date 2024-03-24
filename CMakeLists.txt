@@ -32,7 +32,6 @@ if (USE_PYTHON)
   set(Python3_FIND_REGISTRY "LAST")
   set(Python3_FIND_FRAMEWORK "LAST")
   set(Python3_FIND_VIRTUALENV "FIRST")
-  endif()
 
   add_definitions(-DUSE_PYTHON)
   find_package(Python3 REQUIRED COMPONENTS Development)
