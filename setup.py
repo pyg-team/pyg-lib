@@ -7,6 +7,7 @@ import importlib
 import os
 import os.path as osp
 import subprocess
+import sys
 import warnings
 
 from setuptools import Extension, find_packages, setup
@@ -58,6 +59,7 @@ class CMakeBuild(build_ext):
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             '-DUSE_PYTHON=ON',
+            f'-DPython3_ROOT_DIR={sys.exec_prefix}',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
