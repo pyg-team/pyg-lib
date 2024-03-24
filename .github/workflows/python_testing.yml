@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout repository
@@ -19,9 +19,14 @@ jobs:
 
       - name: Setup packages
         uses: ./.github/actions/setup
+        with:
+          python-version: '3.10'
 
       - name: Install package
         run: |
+          echo "python-setup: ${{ env.pythonLocation }}"
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.exec_prefix)"
           pip install --verbose -e .[test]
 
       - name: Print GLIBC dependency
