@@ -9,10 +9,11 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   import:
-    runs-on: [windows-latest]
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
+        os: [windows-latest]
         cuda-version: ['cpu', 'cu121']
 
     steps:
@@ -30,6 +31,7 @@ jobs:
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           pip install --verbose -e .
+        shell: bash
 
       - name: Test imports
         run: |
