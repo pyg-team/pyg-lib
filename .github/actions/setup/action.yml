@@ -26,6 +26,9 @@ runs:
         sudo rm -rf /usr/share/dotnet
       shell: bash
 
+    - name: Set up Windows developer command prompt
+      uses: ilammy/msvc-dev-cmd@v1
+
     - name: Install CUDA ${{ inputs.cuda-version }}
       if: ${{ inputs.cuda-version != 'cpu' }}
       run: |
