@@ -19,7 +19,7 @@ URL = 'https://github.com/pyg-team/pyg-lib'
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
+        self.sourcedir = osp.abspath(sourcedir)
 
 
 class CMakeBuild(build_ext):
@@ -29,6 +29,7 @@ class CMakeBuild(build_ext):
         return value in ["1", "ON", "YES", "TRUE", "Y"]
 
     def get_ext_filename(self, ext_name):
+        print("GET EXT FILENAME")
         # Remove Python ABI suffix:
         ext_filename = super().get_ext_filename(ext_name)
         ext_filename_parts = ext_filename.split('.')
@@ -40,7 +41,7 @@ class CMakeBuild(build_ext):
 
         import torch
 
-        extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
+        extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
         self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
             if CMakeBuild.check_env_flag("DEBUG"):
@@ -79,10 +80,13 @@ class CMakeBuild(build_ext):
 
         build_args = []
 
+        print("1111 ---------------")
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
                               cwd=self.build_temp)
+        print("2222 ---------------")
         subprocess.check_call(['cmake', '--build', '.'] + build_args,
                               cwd=self.build_temp)
+        print("3333 ---------------")
 
 
 def maybe_append_with_mkl(dependencies):
