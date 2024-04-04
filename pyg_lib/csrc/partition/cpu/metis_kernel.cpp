@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
-#include <metis.h>
+/* #include <metis.h> */
 
 namespace pyg {
 namespace partition {
@@ -31,14 +31,16 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
   auto part = at::empty({nvtxs}, rowptr.options());
   auto part_data = part.data_ptr<int64_t>();
 
-  if (recursive) {
-    METIS_PartGraphRecursive(&nvtxs, &ncon, xadj, adjncy, vwgt, NULL, adjwgt,
-                             &num_partitions, NULL, NULL, NULL, &objval,
-                             part_data);
-  } else {
-    METIS_PartGraphKway(&nvtxs, &ncon, xadj, adjncy, vwgt, NULL, adjwgt,
-                        &num_partitions, NULL, NULL, NULL, &objval, part_data);
-  }
+  /* if (recursive) { */
+  /*   METIS_PartGraphRecursive(&nvtxs, &ncon, xadj, adjncy, vwgt, NULL, adjwgt,
+   */
+  /*                            &num_partitions, NULL, NULL, NULL, &objval, */
+  /*                            part_data); */
+  /* } else { */
+  /*   METIS_PartGraphKway(&nvtxs, &ncon, xadj, adjncy, vwgt, NULL, adjwgt, */
+  /*                       &num_partitions, NULL, NULL, NULL, &objval,
+   * part_data); */
+  /* } */
 
   return part;
 }
