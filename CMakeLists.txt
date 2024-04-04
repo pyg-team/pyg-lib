@@ -121,4 +121,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Cmake creates *.dylib by default, but python expects *.so by default
 if (APPLE)
   set_property(TARGET ${PROJECT_NAME} PROPERTY SUFFIX .so)
+elseif (MSVC)
+  set_property(TARGET ${PROJECT_NAME} PROPERTY SUFFIX .pyd)
 endif()
