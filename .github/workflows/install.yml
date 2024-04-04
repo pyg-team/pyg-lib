@@ -29,9 +29,8 @@ jobs:
 
       - name: Install package
         run: |
-          source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
+          # source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           pip install --verbose -e .
-        shell: bash
 
       - name: Test imports
         run: |

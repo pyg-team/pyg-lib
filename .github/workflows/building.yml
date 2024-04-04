@@ -121,6 +121,7 @@ jobs:
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
+        shell: bash
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1
