@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-2019]
         cuda-version: ['cpu', 'cu121']
 
     steps:

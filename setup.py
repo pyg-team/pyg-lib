@@ -30,12 +30,10 @@ class CMakeBuild(build_ext):
         return value in ["1", "ON", "YES", "TRUE", "Y"]
 
     def get_ext_filename(self, ext_name):
-        print("GET EXT FILENAME")
         # Remove Python ABI suffix:
         ext_filename = super().get_ext_filename(ext_name)
         ext_filename_parts = ext_filename.split('.')
         ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
-        print('.'.join(ext_filename_parts))
         return '.'.join(ext_filename_parts)
 
     def build_extension(self, ext):
@@ -44,8 +42,6 @@ class CMakeBuild(build_ext):
         import torch
 
         extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
-        print(ext)
-        print(extdir)
         self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
             if CMakeBuild.check_env_flag("DEBUG"):
@@ -85,20 +81,10 @@ class CMakeBuild(build_ext):
 
         build_args = []
 
-        print("1111 ---------------")
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
                               cwd=self.build_temp)
-        print("2222 ---------------")
         subprocess.check_call(['cmake', '--build', '.'] + build_args,
                               cwd=self.build_temp)
-        print("3333 ---------------")
-
-        print('. --------------')
-        print(os.listdir('.'))
-        print('build --------------')
-        print(os.listdir(osp.join('.', 'build')))
-        print('build temp.win --------------')
-        print(os.listdir(osp.join('.', 'build', 'temp.win-amd64-3.8')))
 
 
 def mkl_dependencies():
