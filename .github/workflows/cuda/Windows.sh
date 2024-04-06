@@ -51,7 +51,7 @@ rm -f "${CUDA_FILE}"
 
 echo Installing NvToolsExt...
 curl -k -L https://ossci-windows.s3.us-east-1.amazonaws.com/builder/NvToolsExt.7z --output "/tmp/NvToolsExt.7z"
-7z x tmp/NvToolsExt.7z -o"/tmp/NvToolsExt"
+7z x "/tmp/NvToolsExt.7z" -o"/tmp/NvToolsExt"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/bin/x64"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/include"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/lib/x64"
