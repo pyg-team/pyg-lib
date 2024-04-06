@@ -39,7 +39,7 @@ esac
 
 # Install NVIDIA drivers, see:
 # https://github.com/pytorch/vision/blob/master/packaging/windows/internal/cuda_install.bat#L99-L102
-curl -k -L "https://drive.google.com/u/0/uc?id=1injUyo3lnarMgWyRcXqKg4UGnN0ysmuq&export=download" --output "/tmp/gpu_driver_dlls.zip"
+curl -k -L "https://ossci-windows.s3.us-east-1.amazonaws.com/builder/additional_dlls.zip" --output "/tmp/gpu_driver_dlls.zip"
 7z x "/tmp/gpu_driver_dlls.zip" -o"/c/Windows/System32"
 
 curl -k -L "${CUDA_URL}/${CUDA_FILE}" --output "${CUDA_FILE}"
