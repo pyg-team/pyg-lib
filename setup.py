@@ -1,7 +1,7 @@
 # Environment flags to control different options
 #
-#   USE_MKL_BLAS=1
-#     enables use of MKL BLAS (requires PyTorch to be built with MKL support)
+# - USE_MKL_BLAS=1:
+#   Enables use of MKL BLAS (requires PyTorch to be built with MKL support)
 
 import importlib
 import os
@@ -44,6 +44,8 @@ class CMakeBuild(build_ext):
         import torch
 
         extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
+        print(ext)
+        print(extdir)
         self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
             if CMakeBuild.check_env_flag("DEBUG"):
