@@ -90,6 +90,13 @@ class CMakeBuild(build_ext):
                               cwd=self.build_temp)
         print("3333 ---------------")
 
+        print('. --------------')
+        print(os.listdir('.'))
+        print('build --------------')
+        print(os.listdir(osp.join('.', 'build')))
+        print('build lib.win --------------')
+        print(os.listdir(osp.join('.', 'build', 'lib.win-amd64-3.8')))
+
 
 def mkl_dependencies():
     if not CMakeBuild.check_env_flag('USE_MKL_BLAS'):
