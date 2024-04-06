@@ -94,8 +94,8 @@ class CMakeBuild(build_ext):
         print(os.listdir('.'))
         print('build --------------')
         print(os.listdir(osp.join('.', 'build')))
-        print('build lib.win --------------')
-        print(os.listdir(osp.join('.', 'build', 'lib.win-amd64-3.8')))
+        print('build temp.win --------------')
+        print(os.listdir(osp.join('.', 'build', 'temp.win-amd64-3.8')))
 
 
 def mkl_dependencies():
