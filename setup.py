@@ -6,6 +6,7 @@
 import importlib
 import os
 import os.path as osp
+import re
 import subprocess
 import warnings
 
@@ -34,6 +35,7 @@ class CMakeBuild(build_ext):
         ext_filename = super().get_ext_filename(ext_name)
         ext_filename_parts = ext_filename.split('.')
         ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
+        print('.'.join(ext_filename_parts))
         return '.'.join(ext_filename_parts)
 
     def build_extension(self, ext):
@@ -89,26 +91,28 @@ class CMakeBuild(build_ext):
         print("3333 ---------------")
 
 
-def maybe_append_with_mkl(dependencies):
-    if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
-        import re
+def mkl_dependencies():
+    if not CMakeBuild.check_env_flag('USE_MKL_BLAS'):
+        return []
 
-        import torch
-        torch_config = torch.__config__.show()
-        with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
-        if torch.backends.mkl.is_available() and with_mkl_blas:
-            product_version = '2023.1.0'
-            pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
-            match = re.search(pattern, torch_config)
-            if match:
-                product_version = match.group(0).split(' ')[-1]
+    import torch
 
-            dependencies.append(f'mkl-include=={product_version}')
-            dependencies.append(f'mkl-static=={product_version}')
+    dependencies = []
+    torch_config = torch.__config__.show()
+    with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
+    if torch.backends.mkl.is_available() and with_mkl_blas:
+        product_version = '2023.1.0'
+        pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
+        match = re.search(pattern, torch_config)
+        if match:
+            product_version = match.group(0).split(' ')[-1]
+        dependencies.append(f'mkl-include=={product_version}')
+        dependencies.append(f'mkl-static=={product_version}')
+
+    return dependencies
 
 
-install_requires = []
-maybe_append_with_mkl(install_requires)
+install_requires = [] + mkl_dependencies()
 
 triton_requires = [
     'triton',
