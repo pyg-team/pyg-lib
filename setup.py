@@ -65,6 +65,7 @@ class CMakeBuild(build_ext):
             '-DUSE_PYTHON=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
+            f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
