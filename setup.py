@@ -69,6 +69,9 @@ class CMakeBuild(build_ext):
         cuda_arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
         if WITH_CUDA and cuda_arch_list is not None:
             cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
+        else:
+            cuda_arch_list = "3.5;5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+            cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
