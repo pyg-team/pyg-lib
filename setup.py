@@ -66,6 +66,8 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
+        os.environ['TORCH_CUDA_ARCH_LIST'] = '8.0 8.6 9.0'
+
         cuda_arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
         print("ARCH LIST")
         print("-----------")
