@@ -70,7 +70,7 @@ class CMakeBuild(build_ext):
         if WITH_CUDA and cuda_arch_list is not None:
             cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
         else:
-            cuda_arch_list = "3.5;5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+            cuda_arch_list = "35;50;60;70;75;80;86"
             cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
