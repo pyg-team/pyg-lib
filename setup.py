@@ -70,11 +70,12 @@ class CMakeBuild(build_ext):
         print("ARCH LIST")
         print("-----------")
         print(cuda_arch_list)
-        if WITH_CUDA and cuda_arch_list is not None:
-            cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
-        else:
-            cuda_arch_list = "50;60;70;75;80;86"
-            cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
+        cmake_args.append('-DCUDA_ARCH_PTX=5.0+PTX')
+        # if WITH_CUDA and cuda_arch_list is not None:
+        #     cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
+        # else:
+        #     cuda_arch_list = "50;60;70;75;80;86"
+        #     cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
