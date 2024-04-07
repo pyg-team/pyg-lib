@@ -67,10 +67,13 @@ class CMakeBuild(build_ext):
         ]
 
         cuda_arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
+        print("ARCH LIST")
+        print("-----------")
+        print(cuda_arch_list)
         if WITH_CUDA and cuda_arch_list is not None:
             cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
         else:
-            cuda_arch_list = "35;50;60;70;75;80;86"
+            cuda_arch_list = "50;60;70;75;80;86"
             cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
