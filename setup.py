@@ -66,6 +66,10 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
+        cuda_arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
+        if WITH_CUDA and cuda_arch_list is not None:
+            cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
+
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
