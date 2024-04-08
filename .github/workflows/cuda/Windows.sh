@@ -37,11 +37,6 @@ case ${1} in
     ;;
 esac
 
-# Install NVIDIA drivers, see:
-# https://github.com/pytorch/vision/blob/master/packaging/windows/internal/cuda_install.bat#L99-L102
-# curl -k -L "https://ossci-windows.s3.us-east-1.amazonaws.com/builder/additional_dlls.zip" --output "/tmp/gpu_driver_dlls.zip"
-# 7z x "/tmp/gpu_driver_dlls.zip" -o"/c/Windows/System32"
-
 curl -k -L "${CUDA_URL}/${CUDA_FILE}" --output "${CUDA_FILE}"
 echo ""
 echo "Installing from ${CUDA_FILE}..."
@@ -49,28 +44,17 @@ PowerShell -Command "Start-Process -FilePath \"${CUDA_FILE}\" -ArgumentList \"-s
 echo "Done!"
 rm -f "${CUDA_FILE}"
 
+# echo Installing NVIDIA drivers...
+# https://github.com/pytorch/vision/blob/master/packaging/windows/internal/cuda_install.bat#L99-L102
+# curl -k -L "https://ossci-windows.s3.us-east-1.amazonaws.com/builder/additional_dlls.zip" --output "/tmp/gpu_driver_dlls.zip"
+# 7z x "/tmp/gpu_driver_dlls.zip" -o"/c/Windows/System32"
+
 echo Installing NvToolsExt...
-curl -k -L https://ossci-windows.s3.us-east-1.amazonaws.com/builder/NvToolsExt.7z --output "/tmp/NvToolsExt.7z"
-7z x "/tmp/NvToolsExt.7z" -o"/tmp/NvToolsExt"
+curl -k -L https://ossci-windows.s3.us-east-1.amazonaws.com/builder/NvToolsExt.7z --output /tmp/NvToolsExt.7z
+7z x /tmp/NvToolsExt.7z -o"/tmp/NvToolsExt"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/bin/x64"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/include"
 mkdir -p "/c/Program Files/NVIDIA Corporation/NvToolsExt/lib/x64"
-echo "-------"
-ls "/tmp/NvToolsExt"
-echo "-------"
-ls "/tmp/NvToolsExt/bin"
-echo "-------"
-ls "/tmp/NvToolsExt/bin/x64"
-echo "-------"
-ls "/tmp/NvToolsExt/include"
-echo "-------"
-ls "/tmp/NvToolsExt/lib"
-echo "-------"
-ls "/tmp/NvToolsExt/lib/x64"
 cp -r /tmp/NvToolsExt/bin/x64/* "/c/Program Files/NVIDIA Corporation/NvToolsExt/bin/x64"
 cp -r /tmp/NvToolsExt/include/* "/c/Program Files/NVIDIA Corporation/NvToolsExt/include"
 cp -r /tmp/NvToolsExt/lib/x64/* "/c/Program Files/NVIDIA Corporation/NvToolsExt/lib/x64"
-export NVTOOLSEXT_PATH="/c/Program Files/NVIDIA Corporation/NvToolsExt/bin/x64"
-
-export TORCH_CUDA_ARCH_LIST="3.5;5.0+PTX;6.0;7.0;7.5;8.0;8.6"
-export TORCH_CUDA_ARCH_LIST="35;50+PTX;6.0;7.0;7.5;8.0;8.6"

@@ -42,8 +42,6 @@ endif()
 if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
-  message("CUDA FLAGS HEHEHEHEHEHE")
-  message("${CMAKE_CUDA_FLAGS}")
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
