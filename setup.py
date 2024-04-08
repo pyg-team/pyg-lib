@@ -1,11 +1,12 @@
 # Environment flags to control different options
 #
-#   USE_MKL_BLAS=1
-#     enables use of MKL BLAS (requires PyTorch to be built with MKL support)
+# - USE_MKL_BLAS=1:
+#   Enables use of MKL BLAS (requires PyTorch to be built with MKL support)
 
 import importlib
 import os
 import os.path as osp
+import re
 import subprocess
 import warnings
 
@@ -19,7 +20,7 @@ URL = 'https://github.com/pyg-team/pyg-lib'
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(sourcedir)
+        self.sourcedir = osp.abspath(sourcedir)
 
 
 class CMakeBuild(build_ext):
@@ -40,7 +41,7 @@ class CMakeBuild(build_ext):
 
         import torch
 
-        extdir = os.path.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
+        extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
         self.build_type = "DEBUG" if self.debug else "RELEASE"
         if self.debug is None:
             if CMakeBuild.check_env_flag("DEBUG"):
@@ -60,6 +61,7 @@ class CMakeBuild(build_ext):
             '-DUSE_PYTHON=ON',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
+            f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
@@ -85,26 +87,28 @@ class CMakeBuild(build_ext):
                               cwd=self.build_temp)
 
 
-def maybe_append_with_mkl(dependencies):
-    if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
-        import re
+def mkl_dependencies():
+    if not CMakeBuild.check_env_flag('USE_MKL_BLAS'):
+        return []
 
-        import torch
-        torch_config = torch.__config__.show()
-        with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
-        if torch.backends.mkl.is_available() and with_mkl_blas:
-            product_version = '2023.1.0'
-            pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
-            match = re.search(pattern, torch_config)
-            if match:
-                product_version = match.group(0).split(' ')[-1]
+    import torch
 
-            dependencies.append(f'mkl-include=={product_version}')
-            dependencies.append(f'mkl-static=={product_version}')
+    dependencies = []
+    torch_config = torch.__config__.show()
+    with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
+    if torch.backends.mkl.is_available() and with_mkl_blas:
+        product_version = '2023.1.0'
+        pattern = r'oneAPI Math Kernel Library Version [0-9]{4}\.[0-9]+'
+        match = re.search(pattern, torch_config)
+        if match:
+            product_version = match.group(0).split(' ')[-1]
+        dependencies.append(f'mkl-include=={product_version}')
+        dependencies.append(f'mkl-static=={product_version}')
+
+    return dependencies
 
 
-install_requires = []
-maybe_append_with_mkl(install_requires)
+install_requires = [] + mkl_dependencies()
 
 triton_requires = [
     'triton',

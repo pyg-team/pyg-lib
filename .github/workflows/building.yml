@@ -15,7 +15,6 @@ jobs:
         torch-version: [1.12.0, 1.13.0, 2.0.0, 2.1.0, 2.2.0]
         cuda-version: ['cpu', 'cu113', 'cu116', 'cu117', 'cu118', 'cu121']
         exclude:
-          - os: windows-2019  # No windows support yet :(
           - torch-version: 1.12.0
             python-version: '3.12'
           - torch-version: 1.13.0
@@ -112,6 +111,8 @@ jobs:
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           python setup.py bdist_wheel --dist-dir=dist
         shell: bash
+        env:
+          TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
 
       - name: Test wheel
         run: |
@@ -121,6 +122,7 @@ jobs:
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
+        shell: bash
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v1

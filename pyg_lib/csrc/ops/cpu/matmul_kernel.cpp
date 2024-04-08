@@ -86,8 +86,7 @@ void mkl_blas_gemm_batched(const int* m_array,
                            const int* ldc_array,
                            const int group_count,
                            const int* group_size) {
-  TORCH_INTERNAL_ASSERT(false,
-                        "mkl_blas_gemm_batched: MKL BLAS is not supported");
+  TORCH_INTERNAL_ASSERT(false, "MKL BLAS is not supported");
 }
 
 void mkl_blas_gemm_batched(const int* m_array,
@@ -103,8 +102,7 @@ void mkl_blas_gemm_batched(const int* m_array,
                            const int* ldc_array,
                            const int group_count,
                            const int* group_size) {
-  TORCH_INTERNAL_ASSERT(false,
-                        "mkl_blas_gemm_batched: MKL BLAS is not supported");
+  TORCH_INTERNAL_ASSERT(false, "MKL BLAS is not supported");
 }
 
 #endif
@@ -205,6 +203,7 @@ void grouped_matmul_out_kernel_at_impl(const std::vector<at::Tensor> input,
 void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
                                         const std::vector<at::Tensor> other,
                                         std::vector<at::Tensor> out) {
+#if WITH_MKL_BLAS()
   // matrix_params<M, N, K>
   using matrix_params = std::tuple<int, int, int>;
   phmap::flat_hash_map<matrix_params, std::vector<size_t>> groups;
@@ -276,6 +275,7 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
                               group_sizes.data());
 #endif
       });
+#endif
 }
 
 std::vector<at::Tensor> grouped_matmul_kernel(const at::TensorList input,
@@ -328,6 +328,7 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
                                         const at::Tensor& other,
                                         at::Tensor& out,
                                         const at::IntArrayRef& sizes) {
+#if WITH_MKL_BLAS()
   const int n = other.size(-1);
   const int k = input.size(-1);
   const int nk = n * k;
@@ -403,6 +404,7 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
                               group_sizes.data());
 #endif
       });
+#endif
 }
 
 at::Tensor segment_matmul_kernel(const at::Tensor& input,

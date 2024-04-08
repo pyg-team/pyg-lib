@@ -1,7 +1,9 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
+#ifndef _WIN32
 #include <metis.h>
+#endif
 
 namespace pyg {
 namespace partition {
@@ -14,6 +16,9 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         const c10::optional<at::Tensor>& node_weight,
                         const c10::optional<at::Tensor>& edge_weight,
                         bool recursive) {
+#ifdef _WIN32
+  TORCH_INTERNAL_ASSERT(false, "METIS not yet supported on Windows");
+#else
   int64_t nvtxs = rowptr.numel() - 1;
   int64_t ncon = 1;
   auto* xadj = rowptr.data_ptr<int64_t>();
@@ -41,6 +46,7 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
   }
 
   return part;
+#endif
 }
 
 }  // namespace
