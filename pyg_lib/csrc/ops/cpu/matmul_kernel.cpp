@@ -261,6 +261,7 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
         auto src1_ptrs = const_cast<const scalar_t**>(src1.data());
         auto dst_ptrs = dst.data();
 
+#if WITH_MKL_BLAS()
 #if AT_MKL_SEQUENTIAL()
         // unlikely to happen - requires Torch to be built from source with
         // explicit flag denoting MKL sequential version
@@ -272,6 +273,7 @@ void grouped_matmul_out_kernel_mkl_impl(const std::vector<at::Tensor> input,
                               src0_ptrs, ld_src0.data(), src1_ptrs, ld_src1.data(),
                               beta.data(), dst_ptrs, ld_dst.data(), group_count,
                               group_sizes.data());
+#endif
 #endif
       });
 }
@@ -388,6 +390,7 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
         auto src1_ptrs = const_cast<const scalar_t**>(src1.data());
         auto dst_ptrs = dst.data();
 
+#if WITH_MKL_BLAS()
 #if AT_MKL_SEQUENTIAL()
         // unlikely to happen - requires Torch to be built from source with
         // explicit flag denoting MKL sequential version
@@ -399,6 +402,7 @@ void segment_matmul_out_kernel_mkl_impl(const at::Tensor& input,
                               src0_ptrs, ld_src0.data(), src1_ptrs, ld_src1.data(),
                               beta.data(), dst_ptrs, ld_dst.data(), group_count,
                               group_sizes.data());
+#endif
 #endif
       });
 }
