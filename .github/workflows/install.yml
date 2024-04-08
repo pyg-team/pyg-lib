@@ -33,7 +33,7 @@ jobs:
           pip install --verbose -e .
         shell: bash
         env:
-          TORCH_CUDA_ARCH_LIST: "3.5;5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+          TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
 
       - name: Test imports
         run: |

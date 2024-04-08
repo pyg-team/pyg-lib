@@ -66,19 +66,6 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
-        # os.environ['TORCH_CUDA_ARCH_LIST'] = '8.0 8.6 9.0'
-
-        # cuda_arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
-        # print("ARCH LIST")
-        # print("-----------")
-        # print(cuda_arch_list)
-        # cmake_args.append('-DCUDA_ARCH_PTX=5.0+PTX')
-        # if WITH_CUDA and cuda_arch_list is not None:
-        #     cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
-        # else:
-        #     cuda_arch_list = "50;60;70;75;80;86"
-        #     cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={cuda_arch_list}')
-
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
