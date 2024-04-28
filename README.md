@@ -29,10 +29,16 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 where
 
-* `${TORCH}` should be replaced by either `1.12.0`, `1.13.0`, `2.0.0`, `2.1.0`, or `2.2.0`
+* `${TORCH}` should be replaced by either `1.12.0`, `1.13.0`, `2.0.0`, `2.1.0`, `2.2.0`, or `2.3.0`
 * `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu113`, `cu116`, `cu117`, `cu118`, or `cu121`
 
 The following combinations are supported:
+
+| PyTorch 2.3  | `cpu` | `cu102` | `cu113` | `cu116` | `cu117` | `cu118` | `cu121` |
+|--------------|-------|---------|---------|---------|---------|---------|---------|
+| **Linux**    | ✅    |         |         |         |         | ✅      | ✅      |
+| **Windows**  | ✅    |         |         |         |         | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |         |         |         |         |
 
 | PyTorch 2.2  | `cpu` | `cu102` | `cu113` | `cu116` | `cu117` | `cu118` | `cu121` |
 |--------------|-------|---------|---------|---------|---------|---------|---------|
