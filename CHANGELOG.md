@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.5.0] - 2023-MM-DD
 ### Added
+- Added PyTorch 2.3 support ([#322](https://github.com/pyg-team/pyg-lib/pull/322))
 - Added Windows support ([#315](https://github.com/pyg-team/pyg-lib/pull/315))
 - Added macOS Apple Silicon support ([#310](https://github.com/pyg-team/pyg-lib/pull/310))
 ### Changed
