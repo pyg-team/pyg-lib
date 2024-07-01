@@ -38,13 +38,13 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+    rev: 7.1.0
     hooks:
       - id: flake8
         name: Check PEP8
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.6
+    rev: v18.1.8
     hooks:
       - id: clang-format
         name: Format C++ code
