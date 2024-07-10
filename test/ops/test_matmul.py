@@ -2,9 +2,11 @@ import os
 
 import pytest
 import torch
+from torch.library import opcheck
 
 import pyg_lib
 from pyg_lib.testing import withCUDA
+
 
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
 torch.backends.cuda.matmul.allow_tf32 = False
@@ -83,3 +85,18 @@ def test_grouped_matmul_autograd(dtype, transposed, device):
             assert others_origin[i].grad.size() == others_origin[i].size()
         else:
             assert others[i].grad.size() == others[i].size()
+
+
+def test_opcheck_segment_matmul():
+    device="cuda"
+    dtype = torch.float32
+    inputs = torch.randn((8, 16), requires_grad=True, device=device,
+                         dtype=dtype)
+    ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
+    other = torch.randn((2, 16, 32), requires_grad=True, device=device,
+                        dtype=dtype)
+    bias = torch.randn((2, 32), requires_grad=True, device=device, dtype=dtype)
+    out = pyg_lib.ops.segment_matmul(inputs, ptr, other, bias)
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_schema")
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_autograd_registration")
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_faketensor")
