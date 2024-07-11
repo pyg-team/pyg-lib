@@ -100,3 +100,11 @@ def test_opcheck_segment_matmul():
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_schema")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_autograd_registration")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_faketensor")
+
+    @torch.compile(backend="eager")
+    def f(x):
+        return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+
+    x = torch.randn(3, device=device)
+    f(x)
+
