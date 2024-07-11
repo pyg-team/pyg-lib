@@ -5,12 +5,6 @@ import warnings
 
 import torch
 
-import pyg_lib.ops  # noqa
-import pyg_lib.sampler  # noqa
-import pyg_lib.partition  # noqa
-
-from .home import get_home_dir, set_home_dir
-
 __version__ = '0.4.0'
 
 # * `libpyg.so`: The name of the shared library file.
@@ -26,7 +20,7 @@ def load_library(lib_name: str):
     loader_details = (importlib.machinery.ExtensionFileLoader,
                       importlib.machinery.EXTENSION_SUFFIXES)
 
-    path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
+    path = osp.abspath(osp.join(osp.dirname(__file__), '../build'))
     ext_finder = importlib.machinery.FileFinder(path, loader_details)
     spec = ext_finder.find_spec(lib_name)
 
@@ -37,6 +31,13 @@ def load_library(lib_name: str):
 
 
 load_library('libpyg')
+
+
+import pyg_lib.ops  # noqa
+import pyg_lib.sampler  # noqa
+import pyg_lib.partition  # noqa
+
+from .home import get_home_dir, set_home_dir
 
 
 def cuda_version() -> int:
