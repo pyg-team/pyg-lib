@@ -8,25 +8,23 @@ import torch
 import pyg_lib.ops  # noqa
 import pyg_lib.sampler  # noqa
 import pyg_lib.partition  # noqa
-
-from .home import get_home_dir, set_home_dir
+from pyg_lib.home import get_home_dir, set_home_dir
 
 __version__ = '0.4.0'
 
 # * `libpyg.so`: The name of the shared library file.
 # * `torch.ops.pyg`: The used namespace.
 # * `pyg_lib`: The name of the Python package.
-# TODO Make naming more consistent.
 
 
-def load_library(lib_name: str):
+def load_library(lib_name: str) -> None:
     if bool(os.getenv('BUILD_DOCS', 0)):
         return
 
     loader_details = (importlib.machinery.ExtensionFileLoader,
                       importlib.machinery.EXTENSION_SUFFIXES)
 
-    path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
+    path = osp.abspath(osp.join(osp.dirname(__file__), '../build'))
     ext_finder = importlib.machinery.FileFinder(path, loader_details)
     spec = ext_finder.find_spec(lib_name)
 

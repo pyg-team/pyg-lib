@@ -82,8 +82,12 @@ def fused_scatter_reduce_kernel(inputs_ptr, index_ptr, out_ptr, num_feats,
             tl.atomic_max(out_ptr + out_offsets, inputs, mask=mask)
 
 
-def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
-                         reduce_list: List[str]) -> Tensor:
+def fused_scatter_reduce(
+    inputs: Tensor,
+    index: Tensor,
+    dim_size: int,
+    reduce_list: List[str],
+) -> Tensor:
     # TODO (matthias): Add support for `out`.
     # TODO (matthias): Add backward functionality.
     # TODO (matthias): Add support for inputs.dim() != 2.
@@ -129,7 +133,8 @@ def fused_scatter_reduce(inputs: Tensor, index: Tensor, dim_size: int,
 
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
-    grid = lambda meta: (triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
+    grid = lambda meta: (  # noqa: E731
+        triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
 
     fused_scatter_reduce_kernel[grid](
         inputs,
