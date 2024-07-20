@@ -22,7 +22,7 @@ def load_library(lib_name: str) -> None:
     loader_details = (importlib.machinery.ExtensionFileLoader,
                       importlib.machinery.EXTENSION_SUFFIXES)
 
-    path = osp.abspath(osp.join(osp.dirname(__file__), '../build'))
+    path = osp.abspath(osp.join(osp.dirname(__file__), '../build'))  # FIXME
     ext_finder = importlib.machinery.FileFinder(path, loader_details)
     spec = ext_finder.find_spec(lib_name)
 
