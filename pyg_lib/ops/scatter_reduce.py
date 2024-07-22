@@ -89,6 +89,7 @@ def fused_scatter_reduce(
     dim_size: int,
     reduce_list: List[str],
 ) -> Tensor:
+    r"""Fuses multiple scatter operations into a single kernel."""
     # TODO (matthias): Add support for `out`.
     # TODO (matthias): Add backward functionality.
     # TODO (matthias): Add support for inputs.dim() != 2.

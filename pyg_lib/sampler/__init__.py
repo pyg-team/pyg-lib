@@ -61,7 +61,7 @@ def neighbor_sample(
             :obj:`node_time` as default for seed nodes.
             Needs to be specified in case edge-level sampling is used via
             :obj:`edge_time`. (default: :obj:`None`)
-        edge-weight (torch.Tensor, optional): If given, will perform biased
+        edge_weight (torch.Tensor, optional): If given, will perform biased
             sampling based on the weight of each edge. (default: :obj:`None`)
         csc (bool, optional): If set to :obj:`True`, assumes that the graph is
             given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
@@ -117,10 +117,8 @@ def hetero_neighbor_sample(
     .. note ::
         Similar to :meth:`neighbor_sample`, but expects a dictionary of node
         types (:obj:`str`) and  edge types (:obj:`Tuple[str, str, str]`) for
-        each non-boolean argument.
-
-    Args:
-        kwargs: Arguments of :meth:`neighbor_sample`.
+        each non-boolean argument. See :meth:`neighbor_sample` for more
+        details.
     """
     src_node_types = {k[0] for k in rowptr_dict.keys()}
     dst_node_types = {k[-1] for k in rowptr_dict.keys()}
@@ -193,8 +191,14 @@ def subgraph(
     return torch.ops.pyg.subgraph(rowptr, col, nodes, return_edge_id)
 
 
-def random_walk(rowptr: Tensor, col: Tensor, seed: Tensor, walk_length: int,
-                p: float = 1.0, q: float = 1.0) -> Tensor:
+def random_walk(
+    rowptr: Tensor,
+    col: Tensor,
+    seed: Tensor,
+    walk_length: int,
+    p: float = 1.0,
+    q: float = 1.0,
+) -> Tensor:
     r"""Samples random walks of length :obj:`walk_length` from all node
     indices in :obj:`seed` in the graph given by :obj:`(rowptr, col)`, as
     described in the `"node2vec: Scalable Feature Learning for Networks"

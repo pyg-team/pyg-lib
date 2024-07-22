@@ -1,7 +1,27 @@
 include = ["pyproject.toml", "pyg_lib/**/*.py"]
+extend-exclude = [
+    "pyg_lib/testing.py",
+    "test",
+    "tools",
+    "setup.py",
+    "benchmark",
+]
 src = ["pyg_lib"]
 line-length = 80
 target-version = "py38"
 
 [lint]
-select = ["D"]
+select = [
+    "D",
+]
+ignore = [
+    "D100",  # TODO Don't ignore "Missing docstring in public module"
+    "D104",  # TODO Don't ignore "Missing docstring in public package"
+    "D205",  # Ignore "blank line required between summary line and description"
+]
+
+[lint.pydocstyle]
+convention = "google"
+
+[format]
+quote-style = "single"

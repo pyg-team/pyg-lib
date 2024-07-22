@@ -5,7 +5,7 @@ import torch.utils._pytree as pytree
 from torch import Tensor
 
 
-def pytreeify(cls):
+def _pytreeify(cls):
     r"""A pytree is Python nested data structure. It is a tree in the sense
     that nodes are Python collections (e.g., list, tuple, dict) and the leaves
     are Python values.
@@ -56,7 +56,7 @@ def pytreeify(cls):
     return cls
 
 
-@pytreeify
+@_pytreeify
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
@@ -96,8 +96,11 @@ class GroupedMatmul(torch.autograd.Function):
         return tuple(inputs_grad + others_grad)
 
 
-def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
-                   biases: Optional[List[Tensor]] = None) -> List[Tensor]:
+def grouped_matmul(
+    inputs: List[Tensor],
+    others: List[Tensor],
+    biases: Optional[List[Tensor]] = None,
+) -> List[Tensor]:
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
@@ -135,14 +138,17 @@ def grouped_matmul(inputs: List[Tensor], others: List[Tensor],
     return outs
 
 
-def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
-                   bias: Optional[Tensor] = None) -> Tensor:
+def segment_matmul(
+    inputs: Tensor,
+    ptr: Tensor,
+    other: Tensor,
+    bias: Optional[Tensor] = None,
+) -> Tensor:
     r"""Performs dense-dense matrix multiplication according to segments along
     the first dimension of :obj:`inputs` as given by :obj:`ptr`, utilizing
     dedicated kernels that effectively parallelize over groups.
 
-    .. code-block:: python
-
+    Example:
         inputs = torch.randn(8, 16)
         ptr = torch.tensor([0, 5, 8])
         other = torch.randn(2, 16, 32)
@@ -153,11 +159,11 @@ def segment_matmul(inputs: Tensor, ptr: Tensor, other: Tensor,
         assert out[5:8] == inputs[5:8] @ other[1]
 
     Args:
-        input (torch.Tensor): The left operand 2D matrix of shape
+        inputs (torch.Tensor): The left operand 2D matrix of shape
             :obj:`[N, K]`.
         ptr (torch.Tensor): Compressed vector of shape :obj:`[B + 1]`, holding
-            the boundaries of segments.
-            For best performance, given as a CPU tensor.
+            the boundaries of segments. For best performance, given as a CPU
+            tensor.
         other (torch.Tensor): The right operand 3D tensor of shape
             :obj:`[B, K, M]`.
         bias (torch.Tensor, optional): Optional bias term of shape
@@ -181,7 +187,7 @@ def sampled_add(
 ) -> Tensor:
     r"""Performs a sampled **addition** of :obj:`left` and :obj:`right`
     according to the indices specified in :obj:`left_index` and
-    :obj:`right_index`:
+    :obj:`right_index`.
 
     .. math::
         \textrm{out} = \textrm{left}[\textrm{left_index}] +
@@ -213,7 +219,7 @@ def sampled_sub(
 ) -> Tensor:
     r"""Performs a sampled **subtraction** of :obj:`left` by :obj:`right`
     according to the indices specified in :obj:`left_index` and
-    :obj:`right_index`:
+    :obj:`right_index`.
 
     .. math::
         \textrm{out} = \textrm{left}[\textrm{left_index}] -
@@ -245,7 +251,7 @@ def sampled_mul(
 ) -> Tensor:
     r"""Performs a sampled **multiplication** of :obj:`left` and :obj:`right`
     according to the indices specified in :obj:`left_index` and
-    :obj:`right_index`:
+    :obj:`right_index`.
 
     .. math::
         \textrm{out} = \textrm{left}[\textrm{left_index}] *
@@ -277,7 +283,7 @@ def sampled_div(
 ) -> Tensor:
     r"""Performs a sampled **division** of :obj:`left` by :obj:`right`
     according to the indices specified in :obj:`left_index` and
-    :obj:`right_index`:
+    :obj:`right_index`.
 
     .. math::
         \textrm{out} = \textrm{left}[\textrm{left_index}] /
@@ -351,7 +357,6 @@ def softmax_csr(
     :rtype: :class:`Tensor`
 
     Examples:
-
         >>> src = torch.randn(4, 4)
         >>> ptr = torch.tensor([0, 4])
         >>> softmax(src, ptr)

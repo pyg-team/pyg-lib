@@ -32,19 +32,18 @@ repos:
         name: Upgrade Python syntax
         args: [--py38-plus]
 
-  # TODO
-  # - repo: https://github.com/PyCQA/autoflake
-  #   rev: v2.3.1
-  #   hooks:
-  #     - id: autoflake
-  #       name: Remove unused imports and variables
-  #       args: [
-  #         --remove-all-unused-imports,
-  #         --remove-unused-variables,
-  #         --remove-duplicate-keys,
-  #         --ignore-init-module-imports,
-  #         --in-place,
-  #       ]
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        name: Remove unused imports and variables
+        args: [
+          --remove-all-unused-imports,
+          --remove-unused-variables,
+          --remove-duplicate-keys,
+          --ignore-init-module-imports,
+          --in-place,
+        ]
 
   - repo: https://github.com/google/yapf
     rev: v0.40.2
