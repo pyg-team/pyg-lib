@@ -104,8 +104,7 @@ def grouped_matmul(
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
-    .. code-block:: python
-
+    Example:
         inputs = [torch.randn(5, 16), torch.randn(3, 32)]
         others = [torch.randn(16, 32), torch.randn(32, 64)]
 
