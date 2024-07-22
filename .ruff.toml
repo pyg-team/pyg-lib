@@ -1,0 +1,7 @@
+include = ["pyproject.toml", "pyg_lib/**/*.py"]
+src = ["pyg_lib"]
+line-length = 80
+target-version = "py38"
+
+[lint]
+select = ["D"]
