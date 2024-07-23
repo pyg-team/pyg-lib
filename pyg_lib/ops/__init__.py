@@ -4,6 +4,8 @@ import torch
 import torch.utils._pytree as pytree
 from torch import Tensor
 
+from pyg_lib._compile import register_fake
+
 
 def _pytreeify(cls):
     r"""A pytree is Python nested data structure. It is a tree in the sense
@@ -176,6 +178,11 @@ def segment_matmul(
         for i in range(ptr.numel() - 1):
             out[ptr[i]:ptr[i + 1]] += bias[i]
     return out
+
+
+@register_fake("pyg::segment_matmul")
+def segment_matmul_abstract(inputs, ptr, other):
+    return torch.empty(inputs.size(0), other.size(2), device=inputs.device)
 
 
 def sampled_add(

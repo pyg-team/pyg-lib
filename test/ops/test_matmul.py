@@ -4,6 +4,7 @@ import pytest
 import torch
 
 import pyg_lib
+from pyg_lib._compile import _WITH_PT24
 from pyg_lib.testing import withCUDA
 
 os.environ['NVIDIA_TF32_OVERRIDE'] = '0'
@@ -35,6 +36,37 @@ def test_segment_matmul_autograd(dtype, device):
     out.mean().backward()
     assert other.grad.size() == other.size()
     assert inputs.grad.size() == inputs.size()
+
+
+@pytest.mark.skipif(not _WITH_PT24, reason='PyTorch 2.4.0 is required')
+def test_segment_matmul_opcheck():
+    from torch.library import opcheck
+
+    device = "cuda"
+    dtype = torch.float32
+    inputs = torch.randn((8, 16), requires_grad=True, device=device,
+                         dtype=dtype)
+    ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
+    other = torch.randn((2, 16, 32), requires_grad=True, device=device,
+                        dtype=dtype)
+    bias = torch.randn((2, 32), requires_grad=True, device=device, dtype=dtype)
+    pyg_lib.ops.segment_matmul(inputs, ptr, other, bias)
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+            test_utils="test_schema")
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+            test_utils="test_autograd_registration")
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+            test_utils="test_faketensor")
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+            test_utils="test_aot_dispatch_static")
+    # opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_aot_dispatch_dynamic")
+
+    # @torch.compile(backend="eager")
+    # def f(x):
+    #     return torch.ops.pyg.segment_matmul(inputs, ptr, other)
+
+    # x = torch.randn(3, device=device)
+    # f(x)
 
 
 @withCUDA
