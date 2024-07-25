@@ -25,6 +25,26 @@ repos:
         name: Check packaging
         args: [--min=10, .]
 
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.16.0
+    hooks:
+      - id: pyupgrade
+        name: Upgrade Python syntax
+        args: [--py38-plus]
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        name: Remove unused imports and variables
+        args: [
+          --remove-all-unused-imports,
+          --remove-unused-variables,
+          --remove-duplicate-keys,
+          --ignore-init-module-imports,
+          --in-place,
+        ]
+
   - repo: https://github.com/google/yapf
     rev: v0.40.2
     hooks:
@@ -36,6 +56,13 @@ repos:
     hooks:
       - id: isort
         name: Sort imports
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.3
+    hooks:
+      - id: ruff
+        name: Ruff formatting
+        args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.0

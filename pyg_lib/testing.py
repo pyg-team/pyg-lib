@@ -39,9 +39,9 @@ def onlyTriton(func: Callable) -> Callable:
 def withCUDA(func: Callable) -> Callable:
     import pytest
 
-    devices = [torch.device('cpu')]
+    devices = [pytest.param(torch.device('cpu'), id='cpu')]
     if torch.cuda.is_available():
-        devices.append(torch.device('cuda:0'))
+        devices.append(pytest.param(torch.device('cuda:0'), id='cuda:0'))
 
     return pytest.mark.parametrize('device', devices)(func)
 
