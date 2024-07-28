@@ -38,19 +38,21 @@ def test_segment_matmul_autograd(dtype, device):
     assert inputs.grad.size() == inputs.size()
 
 
+@withCUDA
+@pytest.mark.parametrize('requires_grad', [False, True])
 @pytest.mark.skipif(not _WITH_PT24, reason='PyTorch 2.4.0 is required')
-def test_segment_matmul_opcheck():
+def test_segment_matmul_opcheck(device, requires_grad):
+    if requires_grad:
+        pytest.skip('TODO: Support requires_grad=True')
+
     from torch.library import opcheck
 
-    device = "cuda"
     dtype = torch.float32
-    inputs = torch.randn((8, 16), requires_grad=False, device=device,
+    inputs = torch.randn((8, 16), requires_grad=requires_grad, device=device,
                          dtype=dtype)
-    ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
-    other = torch.randn((2, 16, 32), requires_grad=False, device=device,
-                        dtype=dtype)
-    bias = torch.randn((2, 32), requires_grad=False, device=device,
-                       dtype=dtype)
+    ptr = torch.tensor([0, 5, 8], device=device)
+    other = torch.randn((2, 16, 32), requires_grad=requires_grad,
+                        device=device, dtype=dtype)
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
             test_utils="test_schema")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
@@ -59,8 +61,9 @@ def test_segment_matmul_opcheck():
             test_utils="test_faketensor")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
             test_utils="test_aot_dispatch_static")
-    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-            test_utils="test_aot_dispatch_dynamic")
+    # TODO(akihironitta): Support dynamic shapes
+    # opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+    #         test_utils="test_aot_dispatch_dynamic")
 
 
 @withCUDA
