@@ -4,11 +4,11 @@ on:  # yamllint disable-line rule:truthy
   push:
     branches:
       - master
+      - aki-gpu-ci
   pull_request:
 
 jobs:
-
-  pytest:
+  pytest-cpu:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +19,32 @@ jobs:
 
       - name: Setup packages
         uses: ./.github/actions/setup
+
+      - name: Install package
+        run: |
+          pip install --verbose -e .[test]
+
+      - name: Print GLIBC dependency
+        run: |
+          objdump -T libpyg.so | grep GLIBC_
+
+      - name: Run tests
+        run: |
+          pytest --cov --cov-report=xml
+
+  pytest-cuda:
+    runs-on: [self-hosted, cuda]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup packages
+        uses: ./.github/actions/setup
+        with:
+          cuda-version: cu121
 
       - name: Install package
         run: |
