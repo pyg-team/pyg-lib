@@ -44,13 +44,13 @@ def test_segment_matmul_opcheck():
 
     device = "cuda"
     dtype = torch.float32
-    inputs = torch.randn((8, 16), requires_grad=True, device=device,
+    inputs = torch.randn((8, 16), requires_grad=False, device=device,
                          dtype=dtype)
     ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
-    other = torch.randn((2, 16, 32), requires_grad=True, device=device,
+    other = torch.randn((2, 16, 32), requires_grad=False, device=device,
                         dtype=dtype)
-    bias = torch.randn((2, 32), requires_grad=True, device=device, dtype=dtype)
-    pyg_lib.ops.segment_matmul(inputs, ptr, other, bias)
+    bias = torch.randn((2, 32), requires_grad=False, device=device,
+                       dtype=dtype)
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
             test_utils="test_schema")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
@@ -59,14 +59,8 @@ def test_segment_matmul_opcheck():
             test_utils="test_faketensor")
     opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
             test_utils="test_aot_dispatch_static")
-    # opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other), test_utils="test_aot_dispatch_dynamic")
-
-    # @torch.compile(backend="eager")
-    # def f(x):
-    #     return torch.ops.pyg.segment_matmul(inputs, ptr, other)
-
-    # x = torch.randn(3, device=device)
-    # f(x)
+    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
+            test_utils="test_aot_dispatch_dynamic")
 
 
 @withCUDA

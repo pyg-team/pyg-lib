@@ -181,7 +181,7 @@ def segment_matmul(
 
 
 @register_fake("pyg::segment_matmul")
-def segment_matmul_abstract(inputs, ptr, other):
+def _(inputs, ptr, other):
     return torch.empty(inputs.size(0), other.size(2), device=inputs.device)
 
 
