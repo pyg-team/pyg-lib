@@ -187,7 +187,12 @@ def _(inputs, ptr, other):
     assert ptr.dim() == 1
     assert other.dim() == 3
     assert ptr.size() == (other.size(0) + 1, )
-    return torch.empty(inputs.size(0), other.size(2), device=inputs.device)
+    return torch.empty(
+        inputs.size(0),
+        other.size(2),
+        device=inputs.device,
+        dtype=inputs.dtype,
+    )
 
 
 def sampled_add(
