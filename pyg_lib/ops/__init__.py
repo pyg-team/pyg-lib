@@ -182,6 +182,11 @@ def segment_matmul(
 
 @register_fake("pyg::segment_matmul")
 def _(inputs, ptr, other):
+    assert inputs.dtype == other.dtype
+    assert inputs.dim() == 2
+    assert ptr.dim() == 1
+    assert other.dim() == 3
+    assert ptr.size() == (other.size(0) + 1, )
     return torch.empty(inputs.size(0), other.size(2), device=inputs.device)
 
 
