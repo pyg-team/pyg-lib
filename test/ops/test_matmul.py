@@ -39,15 +39,18 @@ def test_segment_matmul_autograd(dtype, device):
 
 
 @withCUDA
+@pytest.mark.parametrize('dtype', [
+    pytest.param(torch.float32, id='float32'),
+    pytest.param(torch.bfloat16, id='bfloat16'),
+])
 @pytest.mark.parametrize('requires_grad', [False, True])
 @pytest.mark.skipif(not _WITH_PT24, reason='PyTorch 2.4.0 is required')
-def test_segment_matmul_opcheck(device, requires_grad):
+def test_segment_matmul_opcheck(device, dtype, requires_grad):
     if requires_grad:
         pytest.skip('TODO: Support requires_grad=True')
 
     from torch.library import opcheck
 
-    dtype = torch.float32
     inputs = torch.randn(
         (8, 16),
         requires_grad=requires_grad,
