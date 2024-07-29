@@ -52,7 +52,6 @@ at::Tensor segment_matmul(const at::Tensor& input,
   at::checkDim(c, ptr_arg, 1);
   at::checkDim(c, other_arg, 3);
   at::checkSize_symint(c, other_arg, 1, input_arg->sym_size(-1));
-  // at::checkNumel(c, ptr_arg, other_arg->size(0) + 1);
 
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::segment_matmul", "")
