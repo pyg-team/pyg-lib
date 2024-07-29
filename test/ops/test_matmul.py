@@ -53,17 +53,18 @@ def test_segment_matmul_opcheck(device, requires_grad):
     ptr = torch.tensor([0, 5, 8], device=device)
     other = torch.randn((2, 16, 32), requires_grad=requires_grad,
                         device=device, dtype=dtype)
-    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-            test_utils="test_schema")
-    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-            test_utils="test_autograd_registration")
-    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-            test_utils="test_faketensor")
-    opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-            test_utils="test_aot_dispatch_static")
-    # TODO(akihironitta): Support dynamic shapes
-    # opcheck(torch.ops.pyg.segment_matmul, (inputs, ptr, other),
-    #         test_utils="test_aot_dispatch_dynamic")
+    opcheck(
+        torch.ops.pyg.segment_matmul,
+        (inputs, ptr, other),
+        test_utils=[
+            "test_schema",
+            "test_autograd_registration",
+            "test_faketensor",
+            "test_aot_dispatch_static",
+            # TODO(akihironitta): Support dynamic shapes
+            # "test_aot_dispatch_dynamic",
+        ],
+    )
 
 
 @withCUDA

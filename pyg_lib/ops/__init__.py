@@ -156,8 +156,8 @@ def segment_matmul(
 
         out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
         assert out.size() == (8, 32)
-        assert out[0:5] == inputs[0:5] @ other[0]
-        assert out[5:8] == inputs[5:8] @ other[1]
+        assert torch.allclose(out[0:5], inputs[0:5] @ other[0])
+        assert torch.allclose(out[5:8], inputs[5:8] @ other[1])
 
     Args:
         inputs (torch.Tensor): The left operand 2D matrix of shape
