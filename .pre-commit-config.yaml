@@ -28,7 +28,7 @@ repos:
         args: [--min=10, .]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.16.0
+    rev: v3.17.0
     hooks:
       - id: pyupgrade
         name: Upgrade Python syntax
@@ -60,7 +60,7 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.3
+    rev: v0.5.5
     hooks:
       - id: ruff
         name: Ruff formatting
