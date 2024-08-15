@@ -93,6 +93,7 @@ if (NOT MSVC)
 endif()
 
 find_package(Torch REQUIRED)
+message("-- TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
 find_package(OpenMP)
