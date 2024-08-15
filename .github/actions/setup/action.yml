@@ -42,6 +42,14 @@ runs:
         python -c "import torch; print('CUDA:', torch.version.cuda)"
       shell: bash
 
+    - name: Disable CUDNN
+      if: ${{ (inputs.cuda-version != 'cpu') && ((inputs.torch-version == '1.12.0') || (inputs.torch-version == '1.13.0')) }}
+      run: |
+        Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'`
+        sed -i '95,100d' ${Torch_DIR}/Caffe2/Caffe2Config.cmake
+        sed -i 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
+      shell: bash
+
     - name: Downgrade GLIBC
       if: ${{ runner.os == 'Linux' }}
       run: |
