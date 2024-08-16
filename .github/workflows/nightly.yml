@@ -95,6 +95,9 @@ jobs:
             cuda-version: 'cu121'
           - os: macos-14
             cuda-version: 'cu124'
+          - os: windows-2019
+            torch-version: 2.0.0
+            cuda-version: 'cu121'
 
     steps:
       - name: Checkout repository
