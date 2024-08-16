@@ -78,3 +78,9 @@ repos:
       - id: clang-format
         name: Format C++ code
         args: [--style=file]
+
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v0.9.1
+    hooks:
+      - id: sphinx-lint
+        name: Check Sphinx
