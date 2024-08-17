@@ -104,7 +104,8 @@ def grouped_matmul(
     r"""Performs dense-dense matrix multiplication according to groups,
     utilizing dedicated kernels that effectively parallelize over groups.
 
-    Example:
+    .. code-block:: python
+
         inputs = [torch.randn(5, 16), torch.randn(3, 32)]
         others = [torch.randn(16, 32), torch.randn(32, 64)]
 
@@ -147,7 +148,8 @@ def segment_matmul(
     the first dimension of :obj:`inputs` as given by :obj:`ptr`, utilizing
     dedicated kernels that effectively parallelize over groups.
 
-    Example:
+    .. code-block:: python
+
         inputs = torch.randn(8, 16)
         ptr = torch.tensor([0, 5, 8])
         other = torch.randn(2, 16, 32)
