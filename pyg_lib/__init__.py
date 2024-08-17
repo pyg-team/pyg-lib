@@ -34,15 +34,15 @@ def load_library(lib_name: str) -> None:
 load_library('libpyg')
 
 import pyg_lib.ops  # noqa
-import pyg_lib.sampler  # noqa
 import pyg_lib.partition  # noqa
+import pyg_lib.sampler  # noqa
 
 
 def cuda_version() -> int:
     r"""Returns the CUDA version for which :obj:`pyg_lib` was compiled with.
 
     Returns:
-        (int): The CUDA version.
+        The CUDA version.
     """
     return torch.ops.pyg.cuda_version()
 
