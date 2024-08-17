@@ -21,6 +21,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
+    'sphinx_autodoc_typehints',
     'pyg',
 ]
 

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional, Dict
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -34,12 +34,12 @@ def neighbor_sample(
         binary search to find neighbors that fulfill temporal constraints.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
+        rowptr: Compressed source node indices.
         col (torch.Tensor): Target node indices.
         seed (torch.Tensor): The seed node indices.
-        num_neighbors (List[int]): The number of neighbors to sample for each
-            node in each iteration. If an entry is set to :obj:`-1`, all
-            neighbors will be included.
+        num_neighbors: The number of neighbors to sample for each node in each
+            iteration.
+            If an entry is set to :obj:`-1`, all neighbors will be included.
         node_time (torch.Tensor, optional): Timestamps for the nodes in the
             graph. If set, temporal sampling will be used such that neighbors
             are guaranteed to fulfill temporal constraints, *i.e.* sampled
