@@ -1,9 +1,9 @@
-import copy
 import datetime
 import os.path as osp
 import sys
 
 import pyg_sphinx_theme
+from sphinx.application import Sphinx
 
 import pyg_lib
 
@@ -44,6 +44,6 @@ typehints_use_rtype = False
 typehints_defaults = 'comma'
 
 
-def setup(app):
+def setup(app: Sphinx) -> None:
     # Do not drop type hints in signatures:
     del app.events.listeners['autodoc-process-signature']
