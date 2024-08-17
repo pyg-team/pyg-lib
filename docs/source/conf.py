@@ -1,3 +1,4 @@
+import copy
 import datetime
 import os.path as osp
 import sys
@@ -38,3 +39,11 @@ intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
     'torch': ('https://pytorch.org/docs/master', None),
 }
+
+typehints_use_rtype = False
+typehints_defaults = 'comma'
+
+
+def setup(app):
+    # Do not drop type hints in signatures:
+    del app.events.listeners['autodoc-process-signature']
