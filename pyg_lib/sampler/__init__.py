@@ -179,7 +179,7 @@ def subgraph(
             induced subgraph.
 
     Returns:
-        Compressed source node indices and target node indices of the induced 
+        Compressed source node indices and target node indices of the induced
         subgraph.
         In addition, may return the indices of edges of the original graph.
     """
