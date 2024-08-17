@@ -45,5 +45,6 @@ typehints_defaults = 'comma'
 
 
 def setup(app: Sphinx) -> None:
+    r"""Setup sphinx application."""
     # Do not drop type hints in signatures:
     del app.events.listeners['autodoc-process-signature']
