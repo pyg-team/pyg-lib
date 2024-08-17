@@ -1,4 +1,3 @@
-import copy
 import datetime
 import os.path as osp
 import sys
