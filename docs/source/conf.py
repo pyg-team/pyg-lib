@@ -37,7 +37,7 @@ autodoc_member_order = 'bysource'
 
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
-    'torch': ('https://pytorch.org/docs/master', None),
+    'torch': ('https://pytorch.org/docs/stable', None),
 }
 
 typehints_use_rtype = False
