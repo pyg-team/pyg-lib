@@ -18,19 +18,16 @@ def metis(
     <https://arxiv.org/abs/1905.07953>`_ paper.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
-        col (torch.Tensor): Target node indices.
-        num_partitions (int): The number of partitions.
-        node_weight (torch.Tensor, optional): Optional node weights.
-            (default: :obj:`None`)
-        edge_weight (torch.Tensor, optional): Optional edge weights.
-            (default: :obj:`None`)
-        recursive (bool, optional): If set to :obj:`True`, will use multilevel
-            recursive bisection instead of multilevel k-way partitioning.
-            (default: :obj:`False`)
+        rowptr: Compressed source node indices.
+        col: Target node indices.
+        num_partitions: The number of partitions.
+        node_weight: The node weights.
+        edge_weight: The edge weights.
+        recursive: If set to :obj:`True`, will use multilevel recursive
+            bisection instead of multilevel k-way partitioning.
 
     Returns:
-        torch.Tensor: A vector that assings each node to a partition.
+        A vector that assings each node to a partition.
     """
     return torch.ops.pyg.metis(rowptr, col, num_partitions, node_weight,
                                edge_weight, recursive)

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
@@ -28,7 +28,7 @@ repos:
         args: [--min=10, .]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.16.0
+    rev: v3.17.0
     hooks:
       - id: pyupgrade
         name: Upgrade Python syntax
@@ -60,21 +60,27 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.3
+    rev: v0.6.9
     hooks:
       - id: ruff
         name: Ruff formatting
         args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0
+    rev: 7.1.1
     hooks:
       - id: flake8
         name: Check PEP8
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.8
+    rev: v19.1.1
     hooks:
       - id: clang-format
         name: Format C++ code
         args: [--style=file]
+
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v1.0.0
+    hooks:
+      - id: sphinx-lint
+        name: Check Sphinx

@@ -3,6 +3,7 @@ import os.path as osp
 import sys
 
 import pyg_sphinx_theme
+from sphinx.application import Sphinx
 
 import pyg_lib
 
@@ -20,6 +21,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinx_copybutton',
+    'sphinx_autodoc_typehints',
     'pyg',
 ]
 
@@ -34,5 +37,14 @@ autodoc_member_order = 'bysource'
 
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
-    'torch': ('https://pytorch.org/docs/master', None),
+    'torch': ('https://pytorch.org/docs/stable', None),
 }
+
+typehints_use_rtype = False
+typehints_defaults = 'comma'
+
+
+def setup(app: Sphinx) -> None:
+    r"""Setup sphinx application."""
+    # Do not drop type hints in signatures:
+    del app.events.listeners['autodoc-process-signature']

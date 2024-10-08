@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional, Dict
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -34,53 +34,48 @@ def neighbor_sample(
         binary search to find neighbors that fulfill temporal constraints.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
-        col (torch.Tensor): Target node indices.
-        seed (torch.Tensor): The seed node indices.
-        num_neighbors (List[int]): The number of neighbors to sample for each
-            node in each iteration. If an entry is set to :obj:`-1`, all
-            neighbors will be included.
-        node_time (torch.Tensor, optional): Timestamps for the nodes in the
-            graph. If set, temporal sampling will be used such that neighbors
-            are guaranteed to fulfill temporal constraints, *i.e.* sampled
+        rowptr: Compressed source node indices.
+        col: Target node indices.
+        seed: The seed node indices.
+        num_neighbors: The number of neighbors to sample for each node in each
+            iteration.
+            If an entry is set to :obj:`-1`, all neighbors will be included.
+        node_time: Timestamps for the nodes in the graph.
+            If set, temporal sampling will be used such that neighbors are
+            guaranteed to fulfill temporal constraints, *i.e.* sampled
             nodes have an earlier or equal timestamp than the seed node.
             If used, the :obj:`col` vector needs to be sorted according to time
-            within individual neighborhoods. Requires :obj:`disjoint=True`.
+            within individual neighborhoods.
+            Requires :obj:`disjoint=True`.
             Only either :obj:`node_time` or :obj:`edge_time` can be specified.
-            (default: :obj:`None`)
-        edge_time (torch.Tensor, optional): Timestamps for the edges in the
-            graph. If set, temporal sampling will be used such that neighbors
-            are guaranteed to fulfill temporal constraints, *i.e.* sampled
+        edge_time: Timestamps for the edges in the graph.
+            If set, temporal sampling will be used such that neighbors are
+            guaranteed to fulfill temporal constraints, *i.e.* sampled
             edges have an earlier or equal timestamp than the seed node.
             If used, the :obj:`col` vector needs to be sorted according to time
-            within individual neighborhoods. Requires :obj:`disjoint=True`.
+            within individual neighborhoods.
+            Requires :obj:`disjoint=True`.
             Only either :obj:`node_time` or :obj:`edge_time` can be specified.
-            (default: :obj:`None`)
-        seed_time (torch.Tensor, optional): Optional values to override the
-            timestamp for seed nodes. If not set, will use timestamps in
-            :obj:`node_time` as default for seed nodes.
+        seed_time: Optional values to override the timestamp for seed nodes.
+            If not set, will use timestamps in :obj:`node_time` as default for
+            seed nodes.
             Needs to be specified in case edge-level sampling is used via
-            :obj:`edge_time`. (default: :obj:`None`)
-        edge_weight (torch.Tensor, optional): If given, will perform biased
-            sampling based on the weight of each edge. (default: :obj:`None`)
-        csc (bool, optional): If set to :obj:`True`, assumes that the graph is
-            given in CSC format :obj:`(colptr, row)`. (default: :obj:`False`)
-        replace (bool, optional): If set to :obj:`True`, will sample with
-            replacement. (default: :obj:`False`)
-        directed (bool, optional): If set to :obj:`False`, will include all
-            edges between all sampled nodes. (default: :obj:`True`)
-        disjoint (bool, optional): If set to :obj:`True` , will create disjoint
-            subgraphs for every seed node. (default: :obj:`False`)
-        temporal_strategy (string, optional): The sampling strategy when using
-            temporal sampling (:obj:`"uniform"`, :obj:`"last"`).
-            (default: :obj:`"uniform"`)
-        return_edge_id (bool, optional): If set to :obj:`False`, will not
-            return the indices of edges of the original graph.
-            (default: :obj: `True`)
+            :obj:`edge_time`.
+        edge_weight: If given, will perform biased sampling based on the weight
+            of each edge.
+        csc: If set to :obj:`True`, assumes that the graph is given in CSC
+            format :obj:`(colptr, row)`.
+        replace: If set to :obj:`True`, will sample with replacement.
+        directed: If set to :obj:`False`, will include all edges between all
+            sampled nodes.
+        disjoint: If set to :obj:`True` , will create disjoint subgraphs for
+            every seed node.
+        temporal_strategy: The sampling strategy when using temporal sampling
+            (:obj:`"uniform"`, :obj:`"last"`).
+        return_edge_id: If set to :obj:`False`, will not return the indices of
+            edges of the original graph.
 
     Returns:
-        (torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor],
-        List[int], List[int]):
         Row indices, col indices of the returned subtree/subgraph, as well as
         original node indices for all nodes sampled.
         In addition, may return the indices of edges of the original graph.
@@ -176,16 +171,16 @@ def subgraph(
     :obj:`(rowptr, col)`, containing only the nodes in :obj:`nodes`.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
-        col (torch.Tensor): Target node indices.
-        nodes (torch.Tensor): Node indices of the induced subgraph.
-        return_edge_id (bool, optional): If set to :obj:`False`, will not
+        rowptr: Compressed source node indices.
+        col: Target node indices.
+        nodes: Node indices of the induced subgraph.
+        return_edge_id: If set to :obj:`False`, will not
             return the indices of edges of the original graph contained in the
-            induced subgraph. (default: :obj:`True`)
+            induced subgraph.
 
     Returns:
-        (torch.Tensor, torch.Tensor, Optional[torch.Tensor]): Compressed source
-        node indices and target node indices of the induced subgraph.
+        Compressed source node indices and target node indices of the induced
+        subgraph.
         In addition, may return the indices of edges of the original graph.
     """
     return torch.ops.pyg.subgraph(rowptr, col, nodes, return_edge_id)
@@ -205,19 +200,17 @@ def random_walk(
     <https://arxiv.org/abs/1607.00653>`_ paper.
 
     Args:
-        rowptr (torch.Tensor): Compressed source node indices.
-        col (torch.Tensor): Target node indices.
-        seed (torch.Tensor): Seed node indices from where random walks start.
-        walk_length (int): The walk length of a random walk.
-        p (float, optional): Likelihood of immediately revisiting a node in the
-            walk. (default: :obj:`1.0`)
-        q (float, optional): Control parameter to interpolate between
-            breadth-first strategy and depth-first strategy.
-            (default: :obj:`1.0`)
+        rowptr: Compressed source node indices.
+        col: Target node indices.
+        seed: Seed node indices from where random walks start.
+        walk_length: The walk length of a random walk.
+        p: Likelihood of immediately revisiting a node in the walk.
+        q: Control parameter to interpolate between breadth-first strategy and
+            depth-first strategy.
 
     Returns:
-        torch.Tensor: A tensor of shape :obj:`[seed.size(0), walk_length + 1]`,
-        holding the nodes indices of each walk for each seed node.
+        A tensor of shape :obj:`[seed.size(0), walk_length + 1]`, holding the
+        nodes indices of each walk for each seed node.
     """
     return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 

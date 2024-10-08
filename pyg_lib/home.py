@@ -15,7 +15,7 @@ def get_home_dir() -> str:
     variable :obj:`$PYG_LIB_HOME` which defaults to :obj:`"~/.cache/pyg_lib"`.
 
     Returns:
-        (str): The cache directory.
+        The cache directory.
     """
     if _home_dir is not None:
         return _home_dir
@@ -29,7 +29,7 @@ def set_home_dir(path: str):
     r"""Sets the cache directory used for storing all :obj:`pyg-lib` data.
 
     Args:
-        path (str): The path to a local folder.
+        path: The path to a local folder.
     """
     global _home_dir
     _home_dir = path
