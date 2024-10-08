@@ -8,7 +8,7 @@ extend-exclude = [
 ]
 src = ["pyg_lib"]
 line-length = 80
-target-version = "py38"
+target-version = "py39"
 
 [lint]
 select = [
