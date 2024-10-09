@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Changed
 ### Removed
 
+- Dropped Python 3.8 support ([#356](https://github.com/pyg-team/pyg-lib/pull/356))
+
 ## [0.4.0] - 2024-02-07
 ### Added
 - Added PyTorch 2.2 support ([#294](https://github.com/pyg-team/pyg-lib/pull/294))
