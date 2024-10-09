@@ -4,6 +4,8 @@ import torch
 import torch.utils._pytree as pytree
 from torch import Tensor
 
+from pyg_lib._compile import register_fake
+
 
 def _pytreeify(cls):
     r"""A pytree is Python nested data structure. It is a tree in the sense
@@ -152,8 +154,8 @@ def segment_matmul(
 
         out = pyg_lib.ops.segment_matmul(inputs, ptr, other)
         assert out.size() == (8, 32)
-        assert out[0:5] == inputs[0:5] @ other[0]
-        assert out[5:8] == inputs[5:8] @ other[1]
+        assert torch.allclose(out[0:5], inputs[0:5] @ other[0])
+        assert torch.allclose(out[5:8], inputs[5:8] @ other[1])
 
     Args:
         inputs: The left operand 2D matrix of shape :obj:`[N, K]`.
@@ -170,6 +172,21 @@ def segment_matmul(
         for i in range(ptr.numel() - 1):
             out[ptr[i]:ptr[i + 1]] += bias[i]
     return out
+
+
+@register_fake("pyg::segment_matmul")
+def _(inputs, ptr, other):
+    assert inputs.dtype == other.dtype
+    assert inputs.dim() == 2
+    assert ptr.dim() == 1
+    assert other.dim() == 3
+    assert ptr.size() == (other.size(0) + 1, )
+    return torch.empty(
+        inputs.size(0),
+        other.size(2),
+        device=inputs.device,
+        dtype=inputs.dtype,
+    )
 
 
 def sampled_add(

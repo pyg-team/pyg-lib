@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.5.0] - 2023-MM-DD
 ### Added
+- Added `torch.compile` support for `segment_matmul` ([#333](https://github.com/pyg-team/pyg-lib/pull/333))
 - Added PyTorch 2.4 support ([#338](https://github.com/pyg-team/pyg-lib/pull/338))
 - Added PyTorch 2.3 support ([#322](https://github.com/pyg-team/pyg-lib/pull/322))
 - Added Windows support ([#315](https://github.com/pyg-team/pyg-lib/pull/315))
