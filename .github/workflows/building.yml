@@ -173,6 +173,7 @@ jobs:
         shell: bash
 
       - name: Configure AWS
+        if: ${{ !inputs.dry-run }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -180,5 +181,6 @@ jobs:
           aws-region: us-west-1
 
       - name: Upload wheel
+        if: ${{ !inputs.dry-run }}
         run: |
           aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
