@@ -3,18 +3,6 @@ name: Building Wheels
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
     inputs:
-      python-version:
-        required: false
-        default: '3.9'
-        type: string
-      torch-version:
-        required: false
-        default: '2.5.0'
-        type: string
-      cuda-version:
-        required: false
-        default: cpu
-        type: string
       dry-run:
         required: false
         default: false
