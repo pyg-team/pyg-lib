@@ -134,19 +134,20 @@ class RandintEngine {
       for (auto& val : dst)
         val = static_cast<int>((*this)(beg, end));
     };
-#if WITH_MKL_BLAS()
-    const bool use_fallback_func = count > std::numeric_limits<MKL_INT>::max();
-    if (use_fallback_func) {
-      fallback_func(beg, end, result);
-    } else {
-      const auto b = static_cast<int>(beg);
-      const auto e = static_cast<int>(end);
-      const auto c = static_cast<MKL_INT>(count);
-      viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream_, c, result.data(), b, e);
-    }
-#else
+    // #if WITH_MKL_BLAS()
+    // const bool use_fallback_func = count >
+    // std::numeric_limits<MKL_INT>::max(); if (use_fallback_func) {
+    //   fallback_func(beg, end, result);
+    // } else {
+    //   const auto b = static_cast<int>(beg);
+    //   const auto e = static_cast<int>(end);
+    //   const auto c = static_cast<MKL_INT>(count);
+    //   viRngUniform(VSL_RNG_METHOD_UNIFORM_STD, stream_, c, result.data(),
+    //   b, e);
+    // }
+    // #else
     fallback_func(beg, end, result);
-#endif
+    // #endif
     return result;
   }
 
