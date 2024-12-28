@@ -9,7 +9,6 @@ namespace ops {
 
 namespace {
 
-using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 std::vector<at::Tensor> concat(std::vector<at::Tensor> t1,
@@ -50,7 +49,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
       }
     } else {
       for (size_t i = 0; i < other.size(); ++i)
-        other_grad.push_back(Variable());
+        other_grad.push_back(at::Tensor());
     }
 
     variable_list input_grad;
@@ -60,7 +59,7 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
       input_grad = grouped_matmul(input, grad_outs);
     } else {
       for (size_t i = 0; i < input.size(); ++i)
-        input_grad.push_back(Variable());
+        input_grad.push_back(at::Tensor());
     }
     return concat(input_grad, other_grad);
   }
@@ -69,11 +68,11 @@ class GroupedMatmul : public torch::autograd::Function<GroupedMatmul> {
 class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
  public:
   static variable_list forward(torch::autograd::AutogradContext* ctx,
-                               const Variable& input,
+                               const at::Tensor& input,
                                const at::Tensor& ptr,
-                               const Variable& other) {
+                               const at::Tensor& other) {
     at::AutoDispatchBelowADInplaceOrView g;
-    Variable out = segment_matmul(input, ptr, other);
+    at::Tensor out = segment_matmul(input, ptr, other);
     ctx->save_for_backward({input, ptr, other});
     return {out};
   }
@@ -84,13 +83,13 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
     auto saved = ctx->get_saved_variables();
     auto input = saved[0], ptr = saved[1], other = saved[2];
 
-    auto input_grad = Variable();
+    auto input_grad = at::Tensor();
     if (torch::autograd::any_variable_requires_grad({input})) {
       auto other_t = other.transpose(-2, -1);
       input_grad = segment_matmul(grad_out, ptr, other_t);
     }
 
-    auto other_grad = Variable();
+    auto other_grad = at::Tensor();
     if (torch::autograd::any_variable_requires_grad({other})) {
       auto size = pyg::utils::size_from_ptr(ptr).cpu();
       // TODO (matthias) Allow for other types than `int64_t`.
@@ -107,7 +106,7 @@ class SegmentMatmul : public torch::autograd::Function<SegmentMatmul> {
       other_grad = at::stack(others_grad);
     }
 
-    return {input_grad, Variable(), other_grad};
+    return {input_grad, at::Tensor(), other_grad};
   }
 };
 
