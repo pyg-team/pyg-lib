@@ -7,18 +7,17 @@ namespace ops {
 
 namespace {
 
-using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 class SoftmaxCSR : public torch::autograd::Function<SoftmaxCSR> {
  public:
   static variable_list forward(torch::autograd::AutogradContext* ctx,
-                               const Variable& src,
+                               const at::Tensor& src,
                                const at::Tensor& ptr,
                                const int64_t dim) {
     at::AutoDispatchBelowADInplaceOrView g;
 
-    Variable out = softmax_csr(src, ptr, dim);
+    at::Tensor out = softmax_csr(src, ptr, dim);
     ctx->saved_data["dim"] = dim;
     ctx->save_for_backward({src, out, ptr});
 
@@ -34,12 +33,12 @@ class SoftmaxCSR : public torch::autograd::Function<SoftmaxCSR> {
     const auto ptr = saved[2];
     const auto dim = ctx->saved_data["dim"].toInt();
 
-    auto src_grad = Variable();
+    auto src_grad = at::Tensor();
     if (torch::autograd::any_variable_requires_grad({src})) {
       src_grad = softmax_csr_backward(out, out_grad, ptr, dim);
     }
 
-    return {src_grad, Variable(), Variable()};
+    return {src_grad, at::Tensor(), at::Tensor()};
   }
 };
 

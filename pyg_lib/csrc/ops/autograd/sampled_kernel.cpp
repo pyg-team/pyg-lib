@@ -7,19 +7,18 @@ namespace ops {
 
 namespace {
 
-using torch::autograd::Variable;
 using torch::autograd::variable_list;
 
 class SampledOp : public torch::autograd::Function<SampledOp> {
  public:
   static variable_list forward(torch::autograd::AutogradContext* ctx,
-                               const Variable& left,
-                               const Variable& right,
+                               const at::Tensor& left,
+                               const at::Tensor& right,
                                const at::optional<at::Tensor> left_index,
                                const at::optional<at::Tensor> right_index,
                                const std::string fn) {
     at::AutoDispatchBelowADInplaceOrView g;
-    Variable out = sampled_op(left, right, left_index, right_index, fn);
+    at::Tensor out = sampled_op(left, right, left_index, right_index, fn);
     ctx->saved_data["has_left_index"] = left_index.has_value();
     ctx->saved_data["has_right_index"] = right_index.has_value();
     ctx->saved_data["fn"] = fn;
@@ -48,7 +47,7 @@ class SampledOp : public torch::autograd::Function<SampledOp> {
     }
     auto fn = ctx->saved_data["fn"].toStringRef();
 
-    auto grad_left = Variable();
+    auto grad_left = at::Tensor();
     if (torch::autograd::any_variable_requires_grad({left})) {
       grad_left = grad_out;
 
@@ -66,7 +65,7 @@ class SampledOp : public torch::autograd::Function<SampledOp> {
       }
     }
 
-    auto grad_right = Variable();
+    auto grad_right = at::Tensor();
     if (torch::autograd::any_variable_requires_grad({right})) {
       grad_right = grad_out;
 
@@ -91,7 +90,7 @@ class SampledOp : public torch::autograd::Function<SampledOp> {
       }
     }
 
-    return {grad_left, grad_right, Variable(), Variable(), Variable()};
+    return {grad_left, grad_right, at::Tensor(), at::Tensor(), at::Tensor()};
   }
 };
 
