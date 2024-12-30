@@ -120,7 +120,7 @@ def fused_scatter_reduce(
     out = inputs.new(dim_size, len(reduce_list) * num_feats)
 
     # Pre-processing: Take care of correct initialization for each reduction:
-    for i, reduce in enumerate(reduce_list):
+    for reduce in enumerate(reduce_list):
         assert reduce in REDUCTIONS
         if reduce == 'min':
             fill_value = float('inf')
