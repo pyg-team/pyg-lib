@@ -52,6 +52,8 @@ if(WITH_CUDA)
     set(CUTLASS_UTIL_DIR third_party/cutlass/tools/util/include)
     include_directories(${CUTLASS_UTIL_DIR})
   endif()
+  set(CUCOLLECTIONS_DIR third_party/cuCollections/include)
+  include_directories(${CUCOLLECTIONS_DIR})
 endif()
 
 set(CSRC pyg_lib/csrc)
@@ -103,6 +105,13 @@ endif()
 
 if (USE_PYTHON)
   target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
+endif()
+
+if(WITH_CUDA)
+  target_include_directories(${PROJECT_NAME} PRIVATE
+                             third_party/cccl/thrust
+                             third_party/cccl/cub
+                             third_party/cccl/libcudacxx/include)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")

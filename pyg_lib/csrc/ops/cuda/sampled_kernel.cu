@@ -2,13 +2,15 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
 
+#include <cuco/static_map.cuh>
+
 namespace pyg {
 namespace ops {
 
 namespace {
 
 #define THREADS 1024
-#define CDIV(N, M) ((N) + (M) - 1) / (M)
+#define CDIV(N, M) ((N) + (M)-1) / (M)
 
 enum FnType { ADD, SUB, MUL, DIV };
 const std::map<std::string, FnType> to_fn_type = {

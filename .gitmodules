@@ -7,3 +7,9 @@
 [submodule "third_party/METIS"]
     path = third_party/METIS
     url = https://github.com/KarypisLab/METIS.git
+[submodule "third_party/cuCollections"]
+    path = third_party/cuCollections
+    url = https://github.com/NVIDIA/cuCollections.git
+[submodule "third_party/cccl"]
+    path = third_party/cccl
+    url = https://github.com/NVIDIA/cccl.git
