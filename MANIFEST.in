@@ -12,6 +12,11 @@ recursive-exclude third_party/parallel-hashmap/tests *
 recursive-exclude third_party/parallel-hashmap/examples *
 recursive-exclude third_party/parallel-hashmap/benchmark *
 recursive-exclude third_party/METIS/graphs *
+recursive-exclude third_party/cccl/benchmarks *
+recursive-exclude third_party/cccl/docs *
+recursive-exclude third_party/cccl/examples *
+recursive-exclude third_party/cuCollections/examples *
+recursive-exclude third_party/cuCollections/tests *
 
 recursive-exclude test *
 recursive-exclude docs *
