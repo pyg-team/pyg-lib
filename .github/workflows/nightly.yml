@@ -10,8 +10,8 @@ jobs:
   wheel:
     if: github.repository == 'pyg-team/pyg-lib'
     runs-on: ${{ matrix.os }}
-
     strategy:
+      max-parallel: 10
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, macos-14, windows-2019]
