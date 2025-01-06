@@ -4,7 +4,7 @@ namespace pyg {
 namespace classes {
 
 struct CPUHashMap : torch::CustomClassHolder {
-  CPUHashMap(){};
+  CPUHashMap() {};
 };
 
 TORCH_LIBRARY(pyg, m) {
