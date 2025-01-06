@@ -1,4 +1,4 @@
-#include "pyg_lib/csrc/classes/cpu/hash_map.cpp"
+#include "pyg_lib/csrc/classes/cpu/hash_map.h"
 
 #include <gtest/gtest.h>
 
