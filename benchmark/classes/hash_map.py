@@ -39,7 +39,7 @@ if __name__ == '__main__':
             t_get += time.perf_counter() - t_start
 
     print(f'HashMap Init: {t_init / num_steps:.4f}s')
-    print(f' HashMap Get: {t_get / num_steps:.4f}s')
+    print(f'HashMap  Get: {t_get / num_steps:.4f}s')
     print('=====================')
 
     t_init = t_get = 0
@@ -59,8 +59,8 @@ if __name__ == '__main__':
         if i >= num_warmups:
             t_get += time.perf_counter() - t_start
 
-    print(f'Memory Init:  {t_init / num_steps:.4f}s')
-    print(f' Memory Get:  {t_get / num_steps:.4f}s')
+    print(f' Memory Init: {t_init / num_steps:.4f}s')
+    print(f' Memory  Get: {t_get / num_steps:.4f}s')
     print('=====================')
 
     if key.is_cpu:
@@ -74,9 +74,9 @@ if __name__ == '__main__':
 
             t_start = time.perf_counter()
             ser = pd.Series(query.numpy(), dtype=hash_map)
-            torch.from_numpy(ser.cat.codes.to_numpy()).to(torch.long)
+            ser.cat.codes.to_numpy()
             if i >= num_warmups:
                 t_get += time.perf_counter() - t_start
 
-    print(f'Pandas Init: {t_init / num_steps:.4f}s')
-    print(f' Pandas Get: {t_get / num_steps:.4f}s')
+    print(f' Pandas Init: {t_init / num_steps:.4f}s')
+    print(f' Pandas  Get: {t_get / num_steps:.4f}s')
