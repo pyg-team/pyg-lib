@@ -34,6 +34,7 @@ def load_library(lib_name: str) -> None:
 load_library('libpyg')
 
 import pyg_lib.ops  # noqa
+import pyg_lib.classes  # noqa
 import pyg_lib.partition  # noqa
 import pyg_lib.sampler  # noqa
 
