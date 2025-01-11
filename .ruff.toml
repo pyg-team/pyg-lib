@@ -16,7 +16,12 @@ select = [
 ]
 ignore = [
     "D100",  # TODO Don't ignore "Missing docstring in public module"
+    "D101",  # TODO Don't ignore "Missing docstring in public class"
+    "D102",  # TODO Don't ignore "Missing docstring in public method"
+    "D103",  # TODO Don't ignore "Missing docstring in public function"
     "D104",  # TODO Don't ignore "Missing docstring in public package"
+    "D105",  # Ignore "Missing docstring in magic method"
+    "D107",  # Ignore "Missing docstring in __init__"
     "D205",  # Ignore "blank line required between summary line and description"
 ]
 
