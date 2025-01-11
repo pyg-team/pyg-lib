@@ -13,5 +13,9 @@ ops:
   - pyg_lib/csrc/ops/**/*
   - pyg_lib/ops/**/*
 
+classes:
+  - pyg_lib/csrc/classes/**/*
+  - pyg_lib/classes/**/*
+
 utils:
   - pyg_lib/csrc/utils/**/*
