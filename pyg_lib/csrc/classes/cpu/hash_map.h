@@ -14,8 +14,7 @@ struct CPUHashMap : torch::CustomClassHolder {
     // TODO Assert 1-dim
 
     // clang-format off
-    AT_DISPATCH_ALL_TYPES_AND(
-    at::ScalarType::Bool,
+    AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
     key.scalar_type(),
     "cpu_hash_map_init",
     [&] {
@@ -36,8 +35,7 @@ struct CPUHashMap : torch::CustomClassHolder {
     auto out_data = out.data_ptr<int64_t>();
 
     // clang-format off
-    AT_DISPATCH_ALL_TYPES_AND(
-    at::ScalarType::Bool,
+    AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
     query.scalar_type(),
     "cpu_hash_map_get",
     [&] {
