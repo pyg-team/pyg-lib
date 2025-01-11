@@ -9,7 +9,7 @@ TEST(CPUHashMapTest, BasicAssertions) {
 
   auto map = pyg::classes::CPUHashMap(key);
 
-  auto query = at::tensor({30, 10, 20}, options);
-  auto expected = at::tensor({2, 1, 3}, options);
+  auto query = at::tensor({30, 10, 20, 40}, options);
+  auto expected = at::tensor({2, 1, 3, -1}, options);
   EXPECT_TRUE(at::equal(map.get(query), expected));
 }
