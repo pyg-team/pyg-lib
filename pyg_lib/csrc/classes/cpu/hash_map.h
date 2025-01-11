@@ -11,7 +11,11 @@ struct CPUHashMap : torch::CustomClassHolder {
       variant<bool, uint8_t, int8_t, int16_t, int32_t, int64_t, float, double>;
 
   CPUHashMap(const at::Tensor& key) {
-    // TODO Assert 1-dim
+    at::TensorArg key_arg{key, "key", 0};
+    at::CheckedFrom c{"HashMap.init"};
+    at::checkDeviceType(c, key, at::DeviceType::CPU);
+    at::checkDim(c, key_arg, 1);
+    at::checkContiguous(c, key_arg);
 
     // clang-format off
     AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
@@ -20,15 +24,19 @@ struct CPUHashMap : torch::CustomClassHolder {
     [&] {
       const auto key_data = key.data_ptr<scalar_t>();
       for (int64_t i = 0; i < key.numel(); ++i) {
-        // TODO Check that key does not yet exist.
-        map_[key_data[i]] = i;
+        auto [iterator, inserted] = map_.insert({key_data[i], i});
+        TORCH_CHECK(inserted, "Found duplicated key.");
       }
     });
     // clang-format on
   };
 
   at::Tensor get(const at::Tensor& query) {
-    // TODO Assert 1-dim
+    at::TensorArg query_arg{query, "query", 0};
+    at::CheckedFrom c{"HashMap.get"};
+    at::checkDeviceType(c, query, at::DeviceType::CPU);
+    at::checkDim(c, query_arg, 1);
+    at::checkContiguous(c, query_arg);
 
     const auto options = at::TensorOptions().dtype(at::kLong);
     const auto out = at::empty({query.numel()}, options);
@@ -42,8 +50,8 @@ struct CPUHashMap : torch::CustomClassHolder {
       const auto query_data = query.data_ptr<scalar_t>();
 
       for (size_t i = 0; i < query.numel(); ++i) {
-        // TODO Insert -1 if key does not exist.
-        out_data[i] = map_[query_data[i]];
+        auto it = map_.find(query_data[i]);
+        out_data[i] = (it != map_.end()) ? it->second : -1;
       }
     });
     // clang-format on
