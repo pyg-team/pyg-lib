@@ -5,39 +5,62 @@
 namespace pyg {
 namespace classes {
 
-template <typename T>
 struct CPUHashMap : torch::CustomClassHolder {
-  std::unordered_map<T, int64_t> map;
+ public:
+  using KeyType = std::
+      variant<bool, uint8_t, int8_t, int16_t, int32_t, int64_t, float, double>;
 
   CPUHashMap(const at::Tensor& key) {
     // TODO Assert 1-dim
-    const auto key_data = key.data_ptr<T>();
-    for (int64_t i = 0; i < key.numel(); ++i) {
-      // TODO Check that key does not yet exist.
-      map[key_data[i]] = i;
-    }
+
+    // clang-format off
+    AT_DISPATCH_ALL_TYPES_AND(
+    at::ScalarType::Bool,
+    key.scalar_type(),
+    "cpu_hash_map_init",
+    [&] {
+      const auto key_data = key.data_ptr<scalar_t>();
+      for (int64_t i = 0; i < key.numel(); ++i) {
+        // TODO Check that key does not yet exist.
+        map_[key_data[i]] = i;
+      }
+    });
+    // clang-format on
   };
 
   at::Tensor get(const at::Tensor& query) {
     // TODO Assert 1-dim
-    const auto options = at::TensorOptions().dtype(at::kLong);
-    auto out = at::empty({query.numel()}, options);
 
-    const auto query_data = query.data_ptr<T>();
+    const auto options = at::TensorOptions().dtype(at::kLong);
+    const auto out = at::empty({query.numel()}, options);
     auto out_data = out.data_ptr<int64_t>();
 
-    for (size_t i = 0; i < query.numel(); ++i) {
-      // TODO Insert -1 if key does not exist.
-      out_data[i] = map[query_data[i]];
-    }
+    // clang-format off
+    AT_DISPATCH_ALL_TYPES_AND(
+    at::ScalarType::Bool,
+    query.scalar_type(),
+    "cpu_hash_map_get",
+    [&] {
+      const auto query_data = query.data_ptr<scalar_t>();
+
+      for (size_t i = 0; i < query.numel(); ++i) {
+        // TODO Insert -1 if key does not exist.
+        out_data[i] = map_[query_data[i]];
+      }
+    });
+    // clang-format on
+
     return out;
   }
+
+ private:
+  std::unordered_map<KeyType, int64_t> map_;
 };
 
 TORCH_LIBRARY(pyg, m) {
-  m.class_<CPUHashMap<int64_t>>("CPULongHashMap")
+  m.class_<CPUHashMap>("CPUHashMap")
       .def(torch::init<at::Tensor&>())
-      .def("get", &CPUHashMap<int64_t>::get);
+      .def("get", &CPUHashMap::get);
 }
 
 }  // namespace classes
