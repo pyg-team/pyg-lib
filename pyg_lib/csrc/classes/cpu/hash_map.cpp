@@ -58,7 +58,6 @@ at::Tensor CPUHashMapImpl<KeyType>::get(const at::Tensor& query) {
 }
 
 CPUHashMap::CPUHashMap(const at::Tensor& key) {
-  map_ = std::make_unique<CPUHashMapImpl<int64_t>>(key);
   // clang-format off
   AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
   key.scalar_type(),
