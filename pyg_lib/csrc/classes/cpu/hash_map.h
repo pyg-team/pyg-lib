@@ -1,21 +1,29 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include <variant>
+#include "parallel_hashmap/phmap.h"
 
 namespace pyg {
 namespace classes {
 
+template <typename KeyType>
 struct CPUHashMap : torch::CustomClassHolder {
  public:
-  using KeyType = std::
-      variant<bool, uint8_t, int8_t, int16_t, int32_t, int64_t, float, double>;
+  using ValueType = int64_t;
 
   CPUHashMap(const at::Tensor& key);
   at::Tensor get(const at::Tensor& query);
 
  private:
-  std::unordered_map<KeyType, int64_t> map_;
+  phmap::parallel_flat_hash_map<
+      KeyType,
+      ValueType,
+      phmap::priv::hash_default_hash<KeyType>,
+      phmap::priv::hash_default_eq<KeyType>,
+      phmap::priv::Allocator<std::pair<const KeyType, ValueType>>,
+      8,
+      phmap::NullMutex>
+      map_;
 };
 
 }  // namespace classes
