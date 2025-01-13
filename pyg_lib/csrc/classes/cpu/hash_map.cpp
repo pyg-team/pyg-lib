@@ -73,9 +73,9 @@ at::Tensor CPUHashMap::get(const at::Tensor& query) {
 }
 
 TORCH_LIBRARY(pyg, m) {
-  m.class_<CPUHashMap<int64_t>>("CPUHashMap")
+  m.class_<CPUHashMap>("CPUHashMap")
       .def(torch::init<at::Tensor&>())
-      .def("get", &CPUHashMap<int64_t>::get);
+      .def("get", &CPUHashMap::get);
 }
 
 }  // namespace classes
