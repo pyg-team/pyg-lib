@@ -7,7 +7,7 @@ namespace pyg {
 namespace classes {
 
 template <typename KeyType>
-CPUHashMap<KeyType>::CPUHashMap(const at::Tensor& key) {
+CPUHashMapImpl<KeyType>::CPUHashMapImpl(const at::Tensor& key) {
   at::TensorArg key_arg{key, "key", 0};
   at::CheckedFrom c{"HashMap.init"};
   at::checkDeviceType(c, key, at::DeviceType::CPU);
@@ -30,7 +30,7 @@ CPUHashMap<KeyType>::CPUHashMap(const at::Tensor& key) {
 };
 
 template <typename KeyType>
-at::Tensor CPUHashMap<KeyType>::get(const at::Tensor& query) {
+at::Tensor CPUHashMapImpl<KeyType>::get(const at::Tensor& query) {
   at::TensorArg query_arg{query, "query", 0};
   at::CheckedFrom c{"HashMap.get"};
   at::checkDeviceType(c, query, at::DeviceType::CPU);
@@ -57,10 +57,25 @@ at::Tensor CPUHashMap<KeyType>::get(const at::Tensor& query) {
   return out;
 }
 
+CPUHashMap::CPUHashMap(const at::Tensor& key) {
+  // clang-format off
+  AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
+  key.scalar_type(),
+  "cpu_hash_map_init",
+  [&] {
+    map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
+  });
+  // clang-format on
+}
+
+at::Tensor CPUHashMap::get(const at::Tensor& query) {
+  return map_->get(query);
+}
+
 TORCH_LIBRARY(pyg, m) {
-  m.class_<CPUHashMap<int64_t>>("CPUHashMap")
+  m.class_<CPUHashMap>("CPUHashMap")
       .def(torch::init<at::Tensor&>())
-      .def("get", &CPUHashMap<int64_t>::get);
+      .def("get", &CPUHashMap::get);
 }
 
 }  // namespace classes
