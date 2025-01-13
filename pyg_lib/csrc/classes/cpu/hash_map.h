@@ -26,8 +26,8 @@ struct CPUHashMapImpl : IHashMap {
       phmap::priv::hash_default_hash<KeyType>,
       phmap::priv::hash_default_eq<KeyType>,
       phmap::priv::Allocator<std::pair<const KeyType, ValueType>>,
-      8,
-      phmap::NullMutex>
+      12,
+      std::mutex>
       map_;
 };
 
