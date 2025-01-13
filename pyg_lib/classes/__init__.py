@@ -4,7 +4,7 @@ from torch import Tensor
 
 class HashMap:
     def __init__(self, key: Tensor) -> Tensor:
-        self._map = torch.classes.pyg.CPUHashMap(key)
+        self._map = torch.classes.pyg.HashMap(key)
 
     def get(self, query: Tensor) -> Tensor:
         return self._map.get(query)
