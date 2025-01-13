@@ -40,7 +40,7 @@ if __name__ == '__main__':
             t_init += time.perf_counter() - t_start
 
         t_start = time.perf_counter()
-        hash_map.get(query1)
+        out1 = hash_map.get(query1)
         torch.cuda.synchronize()
         if i >= num_warmups:
             t_get += time.perf_counter() - t_start
@@ -61,7 +61,7 @@ if __name__ == '__main__':
             t_init += time.perf_counter() - t_start
 
         t_start = time.perf_counter()
-        hash_map[query2]
+        out2 = hash_map[query2]
         torch.cuda.synchronize()
         if i >= num_warmups:
             t_get += time.perf_counter() - t_start
@@ -81,9 +81,11 @@ if __name__ == '__main__':
 
             t_start = time.perf_counter()
             ser = pd.Series(query1.numpy(), dtype=hash_map)
-            ser.cat.codes.to_numpy()
+            out3 = ser.cat.codes.to_numpy()
             if i >= num_warmups:
                 t_get += time.perf_counter() - t_start
 
     print(f' Pandas Init: {t_init / num_steps:.4f}s')
     print(f' Pandas  Get: {t_get / num_steps:.4f}s')
+
+    assert out1.equal(torch.tensor(out3))
