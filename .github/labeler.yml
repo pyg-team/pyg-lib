@@ -1,14 +1,19 @@
 installation:
-  - changed-files:
-      - any-glob-to-any-file: ["pyproject.toml", "setup.py"]
+  - pyproject.toml
+  - setup.py
 
 ci:
-  - changed-files:
-      - any-glob-to-any-file: [".github/**/*", "codecov.yaml", ".pre-commit-config.yaml", ".ruff.toml", ".style.yapf", "setup.cfg"]
+  - .github/**/*
+  - codecov.yaml
+  - .pre-commit-config.yaml
+  - .ruff.toml
+  - .style.yapf
+  - setup.cfg
 
 documentation:
-  - changed-files:
-      - any-glob-to-any-file: ["docs/**/*", "readthedocs.yml", "README.MD"]
+  - docs/**/*
+  - readthedocs.yml
+  - README.MD
 
 benchmark:
   - benchmark/**/*
