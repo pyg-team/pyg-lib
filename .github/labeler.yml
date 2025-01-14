@@ -1,5 +1,14 @@
+installation:
+  - changed-files:
+      - any-glob-to-any-file: ["pyproject.toml", "setup.py"]
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**/*", "codecov.yaml", ".pre-commit-config.yaml", ".ruff.toml", ".style.yapf", "setup.cfg"]
+
 documentation:
-  - docs/**/*
+  - changed-files:
+      - any-glob-to-any-file: ["docs/**/*", "readthedocs.yml", "README.MD"]
 
 benchmark:
   - benchmark/**/*
