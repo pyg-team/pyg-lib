@@ -2,6 +2,9 @@
 
 #include <torch/library.h>
 #include "cpu/hash_map_impl.h"
+#ifdef WITH_CUDA
+#include "cuda/hash_map_impl.cuh"
+#endif
 
 namespace pyg {
 namespace classes {
@@ -18,11 +21,15 @@ HashMap::HashMap(const at::Tensor& key) {
   key.scalar_type(),
   "hash_map_init",
   [&] {
-    /* if (key.is_cpu) { */
+    if (key.is_cpu()) {
     map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
-    /* } else { */
-    /*   AT_ERROR("Received invalid device type for 'HashMap'."); */
-    /* } */
+#ifdef WITH_CUDA
+    } else if (key.is_cuda()) {
+    map_ = std::make_unique<CUDAHashMapImpl<scalar_t>>(key);
+#endif
+    } else {
+      AT_ERROR("Received invalid device type for 'HashMap'.");
+    }
   });
   // clang-format on
 }
