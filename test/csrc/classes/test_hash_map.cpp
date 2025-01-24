@@ -5,7 +5,7 @@
 
 TEST(HashMapTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
-  auto key = at::tensor({0, 10, 30, 20}, options);
+  auto key = at::tensor({0, 10, 30, 20}, options).cuda();
 
   auto map = pyg::classes::HashMap(key);
 

@@ -1,19 +1,17 @@
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
-#include <torch/library.h>
+#include <parallel_hashmap/phmap.h>
 
 #include "../hash_map_impl.h"
-#include "parallel_hashmap/phmap.h"
 
 namespace pyg {
 namespace classes {
 
 namespace {
 
-/* template <typename KeyType> */
+template <typename KeyType>
 struct CPUHashMapImpl : HashMapImpl {
  public:
-  using KeyType = int64_t;
   using ValueType = int64_t;
 
   CPUHashMapImpl(const at::Tensor& key) {
@@ -66,32 +64,16 @@ struct CPUHashMapImpl : HashMapImpl {
       map_;
 };
 
-/* template struct CPUHashMapImpl<bool>; */
-/* template struct CPUHashMapImpl<uint8_t>; */
-/* template struct CPUHashMapImpl<int8_t>; */
-/* template struct CPUHashMapImpl<int16_t>; */
-/* template struct CPUHashMapImpl<int32_t>; */
-/* template struct CPUHashMapImpl<int64_t>; */
-/* template struct CPUHashMapImpl<float>; */
-/* template struct CPUHashMapImpl<double>; */
-
-HashMapImpl* get_hash_map(const at::Tensor& key) {
-  return new CPUHashMapImpl(key);
-  // clang-format off
-  /* AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool, */
-  /* key.scalar_type(), */
-  /* "get_hash_map_cpu", */
-  /* [&] { */
-  /*   return std::make_shared<CPUHashMapImpl<scalar_t>>(key); */
-  /* }); */
-  // clang-format on
-}
+template struct CPUHashMapImpl<bool>;
+template struct CPUHashMapImpl<uint8_t>;
+template struct CPUHashMapImpl<int8_t>;
+template struct CPUHashMapImpl<int16_t>;
+template struct CPUHashMapImpl<int32_t>;
+template struct CPUHashMapImpl<int64_t>;
+template struct CPUHashMapImpl<float>;
+template struct CPUHashMapImpl<double>;
 
 }  // namespace
-
-TORCH_LIBRARY_IMPL(pyg, CPU, m) {
-  m.impl(TORCH_SELECTIVE_NAME("pyg::get_hash_map"), TORCH_FN(get_hash_map));
-}
 
 }  // namespace classes
 }  // namespace pyg

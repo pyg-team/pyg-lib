@@ -9,10 +9,11 @@ namespace classes {
 struct HashMap : torch::CustomClassHolder {
  public:
   HashMap(const at::Tensor& key);
+  /* ~HashMap(); */
   at::Tensor get(const at::Tensor& query);
 
  private:
-  HashMapImpl* map_;
+  std::unique_ptr<HashMapImpl> map_;
 };
 
 }  // namespace classes
