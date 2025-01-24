@@ -1,7 +1,9 @@
 #include "hash_map.h"
 
+#include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
-#include "cpu/hash_map_impl.h"
+
+#include "cpu/hash_map_impl.cpp"
 
 namespace pyg {
 namespace classes {
@@ -13,17 +15,24 @@ HashMap::HashMap(const at::Tensor& key) {
   at::checkDim(c, key_arg, 1);
   at::checkContiguous(c, key_arg);
 
+  map_ = get_hash_map(key);
+
+  /* static auto op = c10::Dispatcher::singleton() */
+  /*                      .findSchemaOrThrow("pyg::get_hash_map", "") */
+  /*                      .typed<HashMapImpl*(at::Tensor)>(); */
+  /* map_ = op.call(key); */
+
   // clang-format off
-  AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool,
-  key.scalar_type(),
-  "hash_map_init",
-  [&] {
-    /* if (key.is_cpu) { */
-    map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
-    /* } else { */
-    /*   AT_ERROR("Received invalid device type for 'HashMap'."); */
-    /* } */
-  });
+  /* AT_DISPATCH_ALL_TYPES_AND(at::ScalarType::Bool, */
+  /* key.scalar_type(), */
+  /* "hash_map_init", */
+  /* [&] { */
+  /*   /1* if (key.is_cpu) { *1/ */
+  /*   map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key); */
+  /*   /1* } else { *1/ */
+  /*   /1*   AT_ERROR("Received invalid device type for 'HashMap'."); *1/ */
+  /*   /1* } *1/ */
+  /* }); */
   // clang-format on
 }
 

@@ -71,7 +71,6 @@ if (NOT "$ENV{EXTERNAL_PHMAP_INCLUDE_DIR}" STREQUAL "")
   include_directories($ENV{EXTERNAL_PHMAP_INCLUDE_DIR})
 else()
   set(PHMAP_DIR third_party/parallel-hashmap)
-  include_directories(${PHMAP_DIR})
   target_include_directories(${PROJECT_NAME} PRIVATE ${PHMAP_DIR})
 endif()
 

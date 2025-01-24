@@ -12,7 +12,7 @@ struct HashMap : torch::CustomClassHolder {
   at::Tensor get(const at::Tensor& query);
 
  private:
-  std::unique_ptr<HashMapImpl> map_;
+  HashMapImpl* map_;
 };
 
 }  // namespace classes
