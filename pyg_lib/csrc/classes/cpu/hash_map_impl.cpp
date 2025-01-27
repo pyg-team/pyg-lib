@@ -73,6 +73,10 @@ template struct CPUHashMapImpl<int64_t>;
 template struct CPUHashMapImpl<float>;
 template struct CPUHashMapImpl<double>;
 
+c10::intrusive_ptr<HashMapImpl> create_hash_map_impl(const at::Tensor& key) {
+  return c10::make_intrusive<CPUHashMapImpl<int64_t>>(key);
+}
+
 }  // namespace
 
 }  // namespace classes
