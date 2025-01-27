@@ -2,8 +2,9 @@
 
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
+#include <parallel_hashmap/phmap.h>
+
 #include "../hash_map_impl.h"
-#include "parallel_hashmap/phmap.h"
 
 namespace pyg {
 namespace classes {

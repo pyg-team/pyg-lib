@@ -1,8 +1,7 @@
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
+#include <parallel_hashmap/phmap.h>
 #include <torch/library.h>
-
-#include "parallel_hashmap/phmap.h"
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/index_tracker.h"

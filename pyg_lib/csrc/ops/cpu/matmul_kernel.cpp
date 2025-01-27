@@ -8,9 +8,9 @@
 #include <ATen/ATen.h>
 #include <ATen/Config.h>
 #include <ATen/Parallel.h>
+#include <parallel_hashmap/phmap.h>
 #include <torch/library.h>
 
-#include "parallel_hashmap/phmap.h"
 #include "pyg_lib/csrc/config.h"
 #include "pyg_lib/csrc/utils/convert.h"
 
