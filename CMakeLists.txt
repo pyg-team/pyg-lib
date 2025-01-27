@@ -42,7 +42,7 @@ endif()
 if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})
