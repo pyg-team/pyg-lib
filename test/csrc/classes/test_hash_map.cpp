@@ -1,5 +1,6 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 #include "pyg_lib/csrc/classes/hash_map.h"
 
