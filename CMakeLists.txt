@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.18)
 project(pyg)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -43,6 +43,7 @@ if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
+  set(CMAKE_CUDA_ARCHITECTURES "60;70;75;80;86;90")
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})
