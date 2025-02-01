@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import torch
 
-from pyg_lib.classes import HashMap
+import pyg_lib  # type: ignore
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -29,6 +29,13 @@ if __name__ == '__main__':
     key2 = torch.randperm(args.num_keys, device=args.device)
     query2 = torch.randperm(args.num_queries, device=args.device)
     query2 = query2[:args.num_queries]
+
+    if key1.is_cpu:
+        HashMap = torch.classes.pyg.CPUHashMap
+    elif key1.is_cuda:
+        HashMap = torch.classes.pyg.CUDHashMap
+    else:
+        raise NotImplementedError(f"Unsupported device '{device}'")
 
     t_init = t_get = 0
     for i in range(num_warmups + num_steps):

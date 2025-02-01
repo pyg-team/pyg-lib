@@ -39,7 +39,7 @@ struct CPUHashMapImpl : HashMapImpl {
 
     at::parallel_for(0, key.numel(), grain_size, [&](int64_t beg, int64_t end) {
       for (int64_t i = beg; i < end; ++i) {
-        auto [iterator, inserted] = map_.insert({key_data[i], i});
+        const auto [iterator, inserted] = map_.insert({key_data[i], i});
         TORCH_CHECK(inserted, "Found duplicated key in 'HashMap'.");
       }
     });
@@ -80,17 +80,9 @@ struct CPUHashMapImpl : HashMapImpl {
     }
     const auto key_data = key.data_ptr<KeyType>();
 
-    const auto num_threads = at::get_num_threads();
-    const auto grain_size =
-        std::max((key.numel() + num_threads - 1) / num_threads,
-                 at::internal::GRAIN_SIZE);
-
-    at::parallel_for(0, key.numel(), grain_size, [&](int64_t b, int64_t e) {
-      for (int64_t i = b; i < e; ++i) {
-        const auto pair = std::advance(map.begin(), i);
-        key_data[pair->second] = pair->first;
-      }
-    });
+    for (const auto& pair : map_) {  // No efficient multi-threading possible :(
+      key_data[pair.second] = pair.first;
+    }
 
     return key;
   }
@@ -124,7 +116,7 @@ struct CPUHashMap : torch::CustomClassHolder {
   at::Tensor get(const at::Tensor& query) {
     at::TensorArg query_arg{query, "query", 0};
     at::CheckedFrom c{"CPUHashMap.get"};
-    at::checkDeviceType(c, query, at::DeviceType::CUDA);
+    at::checkDeviceType(c, query, at::DeviceType::CPU);
     at::checkDim(c, query_arg, 1);
     at::checkContiguous(c, query_arg);
 
