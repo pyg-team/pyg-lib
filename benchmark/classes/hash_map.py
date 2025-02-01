@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import torch
 
-import pyg_lib  # type: ignore
+import pyg_lib  # noqa
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
