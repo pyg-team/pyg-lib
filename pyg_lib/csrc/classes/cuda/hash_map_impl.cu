@@ -52,7 +52,7 @@ struct CUDAHashMapImpl : HashMapImpl {
         query.options().dtype(c10::CppTypeToScalarType<ValueType>::value);
     const auto out = at::empty({query.numel()}, options);
     const auto query_data = query.data_ptr<KeyType>();
-    auto out_data = out.data_ptr<ValueType>();
+    const auto out_data = out.data_ptr<ValueType>();
 
     map_->find(query_data, query_data + query.numel(), out_data);
 
@@ -61,14 +61,22 @@ struct CUDAHashMapImpl : HashMapImpl {
 
   at::Tensor keys() override {
     // TODO This will not work in multi-GPU scenarios.
-    const auto options = at::TensorOptions().device(at::DeviceType::CUDA);
+    const auto options = at::TensorOptions()
+                             .device(at::DeviceType::CUDA)
+                             .dtype(c10::CppTypeToScalarType<ValueType>::value);
     const auto size = static_cast<int64_t>(map_->size());
-    const auto key = at::empty(
-        {size}, options.dtype(c10::CppTypeToScalarType<KeyType>::value));
-    const auto value = at::empty(
-        {size}, options.dtype(c10::CppTypeToScalarType<ValueType>::value));
-    auto key_data = key.data_ptr<KeyType>();
-    auto value_data = value.data_ptr<ValueType>();
+
+    at::Tensor key;
+    if (std::is_same<KeyType, int16_t>::value) {
+      key = at::empty({size}, options.dtype(at::kShort));
+    } else if (std::is_same<KeyType, int32_t>::value) {
+      key = at::empty({size}, options.dtype(at::kInt));
+    } else {
+      key = at::empty({size}, options);
+    }
+    const auto value = at::empty({size}, options);
+    const auto key_data = key.data_ptr<KeyType>();
+    const auto value_data = value.data_ptr<ValueType>();
 
     map_->retrieve_all(key_data, value_data);
 
