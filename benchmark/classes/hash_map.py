@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import torch
 
-from pyg_lib.classes import HashMap
+import pyg_lib  # noqa
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -29,6 +29,13 @@ if __name__ == '__main__':
     key2 = torch.randperm(args.num_keys, device=args.device)
     query2 = torch.randperm(args.num_queries, device=args.device)
     query2 = query2[:args.num_queries]
+
+    if key1.is_cpu:
+        HashMap = torch.classes.pyg.CPUHashMap
+    elif key1.is_cuda:
+        HashMap = torch.classes.pyg.CUDAHashMap
+    else:
+        raise NotImplementedError(f"Unsupported device '{args.device}'")
 
     t_init = t_get = 0
     for i in range(num_warmups + num_steps):
@@ -55,7 +62,7 @@ if __name__ == '__main__':
         t_start = time.perf_counter()
         hash_map = torch.full((args.num_keys, ), fill_value=-1,
                               dtype=torch.long, device=args.device)
-        hash_map[key2] = torch.arange(args.num_keys)
+        hash_map[key2] = torch.arange(args.num_keys, device=args.device)
         torch.cuda.synchronize()
         if i >= num_warmups:
             t_init += time.perf_counter() - t_start
@@ -85,7 +92,7 @@ if __name__ == '__main__':
             if i >= num_warmups:
                 t_get += time.perf_counter() - t_start
 
-    print(f' Pandas Init: {t_init / num_steps:.4f}s')
-    print(f' Pandas  Get: {t_get / num_steps:.4f}s')
+        print(f' Pandas Init: {t_init / num_steps:.4f}s')
+        print(f' Pandas  Get: {t_get / num_steps:.4f}s')
 
-    assert out1.equal(torch.tensor(out3))
+        assert out1.equal(torch.tensor(out3))
