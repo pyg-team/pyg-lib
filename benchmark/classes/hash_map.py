@@ -9,9 +9,13 @@ import pyg_lib  # noqa
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--dtype', type=str, default='int',
+                        choices=['short', 'int', 'long'])
     parser.add_argument('--num_keys', type=int, default=10_000_000)
     parser.add_argument('--num_queries', type=int, default=1_000_000)
     args = parser.parse_args()
+
+    dtype = getattr(torch, args.dtype)
 
     args.num_queries = min(args.num_queries, args.num_keys)
 
@@ -19,15 +23,15 @@ if __name__ == '__main__':
     if args.device == 'cpu':
         num_warmups, num_steps = num_warmups // 10, num_steps // 10
 
-    max_value = torch.iinfo(torch.long).max
+    max_value = torch.iinfo(dtype).max
 
-    key1 = torch.randint(0, max_value, (args.num_keys, ), dtype=torch.long,
+    key1 = torch.randint(0, max_value, (args.num_keys, ), dtype=dtype,
                          device=args.device)
     query1 = key1[torch.randperm(key1.size(0), device=args.device)]
     query1 = query1[:args.num_queries]
 
-    key2 = torch.randperm(args.num_keys, device=args.device)
-    query2 = torch.randperm(args.num_queries, device=args.device)
+    key2 = torch.randperm(args.num_keys, dtype=dtype, device=args.device)
+    query2 = torch.randperm(args.num_queries, dtype=dtype, device=args.device)
     query2 = query2[:args.num_queries]
 
     if key1.is_cpu:
@@ -60,15 +64,16 @@ if __name__ == '__main__':
     for i in range(num_warmups + num_steps):
         torch.cuda.synchronize()
         t_start = time.perf_counter()
-        hash_map = torch.full((args.num_keys, ), fill_value=-1,
-                              dtype=torch.long, device=args.device)
-        hash_map[key2] = torch.arange(args.num_keys, device=args.device)
+        hash_map = torch.full((args.num_keys, ), fill_value=-1, dtype=dtype,
+                              device=args.device)
+        hash_map[key2.long()] = torch.arange(args.num_keys, dtype=dtype,
+                                             device=args.device)
         torch.cuda.synchronize()
         if i >= num_warmups:
             t_init += time.perf_counter() - t_start
 
         t_start = time.perf_counter()
-        out2 = hash_map[query2]
+        out2 = hash_map[query2.long()]
         torch.cuda.synchronize()
         if i >= num_warmups:
             t_get += time.perf_counter() - t_start
