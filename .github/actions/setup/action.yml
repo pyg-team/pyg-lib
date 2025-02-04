@@ -57,6 +57,12 @@ runs:
         sed -i '1s/^/#if defined(__linux__) \&\& defined(__x86_64__)\n__asm__(".symver pow,pow@GLIBC_2.2.5");\n#endif\n/' third_party/METIS/libmetis/metislib.h
       shell: bash
 
+    - name: Fix cuCollections
+      if: ${{ (inputs.cuda-version != 'cpu') && (runner.os == 'Windows') }}
+      run: |
+        sed -i '37s|#define CUCO_CUDA_MINIMUM_ARCH .*|#define CUCO_CUDA_MINIMUM_ARCH 600|' third_party/cuCollections/include/cuco/detail/__config
+      shell: bash
+
     - name: Install additional dependencies
       run: |
         pip install setuptools ninja wheel
