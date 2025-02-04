@@ -58,7 +58,7 @@ runs:
       shell: bash
 
     - name: Fix cuCollections
-      if: ${{ (inputs.cuda-version != 'cpu') && ${{ runner.os == 'Windows' }}}}
+      if: ${{ (inputs.cuda-version != 'cpu') && (runner.os == 'Windows') }}
       run: |
         sed -i '37s|#define CUCO_CUDA_MINIMUM_ARCH .*|#define CUCO_CUDA_MINIMUM_ARCH 600|' third_party/cuCollections/include/cuco/detail/__config
       shell: bash
