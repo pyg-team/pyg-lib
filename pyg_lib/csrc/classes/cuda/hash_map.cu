@@ -27,13 +27,13 @@ struct CUDAHashMapImpl : HashMapImpl {
  public:
   using ValueType = int64_t;
 
-  CUDAHashMapImpl(const at::Tensor& key) {
+  CUDAHashMapImpl(const at::Tensor& key, double load_factor) {
     KeyType constexpr empty_key_sentinel = std::numeric_limits<KeyType>::min();
     ValueType constexpr empty_value_sentinel = -1;
 
+    size_t capacity = std::ceil(key.numel() / load_factor);
     map_ = std::make_unique<cuco::static_map<KeyType, ValueType>>(
-        2 * key.numel(),  // load_factor = 0.5
-        cuco::empty_key{empty_key_sentinel},
+        capacity, cuco::empty_key{empty_key_sentinel},
         cuco::empty_value{empty_value_sentinel});
 
     const auto key_data = key.data_ptr<KeyType>();
@@ -89,7 +89,7 @@ struct CUDAHashMapImpl : HashMapImpl {
 
 struct CUDAHashMap : torch::CustomClassHolder {
  public:
-  CUDAHashMap(const at::Tensor& key) {
+  CUDAHashMap(const at::Tensor& key, double load_factor = 0.5) {
     at::TensorArg key_arg{key, "key", 0};
     at::CheckedFrom c{"CUDAHashMap.init"};
     at::checkDeviceType(c, key, at::DeviceType::CUDA);
@@ -97,7 +97,7 @@ struct CUDAHashMap : torch::CustomClassHolder {
     at::checkContiguous(c, key_arg);
 
     DISPATCH_KEY(key.scalar_type(), "cuda_hash_map_init", [&] {
-      map_ = std::make_unique<CUDAHashMapImpl<scalar_t>>(key);
+      map_ = std::make_unique<CUDAHashMapImpl<scalar_t>>(key, load_factor);
     });
   }
 
