@@ -1,7 +1,10 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
-#include <cuco/static_map.cuh>
 #include <limits>
+
+#ifndef _WIN32
+#include <cuco/static_map.cuh>
+#endif
 
 namespace pyg {
 namespace classes {
@@ -22,6 +25,7 @@ struct HashMapImpl {
   virtual at::Tensor keys() = 0;
 };
 
+#ifndef _WIN32
 template <typename KeyType>
 struct CUDAHashMapImpl : HashMapImpl {
  public:
@@ -86,10 +90,12 @@ struct CUDAHashMapImpl : HashMapImpl {
  private:
   std::unique_ptr<cuco::static_map<KeyType, ValueType>> map_;
 };
+#endif
 
 struct CUDAHashMap : torch::CustomClassHolder {
  public:
   CUDAHashMap(const at::Tensor& key, double load_factor = 0.5) {
+#ifndef _WIN32
     at::TensorArg key_arg{key, "key", 0};
     at::CheckedFrom c{"CUDAHashMap.init"};
     at::checkDeviceType(c, key, at::DeviceType::CUDA);
@@ -99,9 +105,13 @@ struct CUDAHashMap : torch::CustomClassHolder {
     DISPATCH_KEY(key.scalar_type(), "cuda_hash_map_init", [&] {
       map_ = std::make_unique<CUDAHashMapImpl<scalar_t>>(key, load_factor);
     });
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
   }
 
   at::Tensor get(const at::Tensor& query) {
+#ifndef _WIN32
     at::TensorArg query_arg{query, "query", 0};
     at::CheckedFrom c{"CUDAHashMap.get"};
     at::checkDeviceType(c, query, at::DeviceType::CUDA);
@@ -109,12 +119,23 @@ struct CUDAHashMap : torch::CustomClassHolder {
     at::checkContiguous(c, query_arg);
 
     return map_->get(query);
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
   }
 
-  at::Tensor keys() { return map_->keys(); }
+  at::Tensor keys() {
+#ifndef _WIN32
+    return map_->keys();
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
+  }
 
  private:
+#ifndef _WIN32
   std::unique_ptr<HashMapImpl> map_;
+#endif
 };
 
 }  // namespace
