@@ -252,7 +252,7 @@ struct CPUHashMap : torch::CustomClassHolder {
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.class_<CPUHashMap>("CPUHashMap")
-      .def(torch::init<at::Tensor&>())
+      .def(torch::init<at::Tensor&, int64_t, double>())
       .def("get", &CPUHashMap::get)
       .def("keys", &CPUHashMap::keys)
       .def_pickle(
