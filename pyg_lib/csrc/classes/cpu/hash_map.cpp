@@ -27,8 +27,71 @@ struct CPUHashMapImpl : HashMapImpl {
  public:
   using ValueType = int64_t;
 
-  CPUHashMapImpl(const at::Tensor& key) {
-    map_.reserve(key.numel());
+  CPUHashMapImpl(const at::Tensor& key, double load_factor) {
+    size_t capacity = std::ceil(key.numel() / load_factor);
+    map_.reserve(capacity);
+
+    const auto key_data = key.data_ptr<KeyType>();
+    for (int64_t i = 0; i < key.numel(); ++i) {
+      const auto [iterator, inserted] = map_.insert({key_data[i], i});
+      TORCH_CHECK(inserted, "Found duplicated key in 'HashMap'.");
+    }
+  }
+
+  at::Tensor get(const at::Tensor& query) override {
+    const auto options =
+        query.options().dtype(c10::CppTypeToScalarType<ValueType>::value);
+    const auto out = at::empty({query.numel()}, options);
+    const auto query_data = query.data_ptr<KeyType>();
+    const auto out_data = out.data_ptr<ValueType>();
+
+    const auto num_threads = at::get_num_threads();
+    const auto grain_size =
+        std::max((query.numel() + num_threads - 1) / num_threads,
+                 at::internal::GRAIN_SIZE);
+
+    at::parallel_for(0, query.numel(), grain_size, [&](int64_t b, int64_t e) {
+      for (int64_t i = b; i < e; ++i) {
+        const auto it = map_.find(query_data[i]);
+        out_data[i] = (it != map_.end()) ? it->second : -1;
+      }
+    });
+
+    return out;
+  }
+
+  at::Tensor keys() override {
+    const auto size = static_cast<int64_t>(map_.size());
+
+    at::Tensor key;
+    if (std::is_same<KeyType, int16_t>::value) {
+      key = at::empty({size}, at::TensorOptions().dtype(at::kShort));
+    } else if (std::is_same<KeyType, int32_t>::value) {
+      key = at::empty({size}, at::TensorOptions().dtype(at::kInt));
+    } else {
+      key = at::empty({size}, at::TensorOptions().dtype(at::kLong));
+    }
+    const auto key_data = key.data_ptr<KeyType>();
+
+    for (const auto& pair : map_) {  // No efficient multi-threading possible :(
+      key_data[pair.second] = pair.first;
+    }
+
+    return key;
+  }
+
+ private:
+  phmap::flat_hash_map<KeyType, ValueType> map_;
+};
+
+template <typename KeyType, size_t num_submaps>
+struct ParallelCPUHashMapImpl : HashMapImpl {
+ public:
+  using ValueType = int64_t;
+
+  ParallelCPUHashMapImpl(const at::Tensor& key, double load_factor) {
+    size_t capacity = std::ceil(key.numel() / load_factor);
+    map_.reserve(capacity);
 
     const auto key_data = key.data_ptr<KeyType>();
 
@@ -94,14 +157,16 @@ struct CPUHashMapImpl : HashMapImpl {
       phmap::priv::hash_default_hash<KeyType>,
       phmap::priv::hash_default_eq<KeyType>,
       phmap::priv::Allocator<std::pair<const KeyType, ValueType>>,
-      12,
+      num_submaps,
       std::mutex>
       map_;
 };
 
 struct CPUHashMap : torch::CustomClassHolder {
  public:
-  CPUHashMap(const at::Tensor& key) {
+  CPUHashMap(const at::Tensor& key,
+             int64_t num_submaps = 0,
+             double load_factor = 0.5) {
     at::TensorArg key_arg{key, "key", 0};
     at::CheckedFrom c{"CPUHashMap.init"};
     at::checkDeviceType(c, key, at::DeviceType::CPU);
@@ -109,7 +174,61 @@ struct CPUHashMap : torch::CustomClassHolder {
     at::checkContiguous(c, key_arg);
 
     DISPATCH_KEY(key.scalar_type(), "cpu_hash_map_init", [&] {
-      map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
+      switch (num_submaps) {
+        case 0:
+          map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key, load_factor);
+          break;
+        case 2:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 1>>(
+              key, load_factor);
+          break;
+        case 4:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 2>>(
+              key, load_factor);
+          break;
+        case 8:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 3>>(
+              key, load_factor);
+          break;
+        case 16:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 4>>(
+              key, load_factor);
+          break;
+        case 32:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 5>>(
+              key, load_factor);
+          break;
+        case 64:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 6>>(
+              key, load_factor);
+          break;
+        case 128:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 7>>(
+              key, load_factor);
+          break;
+        case 256:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 8>>(
+              key, load_factor);
+          break;
+        case 512:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 9>>(
+              key, load_factor);
+          break;
+        case 1024:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 10>>(
+              key, load_factor);
+          break;
+        case 2048:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 11>>(
+              key, load_factor);
+          break;
+        case 4096:
+          map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 12>>(
+              key, load_factor);
+          break;
+        default:
+          TORCH_CHECK(false, "'num_submaps' needs to be a power of 2");
+      }
     });
   }
 
