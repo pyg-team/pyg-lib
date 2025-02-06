@@ -22,8 +22,6 @@ def test_hash_map(dtype, device):
     else:
         raise NotImplementedError(f"Unsupported device '{device}'")
 
-    print(hash_map.keys())
-    return
     assert hash_map.keys().equal(key)
     assert hash_map.keys().dtype == dtype
     expected = torch.tensor([2, 1, 3, -1], device=device)
@@ -51,7 +49,6 @@ class Foo(torch.nn.Module):
 
 @withCUDA
 def test_serialization(device, tmp_path):
-    return
     key = torch.tensor([0, 10, 30, 20], device=device)
     scripted_foo = torch.jit.script(Foo(key))
 
