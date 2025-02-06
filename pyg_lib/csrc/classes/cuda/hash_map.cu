@@ -84,7 +84,7 @@ struct CUDAHashMapImpl : HashMapImpl {
 
     map_->retrieve_all(key_data, value_data);
 
-    perm = at::empty_like(value);
+    const auto perm = at::empty_like(value);
     perm[value] = at::arange(value.numel(), value.options());
 
     return key.index_select(0, perm);
