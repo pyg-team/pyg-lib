@@ -20,11 +20,15 @@ def test_hash_map(load_factor, dtype, device):
     else:
         raise NotImplementedError(f"Unsupported device '{device}'")
 
-    assert torch.equal(key, hash_map.keys())
+    assert hash_map.keys().equal(key)
+    assert hash_map.keys().equal(key)
     expected = torch.tensor([2, 1, 3, -1], device=device)
     assert hash_map.get(query).equal(expected)
+    assert hash_map.get(query).dtype == torch.long
 
     if key.is_cpu:
         hash_map = HashMap(key, 16, load_factor)
-        assert torch.equal(key, hash_map.keys())
+        assert hash_map.keys().dtype == dtype
+        assert hash_map.keys().equal(key)
         assert hash_map.get(query).equal(expected)
+        assert hash_map.get(query).dtype == torch.long
