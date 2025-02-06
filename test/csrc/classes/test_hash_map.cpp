@@ -16,8 +16,5 @@ TEST(HashMapTest, BasicAssertions) {
 
   map = pyg::classes::CPUHashMap(key, 16);
   EXPECT_TRUE(at::equal(map.keys(), key));
-
-  auto query = at::tensor({30, 10, 20, 40}, options);
-  auto expected = at::tensor({2, 1, 3, -1}, options);
   EXPECT_TRUE(at::equal(map.get(query), expected));
 }
