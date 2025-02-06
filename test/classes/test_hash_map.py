@@ -1,5 +1,8 @@
+import os.path as osp
+
 import pytest
 import torch
+from torch import Tensor
 
 from pyg_lib.testing import withCUDA
 
@@ -32,3 +35,29 @@ def test_hash_map(load_factor, dtype, device):
         assert hash_map.keys().equal(key)
         assert hash_map.get(query).equal(expected)
         assert hash_map.get(query).dtype == torch.long
+
+
+class Foo(torch.nn.Module):
+    def __init__(self, key: Tensor):
+        super().__init__()
+        if key.is_cpu:
+            HashMap = torch.classes.pyg.CPUHashMap
+            self.map = HashMap(key, 0, 0.5)
+        elif key.is_cuda:
+            HashMap = torch.classes.pyg.CUDAHashMap
+            self.map = HashMap(key, 0.5)
+
+    def forward(self, query: Tensor) -> Tensor:
+        return self.map.get(query)
+
+
+@withCUDA
+def test_serialization(device, tmp_path):
+    key = torch.tensor([0, 10, 30, 20], device=device)
+    scripted_foo = torch.jit.script(Foo(key))
+
+    path = osp.join(tmp_path, 'foo.pt')
+    scripted_foo.save(path)
+    loaded = torch.jit.load(path)
+
+    assert loaded.map.keys().equal(key)
