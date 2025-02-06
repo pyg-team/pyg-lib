@@ -54,7 +54,7 @@ if __name__ == '__main__':
         print(f'HashMap  Get: {t_get:.4f}s')
         print('=====================')
     else:
-        for num_submaps in [0, 16, 256, 4096]:
+        for num_submaps in [-1, 0, 16, 256]:
             t_init = t_get = 0
             for i in range(num_warmups + num_steps):
                 t_start = time.perf_counter()
@@ -70,6 +70,8 @@ if __name__ == '__main__':
             print(f'HashMap[{num_submaps}] Init: {t_init:.4f}s')
             print(f'HashMap[{num_submaps}]  Get: {t_get:.4f}s')
             print('=====================')
+
+    quit()
 
     t_init = t_get = 0
     for i in range(num_warmups + num_steps):

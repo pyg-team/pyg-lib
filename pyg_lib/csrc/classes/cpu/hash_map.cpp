@@ -170,6 +170,13 @@ struct CPUHashMap : torch::CustomClassHolder {
 
     DISPATCH_KEY(key.scalar_type(), "cpu_hash_map_init", [&] {
       switch (num_submaps) {
+        case -1:  // Auto-infer:
+          if (key.numel() < 200'000) {
+            map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
+          } else {
+            map_ = std::make_unique<ParallelCPUHashMapImpl<scalar_t, 8>>(key);
+          }
+          break;
         case 0:
           map_ = std::make_unique<CPUHashMapImpl<scalar_t>>(key);
           break;
