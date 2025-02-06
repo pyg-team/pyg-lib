@@ -142,7 +142,7 @@ struct CUDAHashMap : torch::CustomClassHolder {
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.class_<CUDAHashMap>("CUDAHashMap")
-      .def(torch::init<at::Tensor&>())
+      .def(torch::init<at::Tensor&, double>())
       .def("get", &CUDAHashMap::get)
       .def("keys", &CUDAHashMap::keys)
       .def_pickle(
