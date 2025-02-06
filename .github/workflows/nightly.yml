@@ -1,9 +1,13 @@
 name: Nightly Wheels
 
 on:  # yamllint disable-line rule:truthy
-  workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+  # workflow_dispatch:
+  # schedule:
+  #   - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
 
@@ -14,10 +18,10 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-14, windows-2019]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-        torch-version: [1.13.0, 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0, 2.5.0]
-        cuda-version: ['cpu', 'cu113', 'cu116', 'cu117', 'cu118', 'cu121', 'cu124']
+        os: [windows-2019]
+        python-version: ['3.10']
+        torch-version: [2.5.0]
+        cuda-version: ['cu118']
         exclude:
           - torch-version: 1.13.0
             python-version: '3.12'
@@ -147,38 +151,38 @@ jobs:
           cd ..
         shell: bash
 
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-1
+      # - name: Configure AWS
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-west-1
 
-      - name: Upload wheel
-        run: |
-          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+      # - name: Upload wheel
+      #   run: |
+      #     aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 
-  boto3:
-    if: ${{ always() }}
-    needs: [wheel]
-    runs-on: ubuntu-latest
+  # boto3:
+    # if: ${{ always() }}
+    # needs: [wheel]
+    # runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    # steps:
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.9
 
-      - name: Install dependencies
-        run: |
-          pip install boto3
+      # - name: Install dependencies
+      #   run: |
+      #     pip install boto3
 
-      - name: Upload index
-        run: |
-          python ./.github/workflows/aws/upload_nightly_index.py
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # - name: Upload index
+      #   run: |
+      #     python ./.github/workflows/aws/upload_nightly_index.py
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
