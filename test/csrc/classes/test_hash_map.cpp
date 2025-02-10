@@ -8,6 +8,9 @@ TEST(HashMapTest, BasicAssertions) {
   auto key = at::tensor({0, 10, 30, 20}, options);
 
   auto map = pyg::classes::CPUHashMap(key);
+  EXPECT_EQ(map.size(), 4);
+  EXPECT_EQ(map.dtype(), at::kLong);
+  EXPECT_EQ(map.device(), at::Device(at::kCPU));
   EXPECT_TRUE(at::equal(map.keys(), key));
 
   auto query = at::tensor({30, 10, 20, 40}, options);

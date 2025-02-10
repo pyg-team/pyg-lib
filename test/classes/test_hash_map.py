@@ -6,6 +6,12 @@ from torch import Tensor
 
 from pyg_lib.testing import withCUDA
 
+INT_TO_DTPYE = {
+    2: torch.short,
+    3: torch.int,
+    4: torch.long,
+}
+
 
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.short, torch.int, torch.long])
@@ -22,6 +28,9 @@ def test_hash_map(dtype, device):
     else:
         raise NotImplementedError(f"Unsupported device '{device}'")
 
+    assert hash_map.size() == 4
+    assert INT_TO_DTPYE[hash_map.dtype()] == dtype
+    assert hash_map.device() == device
     assert hash_map.keys().equal(key)
     assert hash_map.keys().dtype == dtype
     expected = torch.tensor([2, 1, 3, -1], device=device)
