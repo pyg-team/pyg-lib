@@ -1,4 +1,5 @@
 #include <ATen/ATen.h>
+#include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
 #include <limits>
 
@@ -23,6 +24,9 @@ struct HashMapImpl {
   virtual ~HashMapImpl() = default;
   virtual at::Tensor get(const at::Tensor& query) = 0;
   virtual at::Tensor keys() = 0;
+  virtual int64_t size() = 0;
+  virtual at::ScalarType dtype() = 0;
+  virtual at::Device device() = 0;
 };
 
 #ifndef _WIN32
@@ -31,7 +35,10 @@ struct CUDAHashMapImpl : HashMapImpl {
  public:
   using ValueType = int64_t;
 
-  CUDAHashMapImpl(const at::Tensor& key, double load_factor) {
+  CUDAHashMapImpl(const at::Tensor& key, double load_factor)
+      : device_(key.device()) {
+    c10::cuda::MaybeSetDevice(key.get_device());
+
     KeyType constexpr empty_key_sentinel = std::numeric_limits<KeyType>::min();
     ValueType constexpr empty_value_sentinel = -1;
 
@@ -52,6 +59,8 @@ struct CUDAHashMapImpl : HashMapImpl {
   }
 
   at::Tensor get(const at::Tensor& query) override {
+    c10::cuda::MaybeSetDevice(query.get_device());
+
     const auto options =
         query.options().dtype(c10::CppTypeToScalarType<ValueType>::value);
     const auto out = at::empty({query.numel()}, options);
@@ -64,21 +73,12 @@ struct CUDAHashMapImpl : HashMapImpl {
   }
 
   at::Tensor keys() override {
-    // TODO This will not work in multi-GPU scenarios.
-    const auto options = at::TensorOptions()
-                             .device(at::DeviceType::CUDA)
-                             .dtype(c10::CppTypeToScalarType<ValueType>::value);
-    const auto size = static_cast<int64_t>(map_->size());
+    c10::cuda::MaybeSetDevice(device_.index());
 
-    at::Tensor key;
-    if (std::is_same<KeyType, int16_t>::value) {
-      key = at::empty({size}, options.dtype(at::kShort));
-    } else if (std::is_same<KeyType, int32_t>::value) {
-      key = at::empty({size}, options.dtype(at::kInt));
-    } else {
-      key = at::empty({size}, options);
-    }
-    const auto value = at::empty({size}, options);
+    const auto options = at::TensorOptions().device(device_);
+    const at::Tensor key = at::empty({size()}, options.dtype(dtype()));
+    const at::Tensor value = at::empty(
+        {size()}, options.dtype(c10::CppTypeToScalarType<ValueType>::value));
     const auto key_data = key.data_ptr<KeyType>();
     const auto value_data = value.data_ptr<ValueType>();
 
@@ -90,8 +90,23 @@ struct CUDAHashMapImpl : HashMapImpl {
     return key.index_select(0, perm);
   }
 
+  int64_t size() override { return static_cast<int64_t>(map_->size()); }
+
+  at::ScalarType dtype() override {
+    if (std::is_same<KeyType, int16_t>::value) {
+      return at::kShort;
+    } else if (std::is_same<KeyType, int32_t>::value) {
+      return at::kInt;
+    } else {
+      return at::kLong;
+    }
+  }
+
+  at::Device device() override { return device_; }
+
  private:
   std::unique_ptr<cuco::static_map<KeyType, ValueType>> map_;
+  at::Device device_;
 };
 #endif
 
@@ -135,6 +150,12 @@ struct CUDAHashMap : torch::CustomClassHolder {
 #endif
   }
 
+  int64_t size() { return map_->size(); }
+
+  at::ScalarType dtype() { return map_->dtype(); }
+
+  at::Device device() { return map_->device(); }
+
  private:
 #ifndef _WIN32
   std::unique_ptr<HashMapImpl> map_;
@@ -148,6 +169,9 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       .def(torch::init<at::Tensor&, double>())
       .def("get", &CUDAHashMap::get)
       .def("keys", &CUDAHashMap::keys)
+      .def("size", &CUDAHashMap::size)
+      .def("dtype", &CUDAHashMap::dtype)
+      .def("device", &CUDAHashMap::device)
       .def_pickle(
           // __getstate__
           [](const c10::intrusive_ptr<CUDAHashMap>& self) -> at::Tensor {

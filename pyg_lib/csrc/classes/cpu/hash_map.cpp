@@ -20,6 +20,8 @@ struct HashMapImpl {
   virtual ~HashMapImpl() = default;
   virtual at::Tensor get(const at::Tensor& query) = 0;
   virtual at::Tensor keys() = 0;
+  virtual int64_t size() = 0;
+  virtual at::ScalarType dtype() = 0;
 };
 
 template <typename KeyType>
@@ -60,16 +62,8 @@ struct CPUHashMapImpl : HashMapImpl {
   }
 
   at::Tensor keys() override {
-    const auto size = static_cast<int64_t>(map_.size());
-
-    at::Tensor key;
-    if (std::is_same<KeyType, int16_t>::value) {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kShort));
-    } else if (std::is_same<KeyType, int32_t>::value) {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kInt));
-    } else {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kLong));
-    }
+    const at::Tensor key =
+        at::empty({size()}, at::TensorOptions().dtype(dtype()));
     const auto key_data = key.data_ptr<KeyType>();
 
     for (const auto& pair : map_) {  // No efficient multi-threading possible :(
@@ -77,6 +71,18 @@ struct CPUHashMapImpl : HashMapImpl {
     }
 
     return key;
+  }
+
+  int64_t size() override { return static_cast<int64_t>(map_.size()); }
+
+  at::ScalarType dtype() override {
+    if (std::is_same<KeyType, int16_t>::value) {
+      return at::kShort;
+    } else if (std::is_same<KeyType, int32_t>::value) {
+      return at::kInt;
+    } else {
+      return at::kLong;
+    }
   }
 
  private:
@@ -129,16 +135,8 @@ struct ParallelCPUHashMapImpl : HashMapImpl {
   }
 
   at::Tensor keys() override {
-    const auto size = static_cast<int64_t>(map_.size());
-
-    at::Tensor key;
-    if (std::is_same<KeyType, int16_t>::value) {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kShort));
-    } else if (std::is_same<KeyType, int32_t>::value) {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kInt));
-    } else {
-      key = at::empty({size}, at::TensorOptions().dtype(at::kLong));
-    }
+    const at::Tensor key =
+        at::empty({size()}, at::TensorOptions().dtype(dtype()));
     const auto key_data = key.data_ptr<KeyType>();
 
     for (const auto& pair : map_) {  // No efficient multi-threading possible :(
@@ -146,6 +144,18 @@ struct ParallelCPUHashMapImpl : HashMapImpl {
     }
 
     return key;
+  }
+
+  int64_t size() override { return static_cast<int64_t>(map_.size()); }
+
+  at::ScalarType dtype() override {
+    if (std::is_same<KeyType, int16_t>::value) {
+      return at::kShort;
+    } else if (std::is_same<KeyType, int32_t>::value) {
+      return at::kInt;
+    } else {
+      return at::kLong;
+    }
   }
 
  private:
@@ -234,6 +244,12 @@ struct CPUHashMap : torch::CustomClassHolder {
 
   at::Tensor keys() { return map_->keys(); }
 
+  int64_t size() { return map_->size(); }
+
+  at::ScalarType dtype() { return map_->dtype(); }
+
+  at::Device device() { return at::Device(at::kCPU); }
+
  private:
   std::unique_ptr<HashMapImpl> map_;
 };
@@ -245,6 +261,9 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       .def(torch::init<at::Tensor&, int64_t>())
       .def("get", &CPUHashMap::get)
       .def("keys", &CPUHashMap::keys)
+      .def("size", &CPUHashMap::size)
+      .def("dtype", &CPUHashMap::dtype)
+      .def("device", &CPUHashMap::device)
       .def_pickle(
           // __getstate__
           [](const c10::intrusive_ptr<CPUHashMap>& self) -> at::Tensor {
