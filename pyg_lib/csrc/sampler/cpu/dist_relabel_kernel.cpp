@@ -33,7 +33,7 @@ std::tuple<at::Tensor, at::Tensor> relabel(
     const at::Tensor& sampled_nodes_with_duplicates,
     const std::vector<int64_t>& num_sampled_neighbors_per_node,
     const int64_t num_nodes,
-    const c10::optional<at::Tensor>& batch,
+    const std::optional<at::Tensor>& batch,
     const bool csc) {
   if (disjoint) {
     TORCH_CHECK(batch.has_value(),
@@ -103,7 +103,7 @@ relabel(
     const c10::Dict<rel_type, std::vector<std::vector<int64_t>>>&
         num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
+    const std::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     const bool csc) {
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
 
@@ -281,7 +281,7 @@ std::tuple<at::Tensor, at::Tensor> relabel_neighborhood_kernel(
     const at::Tensor& sampled_nodes_with_duplicates,
     const std::vector<int64_t>& num_sampled_neighbors_per_node,
     const int64_t num_nodes,
-    const c10::optional<at::Tensor>& batch,
+    const std::optional<at::Tensor>& batch,
     bool csc,
     bool disjoint) {
   DISPATCH_RELABEL(disjoint, seed, sampled_nodes_with_duplicates,
@@ -297,7 +297,7 @@ hetero_relabel_neighborhood_kernel(
     const c10::Dict<rel_type, std::vector<std::vector<int64_t>>>&
         num_sampled_neighbors_per_node_dict,
     const c10::Dict<node_type, int64_t>& num_nodes_dict,
-    const c10::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
+    const std::optional<c10::Dict<node_type, at::Tensor>>& batch_dict,
     bool csc,
     bool disjoint) {
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;

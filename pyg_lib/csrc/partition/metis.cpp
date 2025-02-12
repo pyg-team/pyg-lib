@@ -11,8 +11,8 @@ namespace partition {
 at::Tensor metis(const at::Tensor& rowptr,
                  const at::Tensor& col,
                  int64_t num_partitions,
-                 const c10::optional<at::Tensor>& node_weight,
-                 const c10::optional<at::Tensor>& edge_weight,
+                 const std::optional<at::Tensor>& node_weight,
+                 const std::optional<at::Tensor>& edge_weight,
                  bool recursive) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
