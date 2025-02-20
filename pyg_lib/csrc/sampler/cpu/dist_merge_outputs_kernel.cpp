@@ -15,7 +15,7 @@ namespace {
 template <bool disjoint>
 std::tuple<at::Tensor,
            at::Tensor,
-           c10::optional<at::Tensor>,
+           std::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_outputs(
     const std::vector<at::Tensor>& node_ids,
@@ -25,10 +25,10 @@ merge_outputs(
     const std::vector<int64_t>& partition_orders,
     const int64_t num_partitions,
     const int64_t num_neighbors,
-    const c10::optional<at::Tensor>& batch) {
+    const std::optional<at::Tensor>& batch) {
   at::Tensor out_node_id;
   at::Tensor out_edge_id;
-  c10::optional<at::Tensor> out_batch = c10::nullopt;
+  std::optional<at::Tensor> out_batch = c10::nullopt;
 
   auto offset = num_neighbors;
 
@@ -140,7 +140,7 @@ merge_outputs(
 
 std::tuple<at::Tensor,
            at::Tensor,
-           c10::optional<at::Tensor>,
+           std::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_sampler_outputs_kernel(
     const std::vector<at::Tensor>& node_ids,
@@ -150,7 +150,7 @@ merge_sampler_outputs_kernel(
     const std::vector<int64_t>& partition_orders,
     const int64_t num_partitions,
     const int64_t num_neighbors,
-    const c10::optional<at::Tensor>& batch,
+    const std::optional<at::Tensor>& batch,
     bool disjoint) {
   DISPATCH_MERGE_OUTPUTS(
       disjoint, node_ids, edge_ids, cumsum_neighbors_per_node, partition_ids,
