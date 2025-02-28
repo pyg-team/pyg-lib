@@ -69,7 +69,7 @@ else
 fi
 
 sudo apt-get -qq update
-sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
+sudo apt install -y cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
 sudo apt clean
 
 rm -f ${FILENAME}
