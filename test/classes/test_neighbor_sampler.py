@@ -46,20 +46,18 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
     }
 
     Sampler = torch.classes.pyg.HeteroNeighborSampler
-    sampler = Sampler(node_types, edge_types, rowptr, col, None, node_time, None)
-    
+    sampler = Sampler(node_types, edge_types, rowptr, col, None, node_time,
+                      None)
+
     num_neighbors = {
         'A': [1, 2],
         'B': [2, 1],
     }
-    seed_node = {
-        'A': torch.tensor([1, 0])
-    }
-    seed_time = {
-        'A': torch.tensor([2, 3])
-    }
-    (row, col, node_id, edge_id, batch, num_sampled_nodes, num_sampled_edges
-            ) = sampler.sample(num_neighbors, seed_node, seed_time, True, 'last', True)
+    seed_node = {'A': torch.tensor([1, 0])}
+    seed_time = {'A': torch.tensor([2, 3])}
+    (row, col, node_id, edge_id, batch, num_sampled_nodes,
+     num_sampled_edges) = sampler.sample(num_neighbors, seed_node, seed_time,
+                                         True, 'last', True)
     print(f'Row {row}')
     print(f'Col {col}')
     print(f'Node_id {node_id}')
