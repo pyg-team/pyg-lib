@@ -102,6 +102,9 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         TORCH_CHECK(time.is_contiguous(), "Non-contiguous 'edge_time'");
       }
     }
+    for (const auto& k: edge_types_)
+      std::cerr << "AAAA "  << std::get<0>(k)  << std::get<1>(k)<< std::get<2>(k) << std::endl;
+    phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
     TORCH_CHECK(!(node_time.has_value() && edge_weight.has_value()),
                 "Biased temporal sampling not yet supported");
     TORCH_CHECK(!(edge_time.has_value() && edge_weight.has_value()),
@@ -188,9 +191,15 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                 "No valid temporal strategy found");
     c10::Dict<node_type, at::Tensor> batch;
     clear_placeholders();
+    std::cerr << "Cleared placeholders" << std::endl;
 
     pyg::random::RandintEngine<int64_t> generator;
 
+    for (const auto& k: edge_types_){
+      std::cerr << "AAAA " << std::get<0>(k) << std::endl;
+      std::cerr << "BBBB " << std::get<1>(k) << std::endl;
+      std::cerr << "CCCC " << std::get<2>(k) << std::endl;
+    }
     phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
     for (const auto& k : edge_types_) {
       const auto num_nodes = rowptr_.at(to_rel_type(k)).size(0) - 1;
@@ -312,6 +321,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       at::parallel_for(0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e){
 	for(auto j= _s; j < _e; ++j){
 	  for(const auto& k: threads_edge_types[j]){
+	    
 	    // inner loop for edge type k: src->dst
 	    const auto src = std::get<0>(k);
 	    const auto dst = std::get<2>(k);
