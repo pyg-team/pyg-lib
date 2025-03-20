@@ -10,7 +10,7 @@ namespace sampler {
 
 std::tuple<at::Tensor,
            at::Tensor,
-           std::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
            std::vector<int64_t>>
 merge_sampler_outputs(
     const std::vector<at::Tensor>& node_ids,
@@ -20,7 +20,7 @@ merge_sampler_outputs(
     const std::vector<int64_t>& partition_orders,
     const int64_t num_partitions,
     const int64_t num_neighbors,
-    const std::optional<at::Tensor>& batch,
+    const c10::optional<at::Tensor>& batch,
     bool disjoint) {
   std::vector<at::TensorArg> node_ids_args;
   std::vector<at::TensorArg> edge_ids_args;
