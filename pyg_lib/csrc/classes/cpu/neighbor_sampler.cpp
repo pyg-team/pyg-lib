@@ -103,8 +103,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       }
     }
     for (const auto& k : edge_types_)
-      std::cerr << "AAAA " << std::get<0>(k) << std::get<1>(k) << std::get<2>(k)
-                << std::endl;
     phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
     TORCH_CHECK(!(node_time.has_value() && edge_weight.has_value()),
                 "Biased temporal sampling not yet supported");
@@ -194,24 +192,16 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                 "No valid temporal strategy found");
     c10::Dict<node_type, at::Tensor> batch;
     clear_placeholders();
-    std::cerr << "Cleared placeholders" << std::endl;
 
     pyg::random::RandintEngine<int64_t> generator;
 
     for (const auto& k : edge_types_) {
-      std::cerr << "AAAA " << std::get<0>(k) << std::endl;
-      std::cerr << "BBBB " << std::get<1>(k) << std::endl;
-      std::cerr << "CCCC " << std::get<2>(k) << std::endl;
     }
-    std::cerr << "1" << std::endl;
     phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
     for (const auto& k : edge_types_) {
-      std::cerr << to_rel_type(k) << std::endl;
       const auto num_nodes = rowptr_.at(to_rel_type(k)).size(0) - 1;
-      std::cerr << "num_nodes " << num_nodes << std::endl;
       num_nodes_dict[std::get<0>(k)] = num_nodes;
     }
-    std::cerr << "2" << std::endl;
     // Add node types that only exist in the seed_node
     // TODO why would this happen?
     for (const auto& kv : seed_node) {
@@ -220,7 +210,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         num_nodes_dict[kv.key()] = seed.max().data_ptr<int64_t>()[0] + 1;
       }
     }
-    std::cerr << "3" << std::endl;
 
     // Important: Since `disjoint` isn't known at compile time, we just use
     // pairs <int64, int64> for both usecases and fill batch with 0
@@ -236,7 +225,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
     // initialize all hashmaps that store intermediate/output data
     init_placeholders();
-    std::cerr << "4" << std::endl;
     for (const auto& k : node_types_) {
       const auto N = num_nodes_dict.count(k) > 0 ? num_nodes_dict.at(k) : 0;
       sampled_nodes[k];  // Init an empty vector
@@ -246,7 +234,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
     const bool parallel = at::get_num_threads() > 1 && edge_types_.size() > 1;
     std::vector<std::vector<edge_type>> threads_edge_types;
-    std::cerr << "5" << std::endl;
 
     size_t L = 0;  // num_layers
     // Split edge types into threads
@@ -274,7 +261,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     if (!parallel) {  // One thread handles all edge types.
       threads_edge_types.push_back({edge_types_});
     }
-    std::cerr << "6" << std::endl;
 
     // We fill the buffers with the zero-th layer: seed nodes
     int64_t batch_idx = 0;
@@ -409,7 +395,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         // logic for rebalancing
       }
     }
-    std::cerr << "7" << std::endl;
 
     // We rewrite phmap objects into c10 ones for the return value
     c10::Dict<node_type, std::vector<int64_t>> num_sampled_nodes_per_hop_dict;
@@ -459,15 +444,16 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   }
 
   void init_placeholders() {
-    for (const auto& k : node_types_)
+    for (const auto& k : node_types_){
       num_sampled_nodes_per_hop_.insert({k, std::vector<int64_t>(1, 0)});
+      sampled_batch_.insert({k, std::vector<int64_t>()});
+      sampled_node_ids_.insert({k, std::vector<int64_t>()});
+    }
     for (const auto& k : edge_types_) {
       auto k_rel = to_rel_type(k);
       num_sampled_edges_per_hop_.insert({k_rel, std::vector<int64_t>(1, 0)});
       sampled_cols_.insert({k_rel, std::vector<int64_t>()});
       sampled_rows_.insert({k_rel, std::vector<int64_t>()});
-      sampled_batch_.insert({k_rel, std::vector<int64_t>()});
-      sampled_node_ids_.insert({k_rel, std::vector<int64_t>()});
       sampled_edge_ids_.insert({k_rel, std::vector<int64_t>()});
     }
   }
@@ -543,12 +529,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   const c10::optional<c10::Dict<rel_type, at::Tensor>> edge_time_;
   phmap::flat_hash_map<node_type, std::vector<int64_t>>
       num_sampled_nodes_per_hop_;
+  phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_batch_;
+  phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_node_ids_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>>
       num_sampled_edges_per_hop_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_cols_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_rows_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_batch_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_node_ids_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_edge_ids_;
 };
 

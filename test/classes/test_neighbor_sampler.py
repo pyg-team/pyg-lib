@@ -50,8 +50,8 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
                       None)
 
     num_neighbors = {
-        'A': [1, 2],
-        'B': [2, 1],
+        'A__to__B': [1, 2],
+        'B__to__A': [2, 1],
     }
     seed_node = {'A': torch.tensor([1, 0])}
     seed_time = {'A': torch.tensor([2, 3])}
