@@ -27,7 +27,7 @@ struct NeighborSampler : torch::CustomClassHolder {
         col_(col),
         edge_weight_(edge_weight),
         node_time_(node_time),
-        edge_time_(edge_time){};
+        edge_time_(edge_time) {};
 
   std::tuple<at::Tensor,                 // row
              at::Tensor,                 // col
