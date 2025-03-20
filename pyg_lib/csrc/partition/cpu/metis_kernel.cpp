@@ -13,8 +13,8 @@ namespace {
 at::Tensor metis_kernel(const at::Tensor& rowptr,
                         const at::Tensor& col,
                         int64_t num_partitions,
-                        const std::optional<at::Tensor>& node_weight,
-                        const std::optional<at::Tensor>& edge_weight,
+                        const c10::optional<at::Tensor>& node_weight,
+                        const c10::optional<at::Tensor>& edge_weight,
                         bool recursive) {
 #ifdef _WIN32
   TORCH_INTERNAL_ASSERT(false, "METIS not yet supported on Windows");

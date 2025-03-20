@@ -10,7 +10,7 @@ namespace sampler {
 
 namespace {
 
-std::tuple<at::Tensor, at::Tensor, std::optional<at::Tensor>> subgraph_kernel(
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph_kernel(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& nodes,
@@ -21,7 +21,7 @@ std::tuple<at::Tensor, at::Tensor, std::optional<at::Tensor>> subgraph_kernel(
 
   const auto out_rowptr = rowptr.new_empty({nodes.size(0) + 1});
   at::Tensor out_col;
-  std::optional<at::Tensor> out_edge_id = c10::nullopt;
+  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
 
   AT_DISPATCH_INTEGRAL_TYPES(nodes.scalar_type(), "subgraph_kernel", [&] {
     const auto rowptr_data = rowptr.data_ptr<scalar_t>();

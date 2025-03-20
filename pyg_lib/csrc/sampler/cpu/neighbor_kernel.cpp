@@ -136,12 +136,12 @@ class NeighborSampler {
             dst_mapper, generator, out_global_dst_nodes);
   }
 
-  std::tuple<at::Tensor, at::Tensor, std::optional<at::Tensor>>
+  std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
   get_sampled_edges(bool csc = false) {
     TORCH_CHECK(save_edges, "No edges have been stored")
     const auto row = pyg::utils::from_vector(sampled_rows_);
     const auto col = pyg::utils::from_vector(sampled_cols_);
-    std::optional<at::Tensor> edge_id = c10::nullopt;
+    c10::optional<at::Tensor> edge_id = c10::nullopt;
     if (save_edge_ids) {
       edge_id = pyg::utils::from_vector(sampled_edge_ids_);
     }
@@ -330,7 +330,7 @@ template <bool replace,
 std::tuple<at::Tensor,
            at::Tensor,
            at::Tensor,
-           std::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
            std::vector<int64_t>,
            std::vector<int64_t>,
            std::vector<int64_t>>
@@ -338,10 +338,10 @@ sample(const at::Tensor& rowptr,
        const at::Tensor& col,
        const at::Tensor& seed,
        const std::vector<int64_t>& num_neighbors,
-       const std::optional<at::Tensor>& node_time,
-       const std::optional<at::Tensor>& edge_time,
-       const std::optional<at::Tensor>& seed_time,
-       const std::optional<at::Tensor>& edge_weight,
+       const c10::optional<at::Tensor>& node_time,
+       const c10::optional<at::Tensor>& edge_time,
+       const c10::optional<at::Tensor>& seed_time,
+       const c10::optional<at::Tensor>& edge_weight,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!node_time.has_value() || disjoint,
@@ -373,7 +373,7 @@ sample(const at::Tensor& rowptr,
               "Biased edge temporal sampling not yet supported");
 
   at::Tensor out_row, out_col, out_node_id;
-  std::optional<at::Tensor> out_edge_id = c10::nullopt;
+  c10::optional<at::Tensor> out_edge_id = c10::nullopt;
   std::vector<int64_t> num_sampled_nodes_per_hop;
   std::vector<int64_t> num_sampled_edges_per_hop;
   std::vector<int64_t> cumsum_neighbors_per_node =
@@ -516,7 +516,7 @@ template <bool replace,
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
-           std::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
            c10::Dict<node_type, std::vector<int64_t>>,
            c10::Dict<rel_type, std::vector<int64_t>>>
 sample(const std::vector<node_type>& node_types,
@@ -525,10 +525,10 @@ sample(const std::vector<node_type>& node_types,
        const c10::Dict<rel_type, at::Tensor>& col_dict,
        const c10::Dict<node_type, at::Tensor>& seed_dict,
        const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
-       const std::optional<c10::Dict<node_type, at::Tensor>>& node_time_dict,
-       const std::optional<c10::Dict<rel_type, at::Tensor>>& edge_time_dict,
-       const std::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
-       const std::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
+       const c10::optional<c10::Dict<node_type, at::Tensor>>& node_time_dict,
+       const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_time_dict,
+       const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+       const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
        const bool csc,
        const std::string temporal_strategy) {
   TORCH_CHECK(!node_time_dict.has_value() || disjoint,
@@ -576,7 +576,7 @@ sample(const std::vector<node_type>& node_types,
 
   c10::Dict<rel_type, at::Tensor> out_row_dict, out_col_dict;
   c10::Dict<node_type, at::Tensor> out_node_id_dict;
-  std::optional<c10::Dict<node_type, at::Tensor>> out_edge_id_dict;
+  c10::optional<c10::Dict<node_type, at::Tensor>> out_edge_id_dict;
   if (return_edge_id) {
     out_edge_id_dict = c10::Dict<rel_type, at::Tensor>();
   } else {
@@ -892,17 +892,17 @@ sample(const std::vector<node_type>& node_types,
 std::tuple<at::Tensor,
            at::Tensor,
            at::Tensor,
-           std::optional<at::Tensor>,
+           c10::optional<at::Tensor>,
            std::vector<int64_t>,
            std::vector<int64_t>>
 neighbor_sample_kernel(const at::Tensor& rowptr,
                        const at::Tensor& col,
                        const at::Tensor& seed,
                        const std::vector<int64_t>& num_neighbors,
-                       const std::optional<at::Tensor>& node_time,
-                       const std::optional<at::Tensor>& edge_time,
-                       const std::optional<at::Tensor>& seed_time,
-                       const std::optional<at::Tensor>& edge_weight,
+                       const c10::optional<at::Tensor>& node_time,
+                       const c10::optional<at::Tensor>& edge_time,
+                       const c10::optional<at::Tensor>& seed_time,
+                       const c10::optional<at::Tensor>& edge_weight,
                        bool csc,
                        bool replace,
                        bool directed,
@@ -921,7 +921,7 @@ neighbor_sample_kernel(const at::Tensor& rowptr,
 std::tuple<c10::Dict<rel_type, at::Tensor>,
            c10::Dict<rel_type, at::Tensor>,
            c10::Dict<node_type, at::Tensor>,
-           std::optional<c10::Dict<rel_type, at::Tensor>>,
+           c10::optional<c10::Dict<rel_type, at::Tensor>>,
            c10::Dict<node_type, std::vector<int64_t>>,
            c10::Dict<rel_type, std::vector<int64_t>>>
 hetero_neighbor_sample_kernel(
@@ -931,10 +931,10 @@ hetero_neighbor_sample_kernel(
     const c10::Dict<rel_type, at::Tensor>& col_dict,
     const c10::Dict<node_type, at::Tensor>& seed_dict,
     const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors_dict,
-    const std::optional<c10::Dict<node_type, at::Tensor>>& node_time_dict,
-    const std::optional<c10::Dict<rel_type, at::Tensor>>& edge_time_dict,
-    const std::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
-    const std::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& node_time_dict,
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_time_dict,
+    const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time_dict,
+    const c10::optional<c10::Dict<rel_type, at::Tensor>>& edge_weight_dict,
     bool csc,
     bool replace,
     bool directed,
@@ -952,10 +952,10 @@ dist_neighbor_sample_kernel(const at::Tensor& rowptr,
                             const at::Tensor& col,
                             const at::Tensor& seed,
                             const int64_t num_neighbors,
-                            const std::optional<at::Tensor>& node_time,
-                            const std::optional<at::Tensor>& edge_time,
-                            const std::optional<at::Tensor>& seed_time,
-                            const std::optional<at::Tensor>& edge_weight,
+                            const c10::optional<at::Tensor>& node_time,
+                            const c10::optional<at::Tensor>& edge_time,
+                            const c10::optional<at::Tensor>& seed_time,
+                            const c10::optional<at::Tensor>& edge_weight,
                             bool csc,
                             bool replace,
                             bool directed,

@@ -6,7 +6,7 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor, at::Tensor, std::optional<at::Tensor>> subgraph(
+std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>> subgraph(
     const at::Tensor& rowptr,
     const at::Tensor& col,
     const at::Tensor& nodes,
