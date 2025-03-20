@@ -103,7 +103,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       }
     }
     for (const auto& k : edge_types_)
-    phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
+      phmap::flat_hash_map<node_type, size_t> num_nodes_dict;
     TORCH_CHECK(!(node_time.has_value() && edge_weight.has_value()),
                 "Biased temporal sampling not yet supported");
     TORCH_CHECK(!(edge_time.has_value() && edge_weight.has_value()),
@@ -444,7 +444,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   }
 
   void init_placeholders() {
-    for (const auto& k : node_types_){
+    for (const auto& k : node_types_) {
       num_sampled_nodes_per_hop_.insert({k, std::vector<int64_t>(1, 0)});
       sampled_batch_.insert({k, std::vector<int64_t>()});
       sampled_node_ids_.insert({k, std::vector<int64_t>()});
