@@ -5,7 +5,7 @@
 namespace pyg {
 namespace random {
 
-std::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
+c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
                                         at::Tensor& bias,
                                         bool inplace) {
   TORCH_CHECK(rowptr.is_cpu(), "'rowptr' must be a CPU tensor");
