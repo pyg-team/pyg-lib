@@ -190,7 +190,6 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     }
     TORCH_CHECK(temporal_strategy == "uniform" || temporal_strategy == "last",
                 "No valid temporal strategy found");
-    c10::Dict<node_type, at::Tensor> batch;
     clear_placeholders();
 
     pyg::random::RandintEngine<int64_t> generator;
@@ -305,6 +304,10 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
       num_sampled_nodes_per_hop_.at(kv.key())[0] =
           sampled_nodes.at(kv.key()).size();
+      for (auto& node: sampled_nodes.at(kv.key())) {
+        sampled_batch_.at(kv.key()).push_back(node.first);
+        sampled_node_ids_.at(kv.key()).push_back(node.second);
+      }
     }
 
     // The actual sampling code begins here
@@ -399,10 +402,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     // We rewrite phmap objects into c10 ones for the return value
     c10::Dict<node_type, std::vector<int64_t>> num_sampled_nodes_per_hop_dict;
     c10::Dict<node_type, at::Tensor> out_node_id;
+    c10::Dict<node_type, at::Tensor> batch;
     for (const auto& k : node_types_) {
       out_node_id.insert(k, pyg::utils::from_vector(sampled_node_ids_.at(k)));
       num_sampled_nodes_per_hop_dict.insert(k,
                                             num_sampled_nodes_per_hop_.at(k));
+      batch.insert(k, pyg::utils::from_vector(sampled_batch_.at(k)));
     }
 
     c10::Dict<rel_type, std::vector<int64_t>> num_sampled_edges_per_hop_dict;
