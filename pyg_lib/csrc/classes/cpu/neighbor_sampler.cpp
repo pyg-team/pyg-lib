@@ -302,7 +302,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
       num_sampled_nodes_per_hop_.at(kv.key())[0] =
           sampled_nodes.at(kv.key()).size();
-      for (auto& node: sampled_nodes.at(kv.key())) {
+      for (auto& node : sampled_nodes.at(kv.key())) {
         sampled_batch_.at(kv.key()).push_back(node.first);
         sampled_node_ids_.at(kv.key()).push_back(node.second);
       }
