@@ -103,3 +103,31 @@ def test_hetero_neighbor_sampler_static_sample() -> None:
     assert batch
     assert num_sampled_nodes
     assert num_sampled_edges
+
+
+def test_metapath_tracker() -> None:
+    edge_types = [
+        ('A', 'to', 'B'),
+        ('B', 'to', 'C'),
+    ]
+    num_neighbors = {
+        'A__to__B': [10, 0],
+        'B__to__C': [0, 2],
+    }
+    seed_node_types = ['A']
+    tracker = torch.classes.pyg.MetapathTracker(edge_types, num_neighbors,
+                                                seed_node_types)
+    b1A = tracker.init_batch(1, 'A', 1)
+    b2A = tracker.init_batch(2, 'A', 10)
+    assert b1A == b2A
+    b1AB = tracker.get_neighbor_metapath(b1A, 'A__to__B')
+    assert b1AB != b1A
+    assert tracker.get_sample_size(1, b1A, ('A', 'to', 'B')) == 10
+    assert tracker.get_sample_size(2, b2A, ('A', 'to', 'B')) == 100
+    tracker.report_sample_size(1, b1AB, 5)
+    tracker.report_sample_size(2, b1AB, 25)
+    b1ABC = tracker.get_neighbor_metapath(b1AB, 'B__to__C')
+    assert b1ABC != b1AB
+    assert b1ABC != b1A
+    assert tracker.get_sample_size(1, b1AB, ('B', 'to', 'C')) == 20
+    assert tracker.get_sample_size(2, b1AB, ('B', 'to', 'C')) == 200

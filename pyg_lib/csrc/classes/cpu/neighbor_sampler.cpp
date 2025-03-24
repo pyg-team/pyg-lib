@@ -60,6 +60,109 @@ struct NeighborSampler : torch::CustomClassHolder {
   const c10::optional<at::Tensor>& edge_time_;
 };
 
+struct MetapathTracker : torch::CustomClassHolder {
+ public:
+  MetapathTracker(
+      const std::vector<edge_type>& edge_types,
+      const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors,
+      const std::vector<node_type>& seed_node_types)
+      : edge_types_ (edge_types),
+        num_neighbors_ (num_neighbors){
+    //node_type -> list of metapath_id
+    phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_metapaths;
+    n_metapaths_=0;
+    for (const auto& node_t: seed_node_types){
+      seed_metapaths_.insert({node_t, n_metapaths_});
+      sampled_metapaths.insert({node_t, std::vector<int64_t>(1, n_metapaths_++)});
+    }
+    int64_t L = 0;
+    for (const auto& kv: num_neighbors)
+      if (kv.value().size() > L)
+        L = kv.value().size();
+    for (int64_t i=0;i<L;i++){
+      phmap::flat_hash_map<node_type, std::vector<int64_t>> source_metapaths(sampled_metapaths);
+      sampled_metapaths.clear();
+      for(const auto& edge_t: edge_types){
+        auto rel_t = to_rel_type(edge_t);
+        auto src_node_t = std::get<0>(edge_t);
+        auto dst_node_t = std::get<2>(edge_t);
+        if(source_metapaths.find(src_node_t) == source_metapaths.end())
+          continue;
+        for(const auto& metapath:source_metapaths[src_node_t]){
+          if(sampled_metapaths.find(dst_node_t) == sampled_metapaths.end())
+            sampled_metapaths[dst_node_t]; // init
+          int64_t new_metapath_id = n_metapaths_++;
+          sampled_metapaths[dst_node_t].push_back(new_metapath_id);
+          metapath_tree_[rel_t][metapath] = new_metapath_id;
+        }
+      }
+    }
+  }
+
+  int64_t get_neighbor_metapath(const int64_t& metapath_id,
+                                const rel_type& edge){
+    return metapath_tree_[edge][metapath_id];
+  }
+
+  int64_t get_sample_size(const int64_t& batch_id,
+                          const int64_t& src_metapath_id,
+                          const edge_type& edge){
+    auto rel = to_rel_type(edge);
+    auto dst_metapath_id = get_neighbor_metapath(src_metapath_id, rel);
+    return expected_sample_size_[batch_id][dst_metapath_id];
+  }
+
+  void report_sample_size(const int64_t& batch_id,
+                             const int64_t& metapath_id,
+                             const int64_t n_sampled){
+    if(reported_sample_size_.find(batch_id) == reported_sample_size_.end())
+      reported_sample_size_[batch_id]; // init
+    reported_sample_size_[batch_id][metapath_id] = n_sampled;
+  }
+
+  int64_t init_batch(const int64_t& batch_id,
+                     const node_type& node_t,
+                     const int64_t batch_size){
+    auto seed_metapath = seed_metapaths_[node_t];
+    reported_sample_size_[batch_id][seed_metapath]=batch_size;
+    expected_sample_size_[batch_id][seed_metapath]=batch_size;
+    _init_expected_sample_size(seed_metapath, batch_id, 0);
+    return seed_metapath;
+  }
+
+  void _init_expected_sample_size(const int64_t src_metapath,
+                                  const int64_t batch_id,
+                                  const int64_t hop){
+    for (auto& kv: metapath_tree_){
+      if (kv.second.find(src_metapath) == kv.second.end())
+        continue;
+      const auto& dst_metapath = kv.second[src_metapath];
+      const auto& num_neigh_v = num_neighbors_.at(kv.first);
+      int64_t multiplier = 0;
+      if (num_neigh_v.size() > hop)
+        multiplier = num_neigh_v[hop];
+      if (multiplier>0){
+        expected_sample_size_[batch_id][dst_metapath]=multiplier*expected_sample_size_[batch_id][src_metapath];
+        _init_expected_sample_size(dst_metapath, batch_id, hop+1);
+      }
+    }
+  }
+  phmap::flat_hash_map<int64_t, phmap::flat_hash_map<int64_t, int64_t>> reported_sample_size_;
+
+ private:
+
+  std::vector<edge_type> edge_types_;
+  c10::Dict<rel_type, std::vector<int64_t>> num_neighbors_;
+  int64_t n_metapaths_;
+  phmap::flat_hash_set<int64_t> batch_ids_;
+  phmap::flat_hash_map<node_type, int64_t> seed_metapaths_;
+  // rel_type + metapath_id -> new metapath_id (with one hop more)
+  phmap::flat_hash_map<rel_type, phmap::flat_hash_map<int64_t, int64_t>> metapath_tree_;
+  // batch_id + metapath_id -> expected num of samples
+  phmap::flat_hash_map<int64_t, phmap::flat_hash_map<int64_t, int64_t>> expected_sample_size_;
+
+};
+
 struct HeteroNeighborSampler : torch::CustomClassHolder {
  public:
   typedef std::pair<int64_t, int64_t> pair_int64_t;
@@ -557,6 +660,16 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                        c10::optional<c10::Dict<node_type, at::Tensor>>,
                        c10::optional<c10::Dict<rel_type, at::Tensor>>>())
       .def("sample", &HeteroNeighborSampler::sample);
+
+  m.class_<MetapathTracker>("MetapathTracker")
+      .def(torch::init<std::vector<edge_type>,
+                       c10::Dict<rel_type, std::vector<int64_t>>,
+                       std::vector<node_type>>())
+      .def("report_sample_size", &MetapathTracker::report_sample_size)
+      .def("get_sample_size", &MetapathTracker::get_sample_size)
+      .def("init_batch", &MetapathTracker::init_batch)
+      .def("get_neighbor_metapath", &MetapathTracker::get_neighbor_metapath);
+
 }
 
 }  // namespace classes
