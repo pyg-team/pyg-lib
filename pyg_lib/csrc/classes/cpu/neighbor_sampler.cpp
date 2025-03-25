@@ -115,21 +115,23 @@ struct MetapathTracker : torch::CustomClassHolder {
     return expected_sample_size_[batch_id][dst_metapath_id];
   }
 
-  void report_sample_size(const int64_t& batch_id, 
+  void report_sample_size(const int64_t& batch_id,
                           const int64_t& metapath_id,
-                          const int64_t n_sampled){
-    if(reported_sample_size_.find(batch_id) == reported_sample_size_.end())
-      reported_sample_size_[batch_id]; // init
-    if(reported_sample_size_[batch_id].find(metapath_id) == reported_sample_size_[batch_id].end())
+                          const int64_t n_sampled) {
+    if (reported_sample_size_.find(batch_id) == reported_sample_size_.end())
+      reported_sample_size_[batch_id];  // init
+    if (reported_sample_size_[batch_id].find(metapath_id) ==
+        reported_sample_size_[batch_id].end())
       reported_sample_size_[batch_id][metapath_id] = 0;
     reported_sample_size_[batch_id][metapath_id] += n_sampled;
   }
 
   int64_t get_reported_sample_size(const int64_t& batch_id,
-                                   const int64_t& metapath_id){
-    if(reported_sample_size_.find(batch_id) == reported_sample_size_.end())
+                                   const int64_t& metapath_id) {
+    if (reported_sample_size_.find(batch_id) == reported_sample_size_.end())
       return 0;
-    if(reported_sample_size_[batch_id].find(metapath_id) == reported_sample_size_[batch_id].end())
+    if (reported_sample_size_[batch_id].find(metapath_id) ==
+        reported_sample_size_[batch_id].end())
       return 0;
     return reported_sample_size_[batch_id][metapath_id];
   }
@@ -243,7 +245,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     if ((row_end - row_start == 0) || (count == 0))
       return;
     _sample(e_type, global_src_node, local_src_node, row_start, row_end, count,
-            dst_mapper, generator, out_global_dst_nodes, metapath_tracker, return_edge_id);
+            dst_mapper, generator, out_global_dst_nodes, metapath_tracker,
+            return_edge_id);
   }
 
   void node_temporal_sample(
@@ -284,7 +287,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     }
 
     _sample(e_type, global_src_node, local_src_node, row_start, row_end, count,
-            dst_mapper, generator, out_global_dst_nodes, metapath_tracker, return_edge_id);
+            dst_mapper, generator, out_global_dst_nodes, metapath_tracker,
+            return_edge_id);
   }
 
   std::tuple<c10::Dict<rel_type, at::Tensor>,                  // row
@@ -385,8 +389,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     std::vector<node_type> seed_node_types;
     for (const auto& kv : seed_node)
       seed_node_types.push_back(kv.key());
-    MetapathTracker metapath_tracker(edge_types_,
-                                     num_neighbors,
+    MetapathTracker metapath_tracker(edge_types_, num_neighbors,
                                      seed_node_types);
     // We fill the buffers with the zero-th layer: seed nodes
     int64_t batch_idx = 0;
@@ -396,7 +399,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       const auto seed_data = seed.data_ptr<int64_t>();
 
       if (!disjoint) {
-        auto metapath_id = metapath_tracker.init_batch(0, kv.key(), seed.numel());
+        auto metapath_id =
+            metapath_tracker.init_batch(0, kv.key(), seed.numel());
         for (size_t i = 0; i < seed.numel(); ++i) {
           sampled_nodes[kv.key()].push_back({0, seed_data[i], metapath_id});
           mapper_dict.at(kv.key()).insert({0, seed_data[i]});
@@ -408,7 +412,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         auto& curr_sampled_nodes = sampled_nodes.at(kv.key());
         auto& mapper = mapper_dict.at(kv.key());
         for (size_t i = 0; i < seed.numel(); ++i) {
-          auto metapath_id = metapath_tracker.init_batch(batch_idx, kv.key(), 1);
+          auto metapath_id =
+              metapath_tracker.init_batch(batch_idx, kv.key(), 1);
           curr_sampled_nodes.push_back({batch_idx, seed_data[i], metapath_id});
           mapper.insert({batch_idx, seed_data[i]});
           batch_idx++;
@@ -430,7 +435,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
           }
         }
       }
-   
+
       num_sampled_nodes_per_hop_.at(kv.key())[0] =
           sampled_nodes.at(kv.key()).size();
       for (auto& node : sampled_nodes.at(kv.key())) {
@@ -453,7 +458,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       at::parallel_for(
           0, threads_edge_types.size(), 1, [&](size_t _s, size_t _e) {
             for (auto j = _s; j < _e; ++j) {
-              for (const auto& k: threads_edge_types[j]) {
+              for (const auto& k : threads_edge_types[j]) {
                 // inner loop for edge type k: src->dst
                 const auto src = std::get<0>(k);
                 const auto dst = std::get<2>(k);
@@ -469,9 +474,10 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                 // Track occurrences of each batch to be on hold of balancing
                 phmap::flat_hash_map<int64_t, int64_t> batch_total_count;
                 phmap::flat_hash_map<int64_t, int64_t> batch_processed_count;
-                for (size_t i = begin; i < end; ++i){
-                  auto batch=std::get<0>(src_sampled_nodes[i]);
-                  if(batch_total_count.find(batch) == batch_total_count.end()){
+                for (size_t i = begin; i < end; ++i) {
+                  auto batch = std::get<0>(src_sampled_nodes[i]);
+                  if (batch_total_count.find(batch) ==
+                      batch_total_count.end()) {
                     batch_total_count[batch] = 0;
                     batch_processed_count[batch] = 0;
                   }
@@ -494,17 +500,22 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                      !node_time_.value().contains(dst)) &&
                     (!edge_time_.has_value() ||
                      !edge_time_.value().contains(to_rel_type(k)))) {
-                  for (size_t i: node_permutation){
+                  for (size_t i : node_permutation) {
                     const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
-                    const auto expected_total = metapath_tracker.get_sample_size(
-                        batch_idx,
-                        std::get<2>(src_sampled_nodes[i]), k);
-                    const auto dst_metapath_id = metapath_tracker.get_neighbor_metapath(
-                        std::get<2>(src_sampled_nodes[i]), to_rel_type(k));
-                    const auto reported_total = metapath_tracker.get_reported_sample_size(
-                        batch_idx, dst_metapath_id);
-                    const auto remaining_batches = batch_total_count[batch_idx]-batch_processed_count[batch_idx];
-                    int64_t sample_size = (expected_total-reported_total)/remaining_batches;
+                    const auto expected_total =
+                        metapath_tracker.get_sample_size(
+                            batch_idx, std::get<2>(src_sampled_nodes[i]), k);
+                    const auto dst_metapath_id =
+                        metapath_tracker.get_neighbor_metapath(
+                            std::get<2>(src_sampled_nodes[i]), to_rel_type(k));
+                    const auto reported_total =
+                        metapath_tracker.get_reported_sample_size(
+                            batch_idx, dst_metapath_id);
+                    const auto remaining_batches =
+                        batch_total_count[batch_idx] -
+                        batch_processed_count[batch_idx];
+                    int64_t sample_size =
+                        (expected_total - reported_total) / remaining_batches;
                     uniform_sample(
                         /*e_type=*/to_rel_type(k),
                         /*global_src_node=*/src_sampled_nodes[i],
@@ -523,15 +534,20 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                   const auto dst_time_data = dst_time.data_ptr<temporal_t>();
                   for (size_t i : node_permutation) {
                     const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
-                    const auto expected_total = metapath_tracker.get_sample_size(
-                        batch_idx,
-                        std::get<2>(src_sampled_nodes[i]), k);
-                    const auto dst_metapath_id = metapath_tracker.get_neighbor_metapath(
-                        std::get<2>(src_sampled_nodes[i]), to_rel_type(k));
-                    const auto reported_total = metapath_tracker.get_reported_sample_size(
-                        batch_idx, dst_metapath_id);
-                    const auto remaining_batches = batch_total_count[batch_idx]-batch_processed_count[batch_idx];
-                    int64_t sample_size = (expected_total-reported_total)/remaining_batches;
+                    const auto expected_total =
+                        metapath_tracker.get_sample_size(
+                            batch_idx, std::get<2>(src_sampled_nodes[i]), k);
+                    const auto dst_metapath_id =
+                        metapath_tracker.get_neighbor_metapath(
+                            std::get<2>(src_sampled_nodes[i]), to_rel_type(k));
+                    const auto reported_total =
+                        metapath_tracker.get_reported_sample_size(
+                            batch_idx, dst_metapath_id);
+                    const auto remaining_batches =
+                        batch_total_count[batch_idx] -
+                        batch_processed_count[batch_idx];
+                    int64_t sample_size =
+                        (expected_total - reported_total) / remaining_batches;
                     node_temporal_sample(
                         /*e_type=*/to_rel_type(k),
                         /*temporal_strategy=*/temporal_strategy,
@@ -683,18 +699,21 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     const auto global_dst_node_value =
         col_.at(e_type).data_ptr<int64_t>()[edge_id];
 
-    auto dst_metapath_id = metapath_tracker.get_neighbor_metapath(std::get<2>(global_src_node),e_type);
-    const auto global_dst_node =
-        std::make_tuple(std::get<0>(global_src_node), global_dst_node_value, dst_metapath_id);
+    auto dst_metapath_id = metapath_tracker.get_neighbor_metapath(
+        std::get<2>(global_src_node), e_type);
+    const auto global_dst_node = std::make_tuple(
+        std::get<0>(global_src_node), global_dst_node_value, dst_metapath_id);
 
     // There was special handling for a distributed setting which we ignore
     // for now
 
-    const auto res = dst_mapper.insert(std::make_pair(std::get<0>(global_dst_node),std::get<1>(global_dst_node)));
+    const auto res = dst_mapper.insert(std::make_pair(
+        std::get<0>(global_dst_node), std::get<1>(global_dst_node)));
     if (res.second)  // not yet sampled.
       out_global_dst_nodes.push_back(global_dst_node);
     // handle the global vars below
-    metapath_tracker.report_sample_size(std::get<0>(global_src_node), dst_metapath_id, 1);
+    metapath_tracker.report_sample_size(std::get<0>(global_src_node),
+                                        dst_metapath_id, 1);
     num_sampled_edges_per_hop_[e_type]
                               [num_sampled_edges_per_hop_[e_type].size() - 1]++;
     sampled_cols_[e_type].push_back(res.first);
