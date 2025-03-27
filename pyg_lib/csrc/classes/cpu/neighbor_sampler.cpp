@@ -1,8 +1,6 @@
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
 #include <torch/library.h>
-#include <algorithm>
-#include <random>
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/index_tracker.h"
@@ -337,7 +335,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     // tuples <int64, int64, int64> for both usecases and fill batch with 0
     // for !disjoint case. This is a bit wasteful but we'll clean this up
     // sometime later. TODO
-    // Each tuple is (batch_id, node_id, metapath_id)
+    // Each triple is (batch_id, node_id, metapath_id)
     phmap::flat_hash_map<node_type, std::vector<triple_int64_t>> sampled_nodes;
     // Mappers to contiguous indices starting at 0
     phmap::flat_hash_map<node_type, pyg::sampler::Mapper<pair_int64_t, int64_t>>
@@ -447,15 +445,15 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         }
         // Whenever we undersample nodes in a batch due to the lack of
         // neighbors, we allow oversampling neighbors of later nodes
-        // later nodes of the same batch. Later nodes could thus get
+        // of the same batch. Later nodes could thus get
         // a larger number of neighbors. To avoid bias from the edge
         // order, we check nodes in the random order.
-        std::vector<size_t> node_permutation;
-        for (size_t i = begin; i < end; ++i)
-          node_permutation.push_back(i);
-        // TODO: replace with something based on `generator`
-        std::shuffle(node_permutation.begin(), node_permutation.end(),
-                     std::mt19937{std::random_device{}()});
+	auto perm = at::randperm(end-begin);
+	auto node_data = perm.data_ptr<int64_t>();
+	std::vector<int64_t> node_permutation;
+	for (int i=0;i<end-begin;i++){
+	  node_permutation.push_back(node_data[i]+begin);
+	}
         // We skip weighted/biased edges and edge-tempora sampling for
         // now If no timestamps are involved
         if ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
