@@ -615,7 +615,6 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                        c10::optional<c10::Dict<node_type, at::Tensor>>,
                        c10::optional<c10::Dict<rel_type, at::Tensor>>>())
       .def("sample", &HeteroNeighborSampler::sample);
-
 }
 
 }  // namespace classes
