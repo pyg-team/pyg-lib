@@ -293,8 +293,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         num_sampled_edges_per_hop_[to_rel_type(k)].push_back(0);
         // We skip weighted/biased edges and edge-temporal sampling for
         // now
-        if ((!node_time_.has_value() ||
-             !node_time_.value().contains(dst)) &&
+        if ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
             (!edge_time_.has_value() ||
              !edge_time_.value().contains(to_rel_type(k)))) {
           for (size_t i = begin; i < end; ++i)
@@ -328,7 +327,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
           }
         }
       }
-      
+
       // Update which slice of the sampled_nodes_dict[k] belongs to which hop
       for (const auto& k : node_types_) {
         slice_dict[k] = {slice_dict.at(k).second, sampled_nodes.at(k).size()};
@@ -426,7 +425,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     if (count < 0 || count >= population) {
       for (int64_t edge_id = row_start; edge_id < row_end; ++edge_id)
         add_edge(e_type, edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes, return_edge_id);
+                 out_global_dst_nodes, return_edge_id);
     }  // We skip Case 2: sample with replacement
     // Case 3: Sample without replacement:
     else {
@@ -439,7 +438,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         }
         const auto edge_id = row_start + rnd;
         add_edge(e_type, edge_id, global_src_node, local_src_node, dst_mapper,
-            out_global_dst_nodes, return_edge_id);
+                 out_global_dst_nodes, return_edge_id);
       }
     }
   }
