@@ -448,12 +448,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         // of the same batch. Later nodes could thus get
         // a larger number of neighbors. To avoid bias from the edge
         // order, we check nodes in the random order.
-	auto perm = at::randperm(end-begin);
-	auto node_data = perm.data_ptr<int64_t>();
-	std::vector<int64_t> node_permutation;
-	for (int i=0;i<end-begin;i++){
-	  node_permutation.push_back(node_data[i]+begin);
-	}
+        auto perm = at::randperm(end - begin);
+        auto node_data = perm.data_ptr<int64_t>();
+        std::vector<int64_t> node_permutation;
+        for (int i = 0; i < end - begin; i++) {
+          node_permutation.push_back(node_data[i] + begin);
+        }
         // We skip weighted/biased edges and edge-tempora sampling for
         // now If no timestamps are involved
         if ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
