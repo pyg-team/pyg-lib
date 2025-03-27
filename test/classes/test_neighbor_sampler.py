@@ -103,4 +103,3 @@ def test_hetero_neighbor_sampler_static_sample() -> None:
     assert batch
     assert num_sampled_nodes
     assert num_sampled_edges
-
