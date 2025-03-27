@@ -60,6 +60,11 @@ struct NeighborSampler : torch::CustomClassHolder {
 };
 
 struct MetapathTracker : torch::CustomClassHolder {
+  /* This is a helper class for NeighborSampler. It pre-computes all possible
+   * metapaths and how many of each we are expected to sample if we always
+   * sample the full number specified in `num_neighbors`. It can then be used
+   * to track the actual number of sampled edges of each type.
+   * */
  public:
   MetapathTracker(
       const std::vector<edge_type>& edge_types,
@@ -611,14 +616,6 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                        c10::optional<c10::Dict<rel_type, at::Tensor>>>())
       .def("sample", &HeteroNeighborSampler::sample);
 
-  m.class_<MetapathTracker>("MetapathTracker")
-      .def(torch::init<std::vector<edge_type>,
-                       c10::Dict<rel_type, std::vector<int64_t>>,
-                       std::vector<node_type>>())
-      .def("report_sample_size", &MetapathTracker::report_sample_size)
-      .def("get_sample_size", &MetapathTracker::get_sample_size)
-      .def("init_batch", &MetapathTracker::init_batch)
-      .def("get_neighbor_metapath", &MetapathTracker::get_neighbor_metapath);
 }
 
 }  // namespace classes
