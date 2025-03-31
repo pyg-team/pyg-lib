@@ -65,16 +65,23 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
     assert col['B__to__A'].shape[0] == sum(num_sampled_edges['B__to__A'])
     assert node_id['A'].shape[0] == sum(num_sampled_nodes['A'])
     assert node_id['B'].shape[0] == sum(num_sampled_nodes['B'])
-    assert sum(batch['A'] == 0) == 2
-    assert sum(batch['B'] == 0) == 1
-    assert sum(batch['A'] == 1) == 2
-    assert sum(batch['B'] == 1) == 1
-    assert sum(batch['A'] == 2) == 1
-    assert sum(batch['B'] == 2) == 1
-    assert sum(batch['A'] == 3) == 2
-    assert sum(batch['B'] == 3) == 2
-    assert sum(batch['A'] == 4) == 1
-    assert sum(batch['B'] == 4) == 2
+    # We check that the number of nodes in each batch match the expected count
+    # Their internal IDs might be subject to randomness due to the shuffle
+    # For batch 0, we sample A2 -> B0 -> A1
+    assert (batch['A'] == 0).sum() == 2
+    assert (batch['B'] == 0).sum() == 1
+    # For batch 1, we sample A0 -> B1 -> A1
+    assert (batch['A'] == 1).sum() == 2
+    assert (batch['B'] == 1).sum() == 1
+    # For batch 2, we sample B1 -> A1
+    assert (batch['A'] == 2).sum() == 1
+    assert (batch['B'] == 2).sum() == 1
+    # For batch 3, we sample B1 -> (A1, A2) -> B0
+    assert (batch['A'] == 3).sum() == 2
+    assert (batch['B'] == 3).sum() == 2
+    # For batch 4, we sample B0 -> A0 -> (B0, B1)
+    assert (batch['A'] == 4).sum() == 1
+    assert (batch['B'] == 4).sum() == 2
     assert num_sampled_nodes == {'A': [2, 4, 2], 'B': [3, 2, 2]}
     assert (num_sampled_edges == {
         'A__to__B': [0, 2, 4],
