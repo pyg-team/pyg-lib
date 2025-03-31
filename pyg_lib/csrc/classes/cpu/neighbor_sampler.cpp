@@ -448,14 +448,14 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         // of the same batch. Later nodes could thus get
         // a larger number of neighbors. To avoid bias from the edge
         // order, we check nodes in the random order.
-	auto perm = at::randperm(end-begin);
-	auto node_data = perm.data_ptr<int64_t>();
+        auto perm = at::randperm(end - begin);
+        auto node_data = perm.data_ptr<int64_t>();
         // We skip weighted/biased edges and edge-temporal sampling for now
         if ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
             (!edge_time_.has_value() ||
              !edge_time_.value().contains(to_rel_type(k)))) {
-	  for (int nd=0;nd<end-begin;nd++) {
-	    int i = node_data[nd] + begin;
+          for (int nd = 0; nd < end - begin; nd++) {
+            int i = node_data[nd] + begin;
             const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
             const auto expected_total = metapath_tracker.get_sample_size(
                 batch_idx, std::get<2>(src_sampled_nodes[i]), k);
