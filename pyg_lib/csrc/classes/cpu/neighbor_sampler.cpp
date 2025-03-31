@@ -484,8 +484,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
           // Node-level temporal sampling:
           const at::Tensor& dst_time = node_time_.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<temporal_t>();
-	  for (int nd=0;nd<end-begin;nd++) {
-	    int i = node_data[nd] + begin;
+          for (int nd = 0; nd < end - begin; nd++) {
+            int i = node_data[nd] + begin;
             const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
             const auto expected_total = metapath_tracker.get_sample_size(
                 batch_idx, std::get<2>(src_sampled_nodes[i]), k);
