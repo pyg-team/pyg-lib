@@ -50,26 +50,46 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
                       None)
 
     num_neighbors = {
-        'A__to__B': [1, 2],
+        'A__to__B': [1, 1],
         'B__to__A': [2, 1],
     }
-    seed_node = {'A': torch.tensor([2, 0]), 'B': torch.tensor([1])}
-    seed_time = {'A': torch.tensor([3, 1]), 'B': torch.tensor([2])}
+    seed_node = {'A': torch.tensor([2, 0]), 'B': torch.tensor([1, 1, 0])}
+    seed_time = {'A': torch.tensor([3, 1]), 'B': torch.tensor([2, 4, 3])}
     (row, col, node_id, edge_id, batch, num_sampled_nodes,
      num_sampled_edges) = sampler.sample(num_neighbors, seed_node, seed_time,
                                          True, 'last', True)
-    assert torch.equal(row['A__to__B'], torch.tensor([0, 1]))
-    assert torch.equal(row['B__to__A'], torch.tensor([0, 1, 2]))
-    assert torch.equal(col['A__to__B'], torch.tensor([1, 2]))
-    assert torch.equal(col['B__to__A'], torch.tensor([2, 3, 4]))
-    assert torch.equal(edge_id['A__to__B'], torch.tensor([3, 0]))
-    assert torch.equal(edge_id['B__to__A'], torch.tensor([1, 0, 1]))
-    assert torch.equal(node_id['A'], torch.tensor([2, 0, 1, 0, 1]))
-    assert torch.equal(node_id['B'], torch.tensor([1, 0, 1]))
-    assert torch.equal(batch['A'], torch.tensor([0, 1, 2, 0, 1]))
-    assert torch.equal(batch['B'], torch.tensor([2, 0, 1]))
-    assert num_sampled_nodes == {'A': [2, 1, 2], 'B': [1, 2, 0]}
-    assert num_sampled_edges == {'A__to__B': [0, 2, 0], 'B__to__A': [0, 1, 2]}
+    # Due to random shuffle, the output isn't entirely deterministic
+    assert row['A__to__B'].shape[0] == sum(num_sampled_edges['A__to__B'])
+    assert row['B__to__A'].shape[0] == sum(num_sampled_edges['B__to__A'])
+    assert col['A__to__B'].shape[0] == sum(num_sampled_edges['A__to__B'])
+    assert col['B__to__A'].shape[0] == sum(num_sampled_edges['B__to__A'])
+    assert node_id['A'].shape[0] == sum(num_sampled_nodes['A'])
+    assert node_id['B'].shape[0] == sum(num_sampled_nodes['B'])
+    # We check that the number of nodes in each batch match the expected count
+    # Their internal IDs might be subject to randomness due to the shuffle
+    # For batch 0, we sample A2 -> B0 -> A1
+    assert (batch['A'] == 0).sum() == 2
+    assert (batch['B'] == 0).sum() == 1
+    # For batch 1, we sample A0 -> B1 -> A1
+    assert (batch['A'] == 1).sum() == 2
+    assert (batch['B'] == 1).sum() == 1
+    # For batch 2, we sample B1 -> A1
+    assert (batch['A'] == 2).sum() == 1
+    assert (batch['B'] == 2).sum() == 1
+    # For batch 3, we sample B1 -> (A1, A2) -> B0
+    assert (batch['A'] == 3).sum() == 2
+    assert (batch['B'] == 3).sum() == 2
+    # For batch 4, we sample B0 -> A0 -> (B0, B1)
+    assert (batch['A'] == 4).sum() == 1
+    assert (batch['B'] == 4).sum() == 2
+    assert num_sampled_nodes == {'A': [2, 4, 2], 'B': [3, 2, 2]}
+    assert (num_sampled_edges == {
+        'A__to__B': [0, 2, 4],
+        'B__to__A': [0, 4, 2]
+    } or num_sampled_edges == {
+        'A__to__B': [0, 2, 3],
+        'B__to__A': [0, 4, 2]
+    })
 
 
 def test_hetero_neighbor_sampler_static_sample() -> None:
