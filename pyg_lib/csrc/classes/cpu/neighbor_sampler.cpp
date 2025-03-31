@@ -186,7 +186,7 @@ struct MetapathTracker : torch::CustomClassHolder {
 struct HeteroNeighborSampler : torch::CustomClassHolder {
  public:
   typedef std::pair<int64_t, int64_t> pair_int64_t;
-  typedef std::tuple<int64_t, int64_t, int64_t> triple_int64_t;
+  typedef std::tuple<int64_t, int64_t, int64_t> triplet_int64_t;
   typedef int64_t temporal_t;
 
   HeteroNeighborSampler(
@@ -231,12 +231,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   };
 
   void uniform_sample(rel_type e_type,
-                      const triple_int64_t global_src_node,
+                      const triplet_int64_t global_src_node,
                       const int64_t local_src_node,
                       const int64_t count,
                       pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
                       pyg::random::RandintEngine<int64_t>& generator,
-                      std::vector<triple_int64_t>& out_global_dst_nodes,
+                      std::vector<triplet_int64_t>& out_global_dst_nodes,
                       MetapathTracker& metapath_tracker,
                       bool return_edge_id = true) {
     auto rowptr_v = rowptr_.at(e_type).data_ptr<int64_t>();
@@ -252,14 +252,14 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   void node_temporal_sample(
       rel_type e_type,
       std::string temporal_strategy,
-      const triple_int64_t global_src_node,
+      const triplet_int64_t global_src_node,
       const int64_t local_src_node,
       const int64_t count,
       const temporal_t seed_time,
       const temporal_t* time,
       pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
       pyg::random::RandintEngine<int64_t>& generator,
-      std::vector<triple_int64_t>& out_global_dst_nodes,
+      std::vector<triplet_int64_t>& out_global_dst_nodes,
       MetapathTracker& metapath_tracker,
       bool return_edge_id = true) {
     auto row_start =
@@ -335,8 +335,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     // tuples <int64, int64, int64> for both usecases and fill batch with 0
     // for !disjoint case. This is a bit wasteful but we'll clean this up
     // sometime later. TODO
-    // Each triple is (batch_id, node_id, metapath_id)
-    phmap::flat_hash_map<node_type, std::vector<triple_int64_t>> sampled_nodes;
+    // Each triplet is (batch_id, node_id, metapath_id)
+    phmap::flat_hash_map<node_type, std::vector<triplet_int64_t>> sampled_nodes;
     // Mappers to contiguous indices starting at 0
     phmap::flat_hash_map<node_type, pyg::sampler::Mapper<pair_int64_t, int64_t>>
         mapper_dict;
@@ -450,16 +450,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
         // order, we check nodes in the random order.
 	auto perm = at::randperm(end-begin);
 	auto node_data = perm.data_ptr<int64_t>();
-	std::vector<int64_t> node_permutation;
-	for (int i=0;i<end-begin;i++){
-	  node_permutation.push_back(node_data[i]+begin);
-	}
-        // We skip weighted/biased edges and edge-tempora sampling for
-        // now If no timestamps are involved
+        // We skip weighted/biased edges and edge-temporal sampling for now
         if ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
             (!edge_time_.has_value() ||
              !edge_time_.value().contains(to_rel_type(k)))) {
-          for (size_t i : node_permutation) {
+	  for (int nd=0;nd<end-begin;nd++) {
+	    int i = node_data[nd] + begin;
             const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
             const auto expected_total = metapath_tracker.get_sample_size(
                 batch_idx, std::get<2>(src_sampled_nodes[i]), k);
@@ -597,14 +593,14 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   }
 
   void _sample(rel_type e_type,
-               const triple_int64_t global_src_node,
+               const triplet_int64_t global_src_node,
                const int64_t local_src_node,
                const int64_t row_start,
                const int64_t row_end,
                const int64_t count,
                pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
                pyg::random::RandintEngine<int64_t>& generator,
-               std::vector<triple_int64_t>& out_global_dst_nodes,
+               std::vector<triplet_int64_t>& out_global_dst_nodes,
                MetapathTracker& metapath_tracker,
                bool return_edge_id = true) {
     const auto population = row_end - row_start;
@@ -634,10 +630,10 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
   inline void add_edge(rel_type e_type,
                        const int64_t edge_id,
-                       const triple_int64_t global_src_node,
+                       const triplet_int64_t global_src_node,
                        const int64_t local_src_node,
                        pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
-                       std::vector<triple_int64_t>& out_global_dst_nodes,
+                       std::vector<triplet_int64_t>& out_global_dst_nodes,
                        MetapathTracker& metapath_tracker,
                        bool return_edge_id = true) {
     const auto global_dst_node_value =
@@ -700,15 +696,6 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
                        c10::optional<c10::Dict<node_type, at::Tensor>>,
                        c10::optional<c10::Dict<rel_type, at::Tensor>>>())
       .def("sample", &HeteroNeighborSampler::sample);
-
-  m.class_<MetapathTracker>("MetapathTracker")
-      .def(torch::init<std::vector<edge_type>,
-                       c10::Dict<rel_type, std::vector<int64_t>>,
-                       std::vector<node_type>>())
-      .def("report_sample_size", &MetapathTracker::report_sample_size)
-      .def("get_sample_size", &MetapathTracker::get_sample_size)
-      .def("init_batch", &MetapathTracker::init_batch)
-      .def("get_neighbor_metapath", &MetapathTracker::get_neighbor_metapath);
 }
 
 }  // namespace classes
