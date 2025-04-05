@@ -150,11 +150,29 @@ struct CUDAHashMap : torch::CustomClassHolder {
 #endif
   }
 
-  int64_t size() { return map_->size(); }
+  int64_t size() {
+#ifndef _WIN32
+    return map_->size();
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
+  }
 
-  at::ScalarType dtype() { return map_->dtype(); }
+  at::ScalarType dtype() {
+#ifndef _WIN32
+    return map_->dtype();
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
+  }
 
-  at::Device device() { return map_->device(); }
+  at::Device device() {
+#ifndef _WIN32
+    return map_->device();
+#else
+    TORCH_CHECK(false, "'CUDAHashMap' not supported on Windows");
+#endif
+  }
 
  private:
 #ifndef _WIN32
