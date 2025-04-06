@@ -59,7 +59,7 @@ struct CUDAHashMapImpl : HashMapImpl {
   }
 
   at::Tensor get(const at::Tensor& query) override {
-  cudaSetDevice(query.get_device());
+    cudaSetDevice(query.get_device());
 
     const auto options =
         query.options().dtype(c10::CppTypeToScalarType<ValueType>::value);
