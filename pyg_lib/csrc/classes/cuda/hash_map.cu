@@ -37,7 +37,7 @@ struct CUDAHashMapImpl : HashMapImpl {
 
   CUDAHashMapImpl(const at::Tensor& key, double load_factor)
       : device_(key.device()) {
-    at::cuda::SetDevice(key.get_device());
+    cudaSetDevice(key.get_device());
 
     KeyType constexpr empty_key_sentinel = std::numeric_limits<KeyType>::min();
     ValueType constexpr empty_value_sentinel = -1;
@@ -59,7 +59,7 @@ struct CUDAHashMapImpl : HashMapImpl {
   }
 
   at::Tensor get(const at::Tensor& query) override {
-    at::cuda::SetDevice(query.get_device());
+  cudaSetDevice(query.get_device());
 
     const auto options =
         query.options().dtype(c10::CppTypeToScalarType<ValueType>::value);
@@ -73,7 +73,7 @@ struct CUDAHashMapImpl : HashMapImpl {
   }
 
   at::Tensor keys() override {
-    at::cuda::SetDevice(device_.index());
+    cudaSetDevice(device_.index());
 
     const auto options = at::TensorOptions().device(device_);
     const at::Tensor key = at::empty({size()}, options.dtype(dtype()));
