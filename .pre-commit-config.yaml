@@ -60,7 +60,7 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+    rev: v0.11.4
     hooks:
       - id: ruff
         name: Ruff formatting
