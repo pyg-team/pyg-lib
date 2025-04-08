@@ -266,7 +266,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     auto row_start =
         rowptr_.at(e_type).data_ptr<int64_t>()[std::get<1>(global_src_node)];
     auto row_end = row_start + find_num_neighbors_temporal(
-        e_type, global_src_node, seed_time, time);
+                                   e_type, global_src_node, seed_time, time);
     if ((row_end - row_start == 0) || (count == 0))
       return;
 
@@ -278,11 +278,10 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
             return_edge_id);
   }
 
-  int64_t find_num_neighbors_temporal(
-      rel_type e_type,
-      const triplet_int64_t global_src_node,
-      const temporal_t seed_time,
-      const temporal_t* time){
+  int64_t find_num_neighbors_temporal(rel_type e_type,
+                                      const triplet_int64_t global_src_node,
+                                      const temporal_t seed_time,
+                                      const temporal_t* time) {
     auto row_start =
         rowptr_.at(e_type).data_ptr<int64_t>()[std::get<1>(global_src_node)];
     auto row_end = rowptr_.at(e_type)
@@ -302,18 +301,16 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       TORCH_CHECK(time[col[row_start]] <= time[col[row_end - 1]],
                   "Found invalid non-sorted temporal neighborhood");
     }
-    return row_end-row_start;
+    return row_end - row_start;
   }
 
   int64_t find_num_neighbors(rel_type e_type,
-                      const triplet_int64_t global_src_node
-                      ) {
+                             const triplet_int64_t global_src_node) {
     auto rowptr_v = rowptr_.at(e_type).data_ptr<int64_t>();
     const auto row_start = rowptr_v[std::get<1>(global_src_node)];
     const auto row_end = rowptr_v[std::get<1>(global_src_node) + 1];
-    return row_end-row_start;
+    return row_end - row_start;
   }
-   
 
   std::tuple<c10::Dict<rel_type, at::Tensor>,                  // row
              c10::Dict<rel_type, at::Tensor>,                  // col
@@ -468,28 +465,29 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
           batch_total_count[batch]++;
         }
         // We skip weighted/biased edges and edge-temporal sampling for now
-        bool is_static = ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
-            (!edge_time_.has_value() ||
-             !edge_time_.value().contains(to_rel_type(k))));
+        bool is_static =
+            ((!node_time_.has_value() || !node_time_.value().contains(dst)) &&
+             (!edge_time_.has_value() ||
+              !edge_time_.value().contains(to_rel_type(k))));
         // Whenever we undersample nodes in a batch due to the lack of
         // neighbors, we allow oversampling neighbors of later nodes
         // of the same batch. To ensure that we batch to maximum capacity
         // we sample in the order of the growing number of neighbors.
         std::vector<pair_int64_t> node_order;
-        for (auto i=begin; i<end;i++){
+        for (auto i = begin; i < end; i++) {
           int64_t num_neighbors;
           if (is_static)
-            num_neighbors = find_num_neighbors(to_rel_type(k), src_sampled_nodes[i]);
+            num_neighbors =
+                find_num_neighbors(to_rel_type(k), src_sampled_nodes[i]);
           else
             num_neighbors = find_num_neighbors_temporal(
-                to_rel_type(k), src_sampled_nodes[i], 
-                seed_times[batch_idx],
+                to_rel_type(k), src_sampled_nodes[i], seed_times[batch_idx],
                 node_time_.value().at(dst).data_ptr<temporal_t>());
           node_order.push_back({num_neighbors, i});
         }
         std::sort(node_order.begin(), node_order.end());
         if (is_static) {
-          for (auto& nd: node_order) {
+          for (auto& nd : node_order) {
             int64_t i = nd.second;
             const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
             const auto expected_total = metapath_tracker.get_sample_size(
@@ -519,7 +517,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
           // Node-level temporal sampling:
           const at::Tensor& dst_time = node_time_.value().at(dst);
           const auto dst_time_data = dst_time.data_ptr<temporal_t>();
-          for (auto& nd: node_order) {
+          for (auto& nd : node_order) {
             int64_t i = nd.second;
             const auto batch_idx = std::get<0>(src_sampled_nodes[i]);
             const auto expected_total = metapath_tracker.get_sample_size(
