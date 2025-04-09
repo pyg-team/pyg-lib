@@ -29,7 +29,7 @@ jobs:
       - name: Install package
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install --verbose -e .
+          pip install --no-build-isolation --verbose .
         shell: bash
         env:
           TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
