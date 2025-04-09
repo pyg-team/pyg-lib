@@ -22,6 +22,7 @@ jobs:
 
       - name: Install package
         run: |
+          pip install ninja wheel
           pip install --no-build-isolation --verbose ".[test]"
 
       - name: Print GLIBC dependency
