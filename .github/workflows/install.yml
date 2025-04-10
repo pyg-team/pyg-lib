@@ -29,8 +29,7 @@ jobs:
       - name: Install package
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install ninja wheel
-          pip install --upgrade setuptools pip wheel
+          pip install --upgrade setuptools pip wheel ninja
           pip install --no-build-isolation --verbose .
         shell: bash
         env:
