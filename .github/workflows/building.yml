@@ -117,7 +117,6 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install ninja wheel
           python -m build --wheel --no-isolation --outdir dist
         shell: bash
         env:
