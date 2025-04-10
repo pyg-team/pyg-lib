@@ -19,8 +19,6 @@ jobs:
 
       - name: Setup packages
         uses: ./.github/actions/setup
-        with:
-          python-version: 3.9
 
       - name: Install package
         run: |
