@@ -301,8 +301,8 @@ class NeighborSampler {
     }
     if (save_edges) {
       num_sampled_edges_per_hop[num_sampled_edges_per_hop.size() - 1]++;
-      sampled_rows_.push_back(local_src_node);
-      sampled_cols_.push_back(res.first);
+      sampled_rows_.push_back(to_scalar_t(global_src_node));
+      sampled_cols_.push_back(to_scalar_t(global_dst_node));
       if (save_edge_ids) {
         sampled_edge_ids_.push_back(edge_id);
       }
