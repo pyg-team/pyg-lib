@@ -117,7 +117,8 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          python setup.py bdist_wheel --dist-dir=dist
+          pip install build
+          python -m build --wheel --no-isolation --outdir dist
         shell: bash
         env:
           TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"

@@ -94,5 +94,5 @@ pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.h
 
 ```
 pip install ninja wheel
-pip install git+https://github.com/pyg-team/pyg-lib.git
+pip install --no-build-isolation git+https://github.com/pyg-team/pyg-lib.git
 ```
