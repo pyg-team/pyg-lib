@@ -131,6 +131,8 @@ else:
     cmdclass = {}
 
 setup(
+    name='pyg_lib',
+    version=__version__,
     install_requires=install_requires,
     extras_require={
         'triton': triton_requires,
