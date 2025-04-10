@@ -25,8 +25,7 @@ jobs:
       - name: Install package
         run: |
           pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
-          pip install ninja wheel
-          BUILD_DOCS=1 pip install --no-build-isolation --verbose .
+          BUILD_DOCS=1 pip install --no-build-isolation --verbose -e .
 
       - name: Build documentation
         run: |
