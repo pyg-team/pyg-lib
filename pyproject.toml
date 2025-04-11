@@ -1,0 +1,85 @@
+[build-system]
+requires=["setuptools", "wheel"]
+build-backend="setuptools.build_meta"
+
+[project]
+name="pyg_lib"
+authors=[
+    {name="PyG Team", email="team@pyg.org"},
+]
+dynamic=["version", "dependencies", "optional-dependencies"]
+description="Low-Level Graph Neural Network Operators for PyG"
+readme="README.md"
+requires-python=">=3.9"
+keywords=[
+    "deep-learning",
+    "pytorch",
+    "geometric-deep-learning",
+    "graph-neural-networks",
+    "graph-convolutional-networks",
+]
+license={file="LICENSE"}
+classifiers=[
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.urls]
+homepage="https://pyg.org"
+documentation="https://pyg-lib.readthedocs.io"
+repository="https://github.com/pyg-team/pyg-lib.git"
+changelog="https://github.com/pyg-team/pyg-lib/blob/master/CHANGELOG.md"
+
+[tool.pytest.ini_options]
+addopts=[
+    "--capture=no",
+    "--ignore=third_party",
+    "--color=yes",
+    "-vv",
+]
+
+[tool.yapf]
+based_on_style="pep8"
+split_before_named_assigns=false
+blank_line_before_nested_class_or_def=false
+
+[tool.flake8]
+exclude=["third_party", "build"]
+
+[tool.isort]
+multi_line_output=3
+include_trailing_comma=true
+skip=[".gitignore", "__init__.py"]
+
+[tool.ruff]  # https://docs.astral.sh/ruff/rules
+src=["pyg_lib"]
+line-length=80
+indent-width=4
+target-version="py39"
+
+[tool.ruff.lint]
+select=[
+    "D",  # pydocstyle
+]
+ignore=[
+    "D100",  # TODO Don't ignore "Missing docstring in public module"
+    "D101",  # TODO Don't ignore "Missing docstring in public class"
+    "D102",  # TODO Don't ignore "Missing docstring in public method"
+    "D103",  # TODO Don't ignore "Missing docstring in public function"
+    "D104",  # TODO Don't ignore "Missing docstring in public package"
+    "D105",  # Ignore "Missing docstring in magic method"
+    "D107",  # Ignore "Missing docstring in __init__"
+    "D205",  # Ignore "blank line required between summary line and description"
+]
+
+[tool.ruff.format]
+quote-style="single"
+
+[tool.ruff.lint.pydocstyle]
+convention="google"

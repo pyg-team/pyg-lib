@@ -19,13 +19,11 @@ jobs:
 
       - name: Setup packages
         uses: ./.github/actions/setup
-        with:
-          python-version: 3.9
 
       - name: Install package
         run: |
           pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
-          BUILD_DOCS=1 pip install -e .
+          BUILD_DOCS=1 pip install --no-build-isolation --verbose -e .
 
       - name: Build documentation
         run: |
