@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   import:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
