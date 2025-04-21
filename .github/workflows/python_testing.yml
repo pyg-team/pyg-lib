@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-2204
 
     steps:
       - name: Checkout repository

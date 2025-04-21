@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
 
   gtest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-2204
 
     steps:
       - name: Checkout repostiory
