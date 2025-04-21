@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OS=ubuntu2004
+OS=ubuntu2204
 
 case ${1} in
   cu126)

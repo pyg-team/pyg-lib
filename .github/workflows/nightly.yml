@@ -14,7 +14,7 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, windows-2019]
+        os: [ubuntu-22.04, macos-14, windows-2019]
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         torch-version: [1.13.0, 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0, 2.5.0, 2.6.0]
         cuda-version: ['cpu', 'cu117', 'cu118', 'cu121', 'cu124', 'cu126']
@@ -166,7 +166,7 @@ jobs:
   boto3:
     if: ${{ always() }}
     needs: [wheel]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
