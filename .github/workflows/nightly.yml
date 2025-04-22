@@ -19,11 +19,11 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        # os: [ubuntu-22.04, ubuntu-22.04-arm, macos-14, windows-2019]
+        # os: [ubuntu-latest, ubuntu-latest-arm, macos-latest, windows-latest]
         # python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         # torch-version: [1.13.0, 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0, 2.5.0, 2.6.0]
         # cuda-version: ['cpu', 'cu117', 'cu118', 'cu121', 'cu124', 'cu126']
-        os: [ubuntu-22.04]
+        os: [ubuntu-latest]
         python-version: ['3.9']
         torch-version: [2.6.0]
         cuda-version: ['cpu', 'cu126']
@@ -152,6 +152,7 @@ jobs:
         shell: bash
         env:
           TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+          CIBW_BUILD_FRONTEND: "build[no-isolation]"
 
       - name: Test wheel
         run: |
