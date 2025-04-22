@@ -145,14 +145,15 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install cibuildwheel
-          cibuildwheel --output-dir dist
-          # pip install build
-          # python -m build --wheel --no-isolation --outdir dist
+          # pip install cibuildwheel
+          # cibuildwheel --output-dir dist
+          pip install build
+          python -m build --wheel --no-isolation --outdir dist
+          pip install auditwheel
+          auditwheel show dist/*.whl
         shell: bash
         env:
           TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
-          CIBW_BUILD_FRONTEND: "build[no-isolation]"
 
       - name: Test wheel
         run: |
