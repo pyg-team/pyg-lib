@@ -2,7 +2,7 @@
 #include <torch/library.h>
 
 #include "pyg_lib/csrc/config.h"
-#if !defined(_WIN32) and !NO_METIS()
+#if !defined(_WIN32) && !defined(NO_METIS)
 #include <metis.h>
 #endif
 
@@ -19,7 +19,7 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         bool recursive) {
 #if defined(_WIN32)
   TORCH_INTERNAL_ASSERT(false, "METIS not yet supported on Windows");
-#elif NO_METIS()
+#elif defined(NO_METIS)
   TORCH_INTERNAL_ASSERT(false, "Not compiled with METIS support");
 #else
   int64_t nvtxs = rowptr.numel() - 1;
