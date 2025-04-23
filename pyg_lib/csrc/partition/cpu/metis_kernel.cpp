@@ -16,8 +16,10 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         const c10::optional<at::Tensor>& node_weight,
                         const c10::optional<at::Tensor>& edge_weight,
                         bool recursive) {
-#if !defined(_WIN32) && !defined(NO_METIS)
+#if defined(_WIN32)
   TORCH_INTERNAL_ASSERT(false, "METIS not yet supported on Windows");
+#elif defined(NO_METIS)
+  TORCH_INTERNAL_ASSERT(false, "Not compiled with METIS support");
 #else
   int64_t nvtxs = rowptr.numel() - 1;
   int64_t ncon = 1;
