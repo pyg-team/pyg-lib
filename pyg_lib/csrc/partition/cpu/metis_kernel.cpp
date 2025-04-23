@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(NO_METIS)
 #include <metis.h>
 #endif
 
@@ -16,7 +16,7 @@ at::Tensor metis_kernel(const at::Tensor& rowptr,
                         const c10::optional<at::Tensor>& node_weight,
                         const c10::optional<at::Tensor>& edge_weight,
                         bool recursive) {
-#ifdef _WIN32
+#if !defined(_WIN32) && !defined(NO_METIS)
   TORCH_INTERNAL_ASSERT(false, "METIS not yet supported on Windows");
 #else
   int64_t nvtxs = rowptr.numel() - 1;
