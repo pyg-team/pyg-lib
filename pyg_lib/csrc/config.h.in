@@ -1,3 +1,4 @@
 #pragma once
 
 #define WITH_MKL_BLAS() @WITH_MKL_BLAS@
+#define NO_METIS() @NO_METIS@
