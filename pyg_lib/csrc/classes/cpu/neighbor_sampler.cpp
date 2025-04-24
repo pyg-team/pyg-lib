@@ -13,8 +13,6 @@
 namespace pyg {
 namespace classes {
 
-namespace {
-
 struct NeighborSampler : torch::CustomClassHolder {
  public:
   NeighborSampler(const at::Tensor& rowptr,
@@ -61,14 +59,7 @@ struct NeighborSampler : torch::CustomClassHolder {
   const c10::optional<at::Tensor>& edge_time_;
 };
 
-struct MetapathTracker : torch::CustomClassHolder {
-  /* This is a helper class for NeighborSampler. It pre-computes all possible
-   * metapaths and how many of each we are expected to sample if we always
-   * sample the full number specified in `num_neighbors`. It can then be used
-   * to track the actual number of sampled edges of each type.
-   * */
- public:
-  MetapathTracker(
+MetapathTracker::MetapathTracker(
       const std::vector<edge_type>& edge_types,
       const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors,
       const std::vector<node_type>& seed_node_types)
@@ -106,12 +97,12 @@ struct MetapathTracker : torch::CustomClassHolder {
     }
   }
 
-  int64_t get_neighbor_metapath(const int64_t& metapath_id,
+int64_t MetapathTracker::get_neighbor_metapath(const int64_t& metapath_id,
                                 const rel_type& edge) {
     return metapath_tree_[edge][metapath_id];
   }
 
-  int64_t get_sample_size(const int64_t& batch_id,
+int64_t MetapathTracker::get_sample_size(const int64_t& batch_id,
                           const int64_t& src_metapath_id,
                           const edge_type& edge) {
     auto rel = to_rel_type(edge);
@@ -119,7 +110,7 @@ struct MetapathTracker : torch::CustomClassHolder {
     return expected_sample_size_[batch_id][dst_metapath_id];
   }
 
-  void report_sample_size(const int64_t& batch_id,
+void MetapathTracker::report_sample_size(const int64_t& batch_id,
                           const int64_t& metapath_id,
                           const int64_t n_sampled) {
     if (reported_sample_size_.find(batch_id) == reported_sample_size_.end())
@@ -130,7 +121,7 @@ struct MetapathTracker : torch::CustomClassHolder {
     reported_sample_size_[batch_id][metapath_id] += n_sampled;
   }
 
-  int64_t get_reported_sample_size(const int64_t& batch_id,
+int64_t MetapathTracker::get_reported_sample_size(const int64_t& batch_id,
                                    const int64_t& metapath_id) {
     if (reported_sample_size_.find(batch_id) == reported_sample_size_.end())
       return 0;
@@ -140,7 +131,7 @@ struct MetapathTracker : torch::CustomClassHolder {
     return reported_sample_size_[batch_id][metapath_id];
   }
 
-  int64_t init_batch(const int64_t& batch_id,
+int64_t MetapathTracker::init_batch(const int64_t& batch_id,
                      const node_type& node_t,
                      const int64_t batch_size) {
     auto seed_metapath = seed_metapaths_[node_t];
@@ -150,7 +141,7 @@ struct MetapathTracker : torch::CustomClassHolder {
     return seed_metapath;
   }
 
-  void _init_expected_sample_size(const int64_t src_metapath,
+void MetapathTracker::_init_expected_sample_size(const int64_t src_metapath,
                                   const int64_t batch_id,
                                   const int64_t hop) {
     for (auto& kv : metapath_tree_) {
@@ -168,30 +159,8 @@ struct MetapathTracker : torch::CustomClassHolder {
       }
     }
   }
-  phmap::flat_hash_map<int64_t, phmap::flat_hash_map<int64_t, int64_t>>
-      reported_sample_size_;
 
- private:
-  std::vector<edge_type> edge_types_;
-  c10::Dict<rel_type, std::vector<int64_t>> num_neighbors_;
-  int64_t n_metapaths_;
-  phmap::flat_hash_set<int64_t> batch_ids_;
-  phmap::flat_hash_map<node_type, int64_t> seed_metapaths_;
-  // rel_type + metapath_id -> new metapath_id (with one hop more)
-  phmap::flat_hash_map<rel_type, phmap::flat_hash_map<int64_t, int64_t>>
-      metapath_tree_;
-  // batch_id + metapath_id -> expected num of samples
-  phmap::flat_hash_map<int64_t, phmap::flat_hash_map<int64_t, int64_t>>
-      expected_sample_size_;
-};
-
-struct HeteroNeighborSampler : torch::CustomClassHolder {
- public:
-  typedef std::pair<int64_t, int64_t> pair_int64_t;
-  typedef std::tuple<int64_t, int64_t, int64_t> triplet_int64_t;
-  typedef int64_t temporal_t;
-
-  HeteroNeighborSampler(
+HeteroNeighborSampler::HeteroNeighborSampler(
       const std::vector<node_type> node_types,
       const std::vector<edge_type> edge_types,
       const c10::Dict<rel_type, at::Tensor> rowptr,
@@ -232,7 +201,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                 "Biased temporal sampling not yet supported");
   };
 
-  void uniform_sample(rel_type e_type,
+void HeteroNeighborSampler::uniform_sample(rel_type e_type,
                       const triplet_int64_t global_src_node,
                       const int64_t local_src_node,
                       const int64_t count,
@@ -251,7 +220,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
             return_edge_id);
   }
 
-  void node_temporal_sample(
+void HeteroNeighborSampler::node_temporal_sample(
       rel_type e_type,
       std::string temporal_strategy,
       const triplet_int64_t global_src_node,
@@ -279,7 +248,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
             return_edge_id);
   }
 
-  int64_t find_num_neighbors_temporal(rel_type e_type,
+int64_t HeteroNeighborSampler::find_num_neighbors_temporal(rel_type e_type,
                                       const triplet_int64_t global_src_node,
                                       const temporal_t seed_time,
                                       const temporal_t* time) {
@@ -305,7 +274,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     return row_end - row_start;
   }
 
-  int64_t find_num_neighbors(rel_type e_type,
+int64_t HeteroNeighborSampler::find_num_neighbors(rel_type e_type,
                              const triplet_int64_t global_src_node) {
     auto rowptr_v = rowptr_.at(e_type).data_ptr<int64_t>();
     const auto row_start = rowptr_v[std::get<1>(global_src_node)];
@@ -320,7 +289,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
              c10::optional<c10::Dict<node_type, at::Tensor>>,  // batch
              c10::Dict<node_type, std::vector<int64_t>>,  // num_sampled_nodes
              c10::Dict<rel_type, std::vector<int64_t>>>   // num_sampled_edges
-  sample(const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors,
+HeteroNeighborSampler::sample(const c10::Dict<rel_type, std::vector<int64_t>>& num_neighbors,
          const c10::Dict<node_type, at::Tensor>& seed_node,
          const c10::optional<c10::Dict<node_type, at::Tensor>>& seed_time,
          bool disjoint = false,
@@ -601,8 +570,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
                            num_sampled_edges_per_hop_dict);
   }
 
- private:
-  void clear_placeholders() {
+void HeteroNeighborSampler::clear_placeholders() {
     num_sampled_nodes_per_hop_.clear();
     num_sampled_edges_per_hop_.clear();
     sampled_cols_.clear();
@@ -612,7 +580,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     sampled_edge_ids_.clear();
   }
 
-  void init_placeholders() {
+void HeteroNeighborSampler::init_placeholders() {
     for (const auto& k : node_types_) {
       num_sampled_nodes_per_hop_.insert({k, std::vector<int64_t>(1, 0)});
       sampled_batch_.insert({k, std::vector<int64_t>()});
@@ -627,7 +595,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     }
   }
 
-  void _sample(rel_type e_type,
+void HeteroNeighborSampler::_sample(rel_type e_type,
                const triplet_int64_t global_src_node,
                const int64_t local_src_node,
                const int64_t row_start,
@@ -663,7 +631,7 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
     }
   }
 
-  inline void add_edge(rel_type e_type,
+inline void HeteroNeighborSampler::add_edge(rel_type e_type,
                        const int64_t edge_id,
                        const triplet_int64_t global_src_node,
                        const int64_t local_src_node,
@@ -697,41 +665,22 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       sampled_edge_ids_.at(e_type).push_back(edge_id);
   }
 
-  const std::vector<node_type> node_types_;
-  const std::vector<edge_type> edge_types_;
-  const c10::Dict<rel_type, at::Tensor> rowptr_;
-  const c10::Dict<rel_type, at::Tensor> col_;
-  const c10::optional<c10::Dict<rel_type, at::Tensor>> edge_weight_;
-  const c10::optional<c10::Dict<node_type, at::Tensor>> node_time_;
-  const c10::optional<c10::Dict<rel_type, at::Tensor>> edge_time_;
-  phmap::flat_hash_map<node_type, std::vector<int64_t>>
-      num_sampled_nodes_per_hop_;
-  phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_batch_;
-  phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_node_ids_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>>
-      num_sampled_edges_per_hop_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_cols_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_rows_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_edge_ids_;
-};
-
 }  // namespace
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
-  m.class_<NeighborSampler>("NeighborSampler")
+  m.class_<pyg::classes::NeighborSampler>("NeighborSampler")
       .def(torch::init<at::Tensor&, at::Tensor&, c10::optional<at::Tensor>,
                        c10::optional<at::Tensor>, c10::optional<at::Tensor>>())
-      .def("sample", &NeighborSampler::sample);
+      .def("sample", &pyg::classes::NeighborSampler::sample);
 
-  m.class_<HeteroNeighborSampler>("HeteroNeighborSampler")
+  m.class_<pyg::classes::HeteroNeighborSampler>("HeteroNeighborSampler")
       .def(torch::init<std::vector<node_type>, std::vector<edge_type>,
                        c10::Dict<rel_type, at::Tensor>,
                        c10::Dict<rel_type, at::Tensor>,
                        c10::optional<c10::Dict<rel_type, at::Tensor>>,
                        c10::optional<c10::Dict<node_type, at::Tensor>>,
                        c10::optional<c10::Dict<rel_type, at::Tensor>>>())
-      .def("sample", &HeteroNeighborSampler::sample);
-}
+      .def("sample", &pyg::classes::HeteroNeighborSampler::sample);
 
 }  // namespace classes
 }  // namespace pyg
