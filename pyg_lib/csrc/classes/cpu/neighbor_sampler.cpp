@@ -3,6 +3,7 @@
 #include <torch/library.h>
 #include <algorithm>
 
+#include "pyg_lib/csrc/classes/cpu/neighbor_sampler.h"
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/index_tracker.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
