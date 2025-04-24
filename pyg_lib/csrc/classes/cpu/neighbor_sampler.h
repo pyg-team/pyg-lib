@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ATen/ATen.h>
-#include <torch/library.h>
 #include <parallel_hashmap/phmap.h>
+#include <torch/library.h>
 
 #include "pyg_lib/csrc/random/cpu/rand_engine.h"
 #include "pyg_lib/csrc/sampler/cpu/mapper.h"
@@ -69,7 +69,8 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
       const c10::optional<c10::Dict<node_type, at::Tensor>> node_time,
       const c10::optional<c10::Dict<rel_type, at::Tensor>> edge_time);
 
-  std::tuple<c10::Dict<rel_type, at::Tensor>, c10::Dict<rel_type, at::Tensor>,
+  std::tuple<c10::Dict<rel_type, at::Tensor>,
+             c10::Dict<rel_type, at::Tensor>,
              c10::Dict<node_type, at::Tensor>,
              c10::optional<c10::Dict<rel_type, at::Tensor>>,
              c10::optional<c10::Dict<node_type, at::Tensor>>,
@@ -113,25 +114,30 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
 
   int64_t find_num_neighbors(rel_type e_type,
                              const triplet_int64_t global_src_node);
+
  private:
   void clear_placeholders();
   void init_placeholders();
-  void _sample(rel_type e_type, const triplet_int64_t global_src_node,
-               const int64_t local_src_node, const int64_t row_start,
-               const int64_t row_end, const int64_t count,
+  void _sample(rel_type e_type,
+               const triplet_int64_t global_src_node,
+               const int64_t local_src_node,
+               const int64_t row_start,
+               const int64_t row_end,
+               const int64_t count,
                pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
                pyg::random::RandintEngine<int64_t>& generator,
                std::vector<triplet_int64_t>& out_global_dst_nodes,
                MetapathTracker& metapath_tracker,
                bool return_edge_id);
-  inline void add_edge(rel_type e_type, const int64_t edge_id,
+  inline void add_edge(rel_type e_type,
+                       const int64_t edge_id,
                        const triplet_int64_t global_src_node,
                        const int64_t local_src_node,
                        pyg::sampler::Mapper<pair_int64_t, int64_t>& dst_mapper,
                        std::vector<triplet_int64_t>& out_global_dst_nodes,
                        MetapathTracker& metapath_tracker,
                        bool return_edge_id);
-  
+
   const std::vector<node_type> node_types_;
   const std::vector<edge_type> edge_types_;
   const c10::Dict<rel_type, at::Tensor> rowptr_;
@@ -140,10 +146,12 @@ struct HeteroNeighborSampler : torch::CustomClassHolder {
   const c10::optional<c10::Dict<node_type, at::Tensor>> node_time_;
   const c10::optional<c10::Dict<rel_type, at::Tensor>> edge_time_;
 
-  phmap::flat_hash_map<node_type, std::vector<int64_t>> num_sampled_nodes_per_hop_;
+  phmap::flat_hash_map<node_type, std::vector<int64_t>>
+      num_sampled_nodes_per_hop_;
   phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_batch_;
   phmap::flat_hash_map<node_type, std::vector<int64_t>> sampled_node_ids_;
-  phmap::flat_hash_map<rel_type, std::vector<int64_t>> num_sampled_edges_per_hop_;
+  phmap::flat_hash_map<rel_type, std::vector<int64_t>>
+      num_sampled_edges_per_hop_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_cols_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_rows_;
   phmap::flat_hash_map<rel_type, std::vector<int64_t>> sampled_edge_ids_;
