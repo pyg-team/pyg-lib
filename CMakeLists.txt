@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
 set(PYG_VERSION 0.4.0)
+set(NO_METIS 0)
 
 option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
