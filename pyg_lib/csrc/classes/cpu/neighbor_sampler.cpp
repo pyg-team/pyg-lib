@@ -243,6 +243,8 @@ void HeteroNeighborSampler::node_temporal_sample(
   if (temporal_strategy == "last" && count >= 0) {
     row_start = std::max(row_start, (int64_t)(row_end - count));
   }
+  if (row_end - row_start == 0)
+    return;
   _sample(e_type, global_src_node, local_src_node, row_start, row_end, count,
           dst_mapper, generator, out_global_dst_nodes, metapath_tracker,
           return_edge_id);
