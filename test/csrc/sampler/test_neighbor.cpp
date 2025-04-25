@@ -251,10 +251,9 @@ TEST(EdgeLevelTemporalNeighborTest, BasicAssertions) {
       /*disjoint=*/true);
   EXPECT_TRUE(at::equal(std::get<0>(out2), at::zeros(0, options)));
   EXPECT_TRUE(at::equal(std::get<1>(out2), at::zeros(0, options)));
-  EXPECT_TRUE(at::equal(std::get<2>(out2), at::tensor({0, 2, 1, 3}, options).view({-1, 2})));
+  EXPECT_TRUE(at::equal(std::get<2>(out2),
+                        at::tensor({0, 2, 1, 3}, options).view({-1, 2})));
   EXPECT_TRUE(at::equal(std::get<3>(out2).value(), at::zeros(0, options)));
-
-
 }
 
 TEST(HeteroNeighborTest, BasicAssertions) {
