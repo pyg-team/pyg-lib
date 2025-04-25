@@ -62,7 +62,6 @@ class NeighborSampler {
                       pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
                       pyg::random::RandintEngine<scalar_t>& generator,
                       std::vector<node_t>& out_global_dst_nodes) {
-    
     const auto row_start = rowptr_[to_scalar_t(global_src_node)];
     const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
 
@@ -99,7 +98,7 @@ class NeighborSampler {
 
     if (row_end - row_start == 0)
       return;
-    
+
     if (row_end - row_start > 1) {
       TORCH_CHECK(time[col_[row_start]] <= time[col_[row_end - 1]],
                   "Found invalid non-sorted temporal neighborhood");
@@ -135,7 +134,7 @@ class NeighborSampler {
 
     if (row_end - row_start == 0)
       return;
-    
+
     if (row_end - row_start > 1) {
       TORCH_CHECK(time[row_start] <= time[row_end - 1],
                   "Found invalid non-sorted temporal neighborhood");
