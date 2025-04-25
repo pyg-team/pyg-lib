@@ -56,7 +56,6 @@ TEST(ZeroNeighborTest, BasicAssertions) {
   EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
 }
 
-
 TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
