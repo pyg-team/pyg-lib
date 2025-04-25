@@ -30,6 +30,32 @@ TEST(BasicNeighborTest, BasicAssertions) {
   EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
 }
 
+TEST(ZeroNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  const auto rowptr = at::zeros(6, options);
+  const auto col = at::zeros(0, options);
+
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/at::arange(0, 5, options),
+      /*num_neighbors=*/{-1, -1});
+
+  auto expected_row = at::zeros(0, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = col;
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::arange(0, 5, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::zeros(0, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+  std::vector<int64_t> expected_num_nodes = {5, 0, 0};
+  EXPECT_TRUE(std::get<4>(out) == expected_num_nodes);
+  std::vector<int64_t> expected_num_edges = {0, 0};
+  EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
+}
+
 TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
 
@@ -209,6 +235,25 @@ TEST(EdgeLevelTemporalNeighborTest, BasicAssertions) {
   EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes.view({-1, 2})));
   auto expected_edges = at::tensor({4, 5, 6, 2, 3, 4, 5}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+
+  auto out2 = pyg::sampler::neighbor_sample(
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/at::arange(2, 4, options),
+      /*num_neighbors=*/{1, 1},
+      /*node_time=*/c10::nullopt,
+      /*edge_time=*/edge_time,
+      /*seed_time=*/at::tensor({-1, -1}, options),
+      /*edge_weight=*/c10::nullopt,
+      /*csc=*/false,
+      /*replace=*/true,
+      /*directed=*/true,
+      /*disjoint=*/true);
+  EXPECT_TRUE(at::equal(std::get<0>(out2), at::zeros(0, options)));
+  EXPECT_TRUE(at::equal(std::get<1>(out2), at::zeros(0, options)));
+  EXPECT_TRUE(at::equal(std::get<2>(out2),
+                        at::tensor({0, 2, 1, 3}, options).view({-1, 2})));
+  EXPECT_TRUE(at::equal(std::get<3>(out2).value(), at::zeros(0, options)));
 }
 
 TEST(HeteroNeighborTest, BasicAssertions) {
