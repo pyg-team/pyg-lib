@@ -1,5 +1,6 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
+#include <iostream>
 
 #include "pyg_lib/csrc/sampler/neighbor.h"
 #include "pyg_lib/csrc/utils/types.h"
@@ -29,6 +30,33 @@ TEST(BasicNeighborTest, BasicAssertions) {
   std::vector<int64_t> expected_num_edges = {4, 4};
   EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
 }
+
+TEST(ZeroNeighborTest, BasicAssertions) {
+  auto options = at::TensorOptions().dtype(at::kLong);
+
+  const auto rowptr = at::zeros(6, options);
+  const auto col = at::zeros(0, options);
+
+  auto out = pyg::sampler::neighbor_sample(
+      /*rowptr=*/rowptr,
+      /*col=*/col,
+      /*seed=*/at::arange(0, 5, options),
+      /*num_neighbors=*/{-1, -1});
+
+  auto expected_row = at::zeros(0, options);
+  EXPECT_TRUE(at::equal(std::get<0>(out), expected_row));
+  auto expected_col = col;
+  EXPECT_TRUE(at::equal(std::get<1>(out), expected_col));
+  auto expected_nodes = at::arange(0, 5, options);
+  EXPECT_TRUE(at::equal(std::get<2>(out), expected_nodes));
+  auto expected_edges = at::zeros(0, options);
+  EXPECT_TRUE(at::equal(std::get<3>(out).value(), expected_edges));
+  std::vector<int64_t> expected_num_nodes = {5, 0, 0};
+  EXPECT_TRUE(std::get<4>(out) == expected_num_nodes);
+  std::vector<int64_t> expected_num_edges = {0, 0};
+  EXPECT_TRUE(std::get<5>(out) == expected_num_edges);
+}
+
 
 TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto options = at::TensorOptions().dtype(at::kLong);
