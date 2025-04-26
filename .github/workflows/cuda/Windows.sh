@@ -41,6 +41,9 @@ case ${1} in
     CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers
     CUDA_FILE=cuda_${CUDA_SHORT}.0_465.89_win10.exe
     ;;
+  cpu)
+    exit 0
+    ;;
   *)
     echo "Unrecognized CUDA_VERSION=${1}"
     exit 1

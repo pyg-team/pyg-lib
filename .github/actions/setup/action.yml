@@ -30,7 +30,6 @@ runs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Install CUDA ${{ inputs.cuda-version }}
-      if: ${{ inputs.cuda-version != 'cpu' }}
       run: |
         bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ inputs.cuda-version }}
       shell: bash

@@ -153,7 +153,6 @@ jobs:
           # auditwheel show dist/*.whl
         shell: bash
         env:
-          CIBW_BUILD_FRONTEND: build
           CIBW_ENVIRONMENT: >
             TORCH_CUDA_ARCH_LIST="5.0+PTX;6.0;7.0;7.5;8.0;8.6"
           CIBW_BEFORE_ALL: >
