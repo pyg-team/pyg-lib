@@ -112,12 +112,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup packages
-        uses: ./.github/actions/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
+      # - name: Setup packages
+      #   uses: ./.github/actions/setup
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+      #     torch-version: ${{ matrix.torch-version }}
+      #     cuda-version: ${{ matrix.cuda-version }}
 
       - name: Set version on non-macOS
         if: ${{ runner.os != 'macOS' }}
@@ -144,16 +144,22 @@ jobs:
 
       - name: Build wheel
         run: |
-          source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          # pip install cibuildwheel
-          # cibuildwheel --output-dir dist
-          pip install build
-          python -m build --wheel --no-isolation --outdir dist
-          pip install auditwheel
-          auditwheel show dist/*.whl
+          # source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
+          pip install cibuildwheel
+          cibuildwheel --output-dir dist
+          # pip install build
+          # python -m build --wheel --no-isolation --outdir dist
+          # pip install auditwheel
+          # auditwheel show dist/*.whl
         shell: bash
         env:
-          TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+          CIBW_BUILD_FRONTEND: build
+          CIBW_ENVIRONMENT: >
+            TORCH_CUDA_ARCH_LIST="5.0+PTX;6.0;7.0;7.5;8.0;8.6"
+          CIBW_BEFORE_ALL: >
+            pip install torch==${{ inputs.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ inputs.cuda-version }}
+            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ inputs.cuda-version }}
+            source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
 
       - name: Test wheel
         run: |
