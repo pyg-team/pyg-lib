@@ -130,7 +130,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if (USE_PYTHON)
-  target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Module)
 endif()
 
 if(WITH_CUDA)
