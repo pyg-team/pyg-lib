@@ -157,8 +157,8 @@ jobs:
           CIBW_ENVIRONMENT: >
             TORCH_CUDA_ARCH_LIST="5.0+PTX;6.0;7.0;7.5;8.0;8.6"
           CIBW_BEFORE_ALL: >
-            pip install torch==${{ inputs.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ inputs.cuda-version }}
-            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ inputs.cuda-version }}
+            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }}
             source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
 
       - name: Test wheel
