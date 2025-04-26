@@ -144,17 +144,13 @@ jobs:
 
       - name: Build wheel
         run: |
-          # source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           pip install cibuildwheel
-          cibuildwheel --output-dir dist
-          # pip install build
-          # python -m build --wheel --no-isolation --outdir dist
-          # pip install auditwheel
-          # auditwheel show dist/*.whl
+          cibuildwheel --output-dir dist --python "${{ matrix.python-version }}"
         shell: bash
         env:
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_ALL: >
+            pip install ninja &&
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }} &&
             bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }} &&
             source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
