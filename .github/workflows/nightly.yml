@@ -155,7 +155,7 @@ jobs:
             source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           CIBW_BEFORE_BUILD: >
             pip install ninja &&
-            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }} &&
+            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
 
       - name: Test wheel
         run: |
