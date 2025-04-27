@@ -38,7 +38,6 @@ case ${1} in
     export TORCH_CUDA_ARCH_LIST="6.0+PTX;7.0;7.5"
     ;;
   *)
-    export FORCE_CUDA=0
     ;;
 esac
 
@@ -49,4 +48,6 @@ if [ "${1}" != "cpu" ] ; then
   export CUDA_NVCC_EXECUTABLE=${CUDA_HOME}/bin/nvcc
   export CUDA_INCLUDE_DIRS=${CUDA_HOME}/include
   export CUDA_CUDART_LIBRARY=${CUDA_HOME}/lib64/stubs/libcuda.so
+else
+  export FORCE_CUDA=0
 fi
