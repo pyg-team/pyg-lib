@@ -58,7 +58,6 @@ else
   sudo apt-get -qq update
   sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
   sudo apt clean
-  ln
   sudo ln -sf /usr/local/cuda-${CUDA} /usr/local/cuda
   rm -f "${FILENAME}"
 
