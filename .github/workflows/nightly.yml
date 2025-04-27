@@ -110,19 +110,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
 
-      # - name: Set up Python ${{ matrix.python-version }}
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: ${{ matrix.python-version }}
-
-      # - name: Setup packages
-      #   uses: ./.github/actions/setup
-      #   with:
-      #     python-version: ${{ matrix.python-version }}
-      #     torch-version: ${{ matrix.torch-version }}
-      #     cuda-version: ${{ matrix.cuda-version }}
+      - name: Free up disk space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet
+        shell: bash
 
       - name: Set version on non-macOS
         if: ${{ runner.os != 'macOS' }}
@@ -156,13 +149,9 @@ jobs:
         env:
           CIBW_BUILD: "cp39-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
-          CIBW_ENVIRONMENT: >
-            TORCH_CUDA_ARCH_LIST="6.0+PTX;7.0;7.5;8.0;8.6;9.0"
-            CUDACXX=/usr/local/cuda/bin/nvcc
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_ALL: >
             bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }}
-            nvcc --version
           CIBW_BEFORE_BUILD: >
             pip install ninja &&
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
@@ -175,11 +164,10 @@ jobs:
             python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)" &&
             python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
 
-      - name: Test wheel
+      - name: Check wheels
         working-directory: ./dist
         run: |
           ls -lah
-          unzip *.whl
         shell: bash
 
       # - name: Configure AWS
