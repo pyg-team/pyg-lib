@@ -68,7 +68,7 @@ esac
 
 if [ "$CIBUILDWHEEL" = "1" ]; then
   yum install -y wget
-  wget https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+  wget --quiet https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
   sh cuda_12.6.3_560.35.05_linux.run --silent --toolkit
 else
   wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
