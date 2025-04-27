@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        cuda-version: ['cpu', 'cu124']
+        cuda-version: ['cpu', 'cu126']
 
     steps:
       - name: Checkout repository
@@ -37,8 +37,6 @@ jobs:
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           pip install --no-build-isolation --verbose -e .
         shell: bash
-        env:
-          TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
 
       - name: Test imports
         run: |
