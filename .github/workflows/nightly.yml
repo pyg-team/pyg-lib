@@ -112,6 +112,11 @@ jobs:
         with:
           submodules: recursive
 
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
       # - name: Setup packages
       #   uses: ./.github/actions/setup
       #   with:
@@ -159,13 +164,14 @@ jobs:
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
 
       - name: Test wheel
+        working-directory: ./docs
         run: |
-          cd dist
           ls -lah
           pip install *.whl
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          cd ..
+          unzip *.whl
+          du -h -d 2 pyg_lib-0.4.0.dev20250427+pt26cpu-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64
         shell: bash
 
       # - name: Configure AWS
