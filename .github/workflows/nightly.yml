@@ -165,6 +165,8 @@ jobs:
           CIBW_BEFORE_TEST: >
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_TEST_COMMAND: >
+            python -c "import torch; print('torch:', torch.__version__)" &&
+            python -c "import torch; print('CUDA:', torch.version.cuda)" &&
             python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)" &&
             python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
 
