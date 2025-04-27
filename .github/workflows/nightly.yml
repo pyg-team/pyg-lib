@@ -162,6 +162,7 @@ jobs:
           CIBW_BEFORE_BUILD: >
             pip install ninja &&
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+          CIBW_REPAIR_WHEEL_COMMAND: ''
           # CIBW_BEFORE_TEST: >
           #   pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           # CIBW_TEST_COMMAND: >
