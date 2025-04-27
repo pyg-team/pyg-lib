@@ -171,7 +171,7 @@ jobs:
           #   python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
 
       - name: Test wheel
-        working-directory: ./docs
+        working-directory: ./dist
         run: |
           ls -lah
           # pip install *.whl
