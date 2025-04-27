@@ -150,6 +150,7 @@ jobs:
       - name: Build wheel
         run: |
           pip install cibuildwheel
+          source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           cibuildwheel --output-dir dist
         shell: bash
         env:
@@ -160,8 +161,7 @@ jobs:
             CUDACXX=/usr/local/cuda/bin/nvcc
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BEFORE_ALL: >
-            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }} &&
-            source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }} &&
+            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }}
             nvcc --version
           CIBW_BEFORE_BUILD: >
             pip install ninja &&
