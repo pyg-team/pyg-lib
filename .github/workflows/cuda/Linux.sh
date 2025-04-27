@@ -37,7 +37,7 @@ esac
 
 if [ "$CIBUILDWHEEL" = "1" ]; then
 
-  FILENAME=cuda_${CUDA_ID/-/_}_linux.run
+  FILENAME=cuda_${CUDA_ID//-/_}_linux.run
 
   yum install -y wget
   wget --quiet "https://developer.download.nvidia.com/compute/cuda/${CUDA_PATCH}/local_installers/${FILENAME}"
