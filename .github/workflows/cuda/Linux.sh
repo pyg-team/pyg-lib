@@ -37,7 +37,7 @@ esac
 
 if [ "$CIBUILDWHEEL" = "1" ]; then
 
-  FILENAME=cuda_${CUDA_ID}_linux.run
+  FILENAME=cuda_${CUDA_ID/-/_}_linux.run
 
   yum install -y wget
   wget --quiet "https://developer.download.nvidia.com/compute/cuda/${CUDA_PATCH}/local_installers/${FILENAME}"
@@ -48,11 +48,12 @@ else
 
   OS=ubuntu2204
   APT_KEY=${OS}-${CUDA/./-}-local
+  URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_PATCH}/local_installers
   FILENAME=cuda-repo-${APT_KEY}_${CUDA_ID}-1_amd64.deb
 
   wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
   sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
-  wget -nv "https://developer.download.nvidia.com/compute/cuda/${CUDA_PATCH}/local_installers/${FILENAME}"
+  wget -nv "${URL}/${FILENAME}"
   sudo dpkg -i "${FILENAME}"
   sudo cp "/var/cuda-repo-${APT_KEY}/cuda-*-keyring.gpg /usr/share/keyrings/"
   sudo apt-get -qq update
