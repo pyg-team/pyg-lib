@@ -66,30 +66,25 @@ case ${1} in
     ;;
 esac
 
-if command -v sudo >/dev/null 2>&1; then
-  SUDO="sudo"
+if [ "$CIBUILDWHEEL" = "1" ]; then
+  apt-get install -y wget
+  wget https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
+  sh cuda_12.6.3_560.35.05_linux.run
 else
-  SUDO=""
+  wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
+  sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
+  wget -nv "${URL}/${FILENAME}"
+  sudo dpkg -i "${FILENAME}"
+
+  if [ "${1}" = "cu117" ] || [ "${1}" = "cu118" ] || [ "${1}" = "cu121" ] || [ "${1}" = "cu124" ] || [ "${1}" = "cu126" ]; then
+    sudo cp /var/cuda-repo-${APT_KEY}/cuda-*-keyring.gpg /usr/share/keyrings/
+  else
+    sudo apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
+  fi
+
+  sudo apt-get -qq update
+  sudo apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
+  sudo apt clean
+
+  rm -f "${FILENAME}"
 fi
-
-$SUDO apt-get install -y wget
-wget -nv https://developer.download.nvidia.com/compute/cuda/repos/${OS}/x86_64/cuda-${OS}.pin
-$SUDO mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
-wget -nv ${URL}/${FILENAME}
-$SUDO dpkg -i ${FILENAME}
-
-if [ "${1}" = "cu117" ] || [ "${1}" = "cu118" ] || [ "${1}" = "cu121" ] || [ "${1}" = "cu124" ] || [ "${1}" = "cu126" ]; then
-  $SUDO cp /var/cuda-repo-${APT_KEY}/cuda-*-keyring.gpg /usr/share/keyrings/
-else
-  $SUDO apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
-fi
-
-$SUDO apt-get -qq update
-$SUDO apt install cuda-nvcc-${CUDA/./-} cuda-libraries-dev-${CUDA/./-} cuda-command-line-tools-${CUDA/./-}
-$SUDO apt clean
-ls "/usr/local"
-echo "----------------"
-sudo ln -s /usr/local/cuda-${CUDA} /usr/local/cuda
-ls "/usr/local"
-
-rm -f ${FILENAME}
