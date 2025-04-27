@@ -44,6 +44,7 @@ esac
 if [ "${1}" != "cpu" ] ; then
   export FORCE_CUDA=1
   export PATH=${CUDA_HOME}/bin:${PATH}
+  export CMAKE_PREFIX_PATH=${CUDA_HOME}:${CMAKE_PREFIX_PATH}
   export CUDA_TOOLKIT_ROOT_DIR=${CUDA_HOME}
   export CUDA_NVCC_EXECUTABLE=${CUDA_HOME}/bin/nvcc
   export CUDA_INCLUDE_DIRS=${CUDA_HOME}/include

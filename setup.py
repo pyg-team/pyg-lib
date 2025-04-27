@@ -53,7 +53,10 @@ class CMakeBuild(build_ext):
             os.makedirs(self.build_temp)
 
         WITH_CUDA = torch.cuda.is_available()
+        print('111', torch.cuda.is_available())
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+        print('222', WITH_CUDA)
+        WITH_CUDA = True
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
