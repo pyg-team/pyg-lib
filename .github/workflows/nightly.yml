@@ -163,23 +163,19 @@ jobs:
             pip install ninja &&
             pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_REPAIR_WHEEL_COMMAND: ''
-          # CIBW_BEFORE_TEST: >
-          #   pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
-          # CIBW_TEST_COMMAND: >
-          #   python -c "import torch; print('torch:', torch.__version__)" &&
-          #   python -c "import torch; print('CUDA:', torch.version.cuda)" &&
-          #   python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)" &&
-          #   python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
+          CIBW_BEFORE_TEST: >
+            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+          CIBW_TEST_COMMAND: >
+            python -c "import torch; print('torch:', torch.__version__)" &&
+            python -c "import torch; print('CUDA:', torch.version.cuda)" &&
+            python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)" &&
+            python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
 
       - name: Test wheel
         working-directory: ./dist
         run: |
           ls -lah
-          # pip install *.whl
-          # python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
-          # python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           unzip *.whl
-          du -h -d 2 pyg_lib-0.4.0.dev20250427+pt26cpu-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64
         shell: bash
 
       # - name: Configure AWS
