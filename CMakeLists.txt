@@ -58,7 +58,6 @@ if (USE_PYTHON)
 endif()
 
 if(WITH_CUDA)
-  set(CMAKE_CUDA_ARCHITECTURES "60;70;75")
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
