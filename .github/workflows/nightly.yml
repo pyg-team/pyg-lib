@@ -110,6 +110,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          submodules: recursive
 
       - name: Free up disk space
         if: ${{ runner.os == 'Linux' }}
