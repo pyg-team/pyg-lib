@@ -20,11 +20,17 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Free up disk space
+    - name: Free Disk Space (Ubuntu)
       if: ${{ runner.os == 'Linux' }}
-      run: |
-        sudo rm -rf /usr/share/dotnet
-      shell: bash
+      uses: jlumbroso/free-disk-space@main
+      with:
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+        tool-cache: true
 
     - name: Set up Windows developer command prompt
       uses: ilammy/msvc-dev-cmd@v1
