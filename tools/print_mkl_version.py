@@ -3,7 +3,10 @@ import re
 import torch
 
 
-def compatible_mkl_ver():
+def compatible_mkl_ver() -> str:
+    """Returns an MKL version that is compatible with the current PyTorch
+    installation.
+    """
     torch_config = torch.__config__.show()
     with_mkl_blas = 'BLAS_INFO=mkl' in torch_config
     if torch.backends.mkl.is_available() and with_mkl_blas:
@@ -15,4 +18,8 @@ def compatible_mkl_ver():
 
         return product_version
 
-    return None
+    raise RuntimeError('No MKL found in PyTorch configuration')
+
+
+if __name__ == '__main__':
+    print(compatible_mkl_ver())
