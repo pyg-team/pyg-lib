@@ -20,7 +20,7 @@ jobs:
       - name: Setup packages
         uses: ./.github/actions/setup
 
-      - name: Configure
+      - name: Configure MKL
         run: |
           export MKL_VERSION=`python tools/print_mkl_version.py`
           pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
