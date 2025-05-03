@@ -136,11 +136,10 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
+          echo $TORCH_CUDA_ARCH_LIST
           pip install build
           python -m build --wheel --no-isolation --outdir dist
         shell: bash
-        env:
-          TORCH_CUDA_ARCH_LIST: "5.0+PTX;6.0;7.0;7.5;8.0;8.6"
 
       - name: Test wheel
         run: |
