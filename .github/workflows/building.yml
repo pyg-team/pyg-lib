@@ -12,26 +12,26 @@ jobs:
       matrix:
         include:
           # Linux
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', 'cpu'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', 'cu128'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', 'cu126'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', 'cu118'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', 'cpu'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', 'cu128'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', 'cu126'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', 'cu118'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', 'cpu'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', 'cu128'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', 'cu126'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', 'cu118'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', 'cpu'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', 'cu128'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', 'cu126'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', 'cu118'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', 'cpu'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', 'cu128'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', 'cu126'}
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', 'cu118'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', cuda-version: 'cu128'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', cuda-version: 'cu126'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.13', cuda-version: 'cu118'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', cuda-version: 'cu128'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', cuda-version: 'cu126'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.12', cuda-version: 'cu118'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', cuda-version: 'cu128'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', cuda-version: 'cu126'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.11', cuda-version: 'cu118'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', cuda-version: 'cu128'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', cuda-version: 'cu126'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', cuda-version: 'cu118'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', cuda-version: 'cu128'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', cuda-version: 'cu126'}
+          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.9', cuda-version: 'cu118'}
 
     steps:
       - name: Checkout repository
