@@ -60,12 +60,9 @@ runs:
         MKL_VERSION=`python tools/print_mkl_version.py`
         pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
 
-        export BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'`
-        export MKL_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib{os.sep}cmake{os.sep}mkl")'`
-        export USE_MKL_BLAS=ON
-        echo "BLAS_INCLUDE_DIR: $BLAS_INCLUDE_DIR"
-        echo "MKL_DIR: $MKL_DIR"
-        echo "USE_MKL_BLAS: $USE_MKL_BLAS"
+        echo BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'` >> $GITHUB_ENV
+        echo MKL_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib{os.sep}cmake{os.sep}mkl")'` >> $GITHUB_ENV
+        echo USE_MKL_BLAS=ON >> $GITHUB_ENV
       shell: bash
 
     - name: Downgrade GLIBC
