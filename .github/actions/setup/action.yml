@@ -54,7 +54,7 @@ runs:
         sed -i 's/;caffe2::cudnn-public//g' ${Torch_DIR}/Caffe2/Caffe2Targets.cmake
       shell: bash
 
-    - name: Install MKL and set MKL_VERSION, _BLAS_INCLUDE_DIR, MKL_DIR
+    - name: Install MKL and set MKL_VERSION, BLAS_INCLUDE_DIR, MKL_DIR
       if: ${{ inputs.use-mkl }}
       run: |
         MKL_VERSION=`python tools/print_mkl_version.py`
