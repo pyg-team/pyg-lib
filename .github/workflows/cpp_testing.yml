@@ -20,9 +20,9 @@ jobs:
       - name: Setup packages
         uses: ./.github/actions/setup
 
-      - name: Configure
+      - name: Configure MKL
         run: |
-          export MKL_VERSION=`python -c 'from tools.mkl_ver import compatible_mkl_ver;print(compatible_mkl_ver())'`
+          export MKL_VERSION=`python tools/print_mkl_version.py`
           pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
 
           export _BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'`

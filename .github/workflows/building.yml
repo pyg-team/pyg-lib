@@ -100,7 +100,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup packages
+      - name: Install dependencies
         uses: ./.github/actions/setup
         with:
           python-version: ${{ matrix.python-version }}
