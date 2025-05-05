@@ -15,8 +15,6 @@ jobs:
 
   wheel:
     runs-on: ${{ matrix.os }}
-    container:
-      image: quay.io/pypa/manylinux2014_x86_64
 
     strategy:
       fail-fast: false
