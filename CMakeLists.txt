@@ -6,14 +6,6 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
 set(PYG_VERSION 0.4.0)
 set(NO_METIS 0)
 
-# Ensure proper pthread support
-if(NOT WIN32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-endif()
-find_package(Threads REQUIRED)
-
 option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
@@ -21,13 +13,6 @@ option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
-  if(DEFINED ENV{CONDA_PREFIX})
-    set(Python3_FIND_FRAMEWORK LAST)
-    set(Python3_FIND_STRATEGY LOCATION)
-    set(Python3_FIND_REGISTRY LAST)
-    set(Python3_ROOT_DIR $ENV{CONDA_PREFIX})
-  endif()
-
   find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
   execute_process(
       COMMAND ${Python3_EXECUTABLE} "-c"
@@ -65,20 +50,12 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CUR
 if (USE_PYTHON)
   # Needed for GitHub CI in order to pick up the correct Python version:
   cmake_policy(SET CMP0094 NEW)
+  set(Python3_FIND_REGISTRY "LAST")
+  set(Python3_FIND_FRAMEWORK "LAST")
+  set(Python3_FIND_VIRTUALENV "FIRST")
 
-  if(DEFINED ENV{CONDA_PREFIX})
-    set(Python3_FIND_FRAMEWORK LAST)
-    set(Python3_FIND_STRATEGY LOCATION)
-    set(Python3_FIND_REGISTRY LAST)
-    set(Python3_ROOT_DIR $ENV{CONDA_PREFIX})
-  else()
-    set(Python3_FIND_REGISTRY "LAST")
-    set(Python3_FIND_FRAMEWORK "LAST")
-    set(Python3_FIND_VIRTUALENV "FIRST")
-  endif()
-
-  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
   add_definitions(-DUSE_PYTHON)
+  find_package(Python3 REQUIRED COMPONENTS Development)
 endif()
 
 if(WITH_CUDA)
@@ -113,11 +90,6 @@ if (WITH_CUDA)
 endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
-if(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
-endif()
-
 if(MKL_INCLUDE_FOUND)
     target_include_directories(${PROJECT_NAME} PRIVATE ${BLAS_INCLUDE_DIR})
 endif()
