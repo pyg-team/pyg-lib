@@ -49,6 +49,8 @@ class CMakeBuild(build_ext):
             elif CMakeBuild.check_env_flag("REL_WITH_DEB_INFO"):
                 self.build_type = "RELWITHDEBINFO"
 
+        self.build_type = "DEBUG"
+
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
@@ -81,10 +83,20 @@ class CMakeBuild(build_ext):
 
         build_args = []
 
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
-                              cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args,
-                              cwd=self.build_temp)
+        try:
+            subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
+                                cwd=self.build_temp)
+            subprocess.check_call(['cmake', '--build', '.'] + build_args,
+                                cwd=self.build_temp)
+        except:
+            # Only if exists:
+            if osp.exists(osp.join(self.build_temp, 'CMakeFiles', 'CMakeOutput.log')):
+                with open(osp.join(self.build_temp, 'CMakeFiles', 'CMakeOutput.log'), 'r') as f:
+                    print(f.read())
+            if osp.exists(osp.join(self.build_temp, 'CMakeFiles', 'CMakeError.log')):
+                with open(osp.join(self.build_temp, 'CMakeFiles', 'CMakeError.log'), 'r') as f:
+                    print(f.read())
+            raise
 
 
 def mkl_dependencies():
