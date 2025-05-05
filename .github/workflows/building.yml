@@ -2,14 +2,13 @@ name: Building Wheels
 
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
-#   push:
-#     branches:
-#       - aki/manylinux
+  push:
+    branches:
+      - aki/manylinux
 
-
-# concurrency:
-#   group: aki_hobby
-#   cancel-in-progress: true
+concurrency:
+  group: aki_hobby
+  cancel-in-progress: true
 
 jobs:
 
@@ -61,14 +60,13 @@ jobs:
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
           pip install build cibuildwheel==2.23.3
           python -m cibuildwheel --output-dir dist
-          # python -m build --wheel --no-isolation --outdir dist
+          # python -m cibuildwheel --output-dir dist
         shell: bash
         env:
-          CIBW_BUILD: cp310-manylinux_x86_64
+          CIBW_BUILD: cp311-manylinux_x86_64
+          CIBW_BUILD_FRONTEND: 'build; args: --no-isolation'
+          CIBW_BEFORE_BUILD: 'dnf install -y python3.11-devel && bash ./tools/prepare_for_build.sh 2.6.0 cpu'
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          # Install system library
-          CIBW_BEFORE_BUILD_LINUX: (yum install -y libffi-devel || apt-get install -y libffi-devel || apk add --update --no-cache libffi-devel || true) && (yum install -y libc6 || apt-get install -y libc6 || apk add --update --no-cache libc6 || true) && (bash ./tools/prepare_for_build.sh ${{ matrix.torch-version }} ${{ matrix.cuda-version }})
-          # CIBW_SKIP: "*musllinux*"
 
       - name: Test wheel
         working-directory: dist
