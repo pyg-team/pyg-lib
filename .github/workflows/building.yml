@@ -64,13 +64,15 @@ jobs:
         shell: bash
 
       - name: Test wheel
+        working-directory: dist
         run: |
-          cd dist
           ls -lah
+          pip install auditwheel
+          auditwheel repair *.whl
+
           pip install *.whl
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          cd ..
         shell: bash
 
       # - name: Configure AWS
