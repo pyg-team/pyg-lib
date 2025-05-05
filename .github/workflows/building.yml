@@ -66,9 +66,8 @@ jobs:
         env:
           CIBW_BUILD: cp310-manylinux_x86_64
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          CIBW_BEFORE_BUILD: bash ./tools/prepare_for_build.sh ${{ matrix.torch-version }} ${{ matrix.cuda-version }}
           # Install system library
-          CIBW_BEFORE_BUILD_LINUX: (yum install -y libffi-devel || apt-get install -y libffi-devel || apk add --update --no-cache libffi-devel || true) && (yum install -y libc6 || apt-get install -y libc6 || apk add --update --no-cache libc6 || true)
+          CIBW_BEFORE_BUILD_LINUX: (yum install -y libffi-devel || apt-get install -y libffi-devel || apk add --update --no-cache libffi-devel || true) && (yum install -y libc6 || apt-get install -y libc6 || apk add --update --no-cache libc6 || true) && (bash ./tools/prepare_for_build.sh ${{ matrix.torch-version }} ${{ matrix.cuda-version }})
           # CIBW_ENVIRONMENT: "PIP_ONLY_BINARY=numpy"
           # CIBW_SKIP: "*musllinux*"
 
