@@ -1,6 +1,15 @@
 name: Building Wheels
 
-on: [workflow_dispatch]  # yamllint disable-line rule:truthy
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  push:
+    branches:
+      - aki/manylinux
+
+
+concurrency:
+  group: aki_hobby
+  cancel-in-progress: true
 
 jobs:
 
