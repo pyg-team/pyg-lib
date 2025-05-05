@@ -1,18 +1,15 @@
 name: Building Wheels
 
 on:  # yamllint disable-line rule:truthy
-  workflow_dispatch:
-#   push:
-#     branches:
-#       - aki/manylinux
+  push:
+    branches:
+      - aki/manylinux
 
-
-# concurrency:
-#   group: aki_hobby
-#   cancel-in-progress: true
+concurrency:
+  group: aki_hobby
+  cancel-in-progress: true
 
 jobs:
-
   wheel:
     runs-on: ${{ matrix.os }}
 
@@ -20,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-22.04, torch-version: '2.7.0', python-version: '3.10', cuda-version: 'cpu'}
+          - {os: ubuntu-22.04, torch-version: '2.6.0', python-version: '3.11', cuda-version: 'cpu'}
 
     steps:
       - name: Checkout repository
@@ -28,15 +25,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        uses: ./.github/actions/setup
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
+          python-version: '3.11'  # Always use 3.11+ as recommended by cibuildwheel
 
-      - name: Set version on non-macOS
-        if: ${{ runner.os != 'macOS' }}
+      - name: Prepare for building
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
@@ -46,25 +40,15 @@ jobs:
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
         shell: bash
 
-      - name: Set version on macOS
-        if: ${{ runner.os == 'macOS' }}
-        run: |
-          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
-          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
-          echo "New version name: $VERSION+$TORCH_VERSION"
-          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" setup.py
-          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" pyg_lib/__init__.py
-        shell: bash
-
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install build cibuildwheel==2.23.3
+          pip install build cibuildwheel -U
           python -m cibuildwheel --output-dir dist
           # python -m build --wheel --no-isolation --outdir dist
         shell: bash
         env:
-          CIBW_BUILD: cp310-manylinux_x86_64
+          CIBW_BUILD: cp311-manylinux_x86_64
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           # Install system library
           CIBW_BEFORE_BUILD_LINUX: (yum install -y libffi-devel || apt-get install -y libffi-devel || apk add --update --no-cache libffi-devel || true) && (yum install -y libc6 || apt-get install -y libc6 || apk add --update --no-cache libc6 || true) && (bash ./tools/prepare_for_build.sh ${{ matrix.torch-version }} ${{ matrix.cuda-version }})
