@@ -27,12 +27,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        uses: ./.github/actions/setup
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
 
       - name: Set version on non-macOS
         if: ${{ runner.os != 'macOS' }}
@@ -58,9 +56,8 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install build cibuildwheel==2.23.3
+          pip install cibuildwheel -U
           python -m cibuildwheel --output-dir dist
-          # python -m cibuildwheel --output-dir dist
         shell: bash
         env:
           CIBW_BUILD: cp311-manylinux_x86_64
