@@ -37,7 +37,7 @@ repository="https://github.com/pyg-team/pyg-lib.git"
 changelog="https://github.com/pyg-team/pyg-lib/blob/master/CHANGELOG.md"
 
 [tool.cibuildwheel]
-build-frontend = {name="build", args=["--wheel", "--no-isolation"]}
+build-frontend = {name="build", args=["--no-isolation"]}
 
 
 [tool.pytest.ini_options]
