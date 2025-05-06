@@ -25,10 +25,7 @@ repos:
     hooks:
       - id: pyroma
         name: Check packaging
-        # TODO: Set min to 10 when pyroma adds support for PEP 639
-        # https://github.com/regebro/pyroma/issues/93
-        # https://peps.python.org/pep-0639/
-        args: [--min=9, .]
+        args: [--min=10, .]
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.19.1
