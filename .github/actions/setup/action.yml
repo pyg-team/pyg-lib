@@ -20,9 +20,9 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Free Disk Space (Ubuntu)
+    - name: Free up disk space
       if: ${{ runner.os == 'Linux' }}
-      uses: jlumbroso/free-disk-space@main
+      uses: jlumbroso/free-disk-space@v1.3.1
       with:
         android: true
         dotnet: true
