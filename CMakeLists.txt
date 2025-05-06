@@ -59,10 +59,7 @@ if (USE_PYTHON)
 endif()
 
 if(WITH_CUDA)
-  enable_language(CUDA)
-  add_definitions(-DWITH_CUDA)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
-
+  set(CUDACXX, "/usr/local/cuda/bin/nvcc")
   if (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.8)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;75;80;86;90")
   elseif (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.3)
@@ -70,6 +67,10 @@ if(WITH_CUDA)
   else()
     set(CMAKE_CUDA_ARCHITECTURES "60;70;75")
   endif()
+
+  enable_language(CUDA)
+  add_definitions(-DWITH_CUDA)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})
