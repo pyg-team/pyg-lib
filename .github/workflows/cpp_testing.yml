@@ -26,7 +26,7 @@ jobs:
           cd build
 
           # TODO: Support building with MKL and CXX11 ABI
-          if [ `python -c 'import torch;print(torch.compiled_with_cxx11_abi())'` = "True" ]; then
+          if [ `python -c 'import torch;print(torch.compiled_with_cxx11_abi())'` = "False" ]; then
             export MKL_VERSION=`python ../tools/print_mkl_version.py`
             pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
 
