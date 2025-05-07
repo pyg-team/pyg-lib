@@ -22,17 +22,23 @@ jobs:
 
       - name: Configure MKL
         run: |
-          export MKL_VERSION=`python tools/print_mkl_version.py`
-          pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
-
-          export _BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'`
-          export MKL_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib{os.sep}cmake{os.sep}mkl")'`
-
           mkdir build
           cd build
 
-          Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=ON -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
-          unset _BLAS_INCLUDE_DIR
+          # TODO: Support building with MKL and CXX11 ABI
+          if [ `python -c 'import torch;print(torch.compiled_with_cxx11_abi())'` = "False" ]; then
+            export MKL_VERSION=`python ../tools/print_mkl_version.py`
+            pip install --no-cache-dir mkl-include==${MKL_VERSION} mkl-static==${MKL_VERSION}
+
+            export _BLAS_INCLUDE_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}include")'`
+            export MKL_DIR=`python -c 'import os;import sysconfig;data=sysconfig.get_path("data");print(f"{data}{os.sep}lib{os.sep}cmake{os.sep}mkl")'`
+
+            Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG -DUSE_MKL_BLAS=ON -DBLAS_INCLUDE_DIR=$_BLAS_INCLUDE_DIR -DMKL_DIR=${MKL_DIR}
+            unset _BLAS_INCLUDE_DIR
+          else
+            Torch_DIR=`python -c 'import torch;print(torch.utils.cmake_prefix_path)'` cmake .. -GNinja -DBUILD_TEST=ON -DWITH_COV=ON -DCMAKE_BUILD_TYPE=DEBUG
+          fi
+
           cd ..
 
       - name: Build
