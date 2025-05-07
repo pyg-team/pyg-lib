@@ -82,7 +82,7 @@ The following combinations are supported:
 | **Windows**  | ✅    | ✅      |         |         |         |         |
 | **macOS**    | ✅    |         |         |         |         |         |
 
-### Form nightly
+### From nightly
 
 Nightly wheels are provided for Linux from Python 3.9 till 3.12:
 
