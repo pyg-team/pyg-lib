@@ -1,4 +1,5 @@
 #!/bin/bash
+set -ex
 
 case ${1} in
   cu128)
