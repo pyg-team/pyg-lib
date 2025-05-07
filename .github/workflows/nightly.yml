@@ -86,10 +86,6 @@ jobs:
           - torch-version: 2.7.0
             cuda-version: 'cu117'
           - torch-version: 2.7.0
-            cuda-version: 'cu117'
-          - torch-version: 2.7.0
-            cuda-version: 'cu117'
-          - torch-version: 2.7.0
             cuda-version: 'cu121'
           - torch-version: 2.7.0
             cuda-version: 'cu124'
