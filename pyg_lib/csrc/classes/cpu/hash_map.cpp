@@ -1,4 +1,5 @@
 #include <ATen/ATen.h>
+#include <ATen/Dispatch.h>
 #include <ATen/Parallel.h>
 #include <parallel_hashmap/phmap.h>
 #include <torch/library.h>

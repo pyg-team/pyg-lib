@@ -1,6 +1,10 @@
 #!/bin/bash
 
 case ${1} in
+  cu128)
+    export FORCE_CUDA=1
+    export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v12.8/bin:${PATH}
+    ;;
   cu126)
     export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v12.6/bin:${PATH}
     export TORCH_CUDA_ARCH_LIST="6.0+PTX;7.0;7.5;8.0;8.6;9.0"

@@ -1,6 +1,11 @@
 #!/bin/bash
 
 case ${1} in
+  cu128)
+    CUDA=12.8
+    CUDA_PATCH=${CUDA}.0
+    CUDA_ID=${CUDA_PATCH}-570.86.10
+    ;;
   cu126)
     CUDA=12.6
     CUDA_PATCH=${CUDA}.0

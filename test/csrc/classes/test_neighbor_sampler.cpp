@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <gtest/gtest.h>
 
-#include "pyg_lib/csrc/classes/cpu/neighbor_sampler.cpp"
+#include "pyg_lib/csrc/classes/cpu/neighbor_sampler.h"
 #include "pyg_lib/csrc/utils/types.h"
 
 TEST(NeighborSamplerTest, BasicAssertions) {

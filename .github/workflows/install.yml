@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        cuda-version: ['cpu', 'cu126']
+        cuda-version: ['cpu', 'cu128']
 
     steps:
       - name: Checkout repository
@@ -27,7 +27,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup packages
+      - name: Install dependencies
         uses: ./.github/actions/setup
         with:
           cuda-version: ${{ matrix.cuda-version }}
@@ -35,6 +35,7 @@ jobs:
       - name: Install package
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
+          echo $TORCH_CUDA_ARCH_LIST
           pip install --no-build-isolation --verbose -e .
         shell: bash
 
