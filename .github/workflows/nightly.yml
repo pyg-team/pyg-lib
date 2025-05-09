@@ -1,9 +1,14 @@
 name: Nightly Wheels
 
+# on:  # yamllint disable-line rule:truthy
+#   workflow_dispatch:
+#   schedule:
+#     - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
 on:  # yamllint disable-line rule:truthy
-  workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
 
@@ -14,12 +19,14 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-2019]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        # TODO: Uncomment this once we split the workflow to avoid GitHub Actions' 256 matrix configuration limit.
+        # os: [ubuntu-latest, ubuntu-latest-arm, macos-latest, windows-latest]
+        # python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         # torch-version: [1.13.0, 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0, 2.5.0, 2.6.0, 2.7.0]
-        torch-version: [1.13.0, 2.3.0, 2.4.0, 2.5.0, 2.6.0, 2.7.0]
-        cuda-version: ['cpu', 'cu117', 'cu118', 'cu121', 'cu124', 'cu126', 'cu128']
+        # cuda-version: ['cpu', 'cu117', 'cu118', 'cu121', 'cu124', 'cu126', 'cu128']
+        os: [ubuntu-latest]
+        python-version: ['3.9']
+        torch-version: [2.7.0]
+        cuda-version: ['cpu', 'cu128']
         exclude:
           - torch-version: 1.13.0
             python-version: '3.13'
@@ -129,12 +136,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        uses: ./.github/actions/setup
-        with:
-          python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
+      - name: Free up disk space
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet
+        shell: bash
 
       - name: Set version on non-macOS
         if: ${{ runner.os != 'macOS' }}
@@ -161,54 +167,66 @@ jobs:
 
       - name: Build wheel
         run: |
+          pip install cibuildwheel
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          echo $TORCH_CUDA_ARCH_LIST
-          pip install build
-          python -m build --wheel --no-isolation --outdir dist
+          cibuildwheel --output-dir dist
         shell: bash
-
-      - name: Test wheel
-        run: |
-          cd dist
-          ls -lah
-          pip install *.whl
-          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
-          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          cd ..
-        shell: bash
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-1
-
-      - name: Upload wheel
-        run: |
-          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
-
-  boto3:
-    if: ${{ always() }}
-    needs: [wheel]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          pip install boto3
-
-      - name: Upload index
-        run: |
-          python ./.github/workflows/aws/upload_nightly_index.py
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          CIBW_BUILD: "cp39-*"
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+          CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
+          CIBW_BEFORE_ALL: >
+            bash ./.github/workflows/cuda/${{ runner.os }}.sh ${{ matrix.cuda-version }}
+          CIBW_BEFORE_BUILD: >
+            pip install ninja &&
+            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+          CIBW_REPAIR_WHEEL_COMMAND: ''
+          CIBW_BEFORE_TEST: >
+            pip install torch==${{ matrix.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+          CIBW_TEST_COMMAND: >
+            python -c "import torch; print('torch:', torch.__version__)" &&
+            python -c "import torch; print('CUDA:', torch.version.cuda)" &&
+            python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)" &&
+            python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
+
+      - name: Check wheels
+        working-directory: ./dist
+        run: |
+          ls -lah
+        shell: bash
+
+      # - name: Configure AWS
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: us-west-1
+
+      # - name: Upload wheel
+      #   run: |
+      #     aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+  # boto3:
+  #   if: ${{ always() }}
+  #   needs: [wheel]
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: 3.9
+
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install boto3
+
+  #     - name: Upload index
+  #       run: |
+  #         python ./.github/workflows/aws/upload_nightly_index.py
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -13,7 +13,7 @@ option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
-  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
   execute_process(
       COMMAND ${Python3_EXECUTABLE} "-c"
               "import torch; print(torch.compiled_with_cxx11_abi(),end='');"
@@ -55,7 +55,7 @@ if (USE_PYTHON)
   set(Python3_FIND_VIRTUALENV "FIRST")
 
   add_definitions(-DUSE_PYTHON)
-  find_package(Python3 REQUIRED COMPONENTS Development)
+  find_package(Python3 REQUIRED COMPONENTS Development.Module)
 endif()
 
 if(WITH_CUDA)
@@ -133,7 +133,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if (USE_PYTHON)
-  target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Module)
 endif()
 
 if(WITH_CUDA)
