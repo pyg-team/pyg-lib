@@ -19,7 +19,7 @@ jobs:
 
       - name: Update index
         run: |
-          python .github/workflows/aws/generate_package_index.py
+          python .github/workflows/aws/generate_package_index.py --index-type root
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
