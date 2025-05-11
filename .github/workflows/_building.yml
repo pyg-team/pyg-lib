@@ -6,6 +6,10 @@ on:  # yamllint disable-line rule:truthy
       - aki/manylinux0
   pull_request:
 
+concurrency:
+  group: aki_sunday
+  cancel-in-progress: true
+
 jobs:
   wheel:
     runs-on: ubuntu-latest
