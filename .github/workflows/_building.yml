@@ -87,7 +87,11 @@ jobs:
           # Show wheels:
           auditwheel show dist/*.whl
         env:
-          CIBW_ENVIRONMENT: "FORCE_CUDA=1 CUDA_HOME=/usr/local/cuda TORCH_CUDA_ARCH_LIST=${{ env.TORCH_CUDA_ARCH_LIST }}"
+          CIBW_ENVIRONMENT: >
+            FORCE_NINJA=1
+            FORCE_CUDA=1
+            CUDA_HOME=/usr/local/cuda
+            TORCH_CUDA_ARCH_LIST='${{ env.TORCH_CUDA_ARCH_LIST }}'
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BUILD: "cp311-manylinux_x86_64"  # TODO: Unpin Python version.
           CIBW_BEFORE_BUILD: >
