@@ -31,6 +31,11 @@ jobs:
           - {torch-version: 2.5.0, cuda-version: cu124}
           - {torch-version: 2.5.0, cuda-version: cu121}
           - {torch-version: 2.5.0, cuda-version: cu118}
+          - {torch-version: 2.4.0, cuda-version: cu124}
+          - {torch-version: 2.4.0, cuda-version: cu121}
+          - {torch-version: 2.4.0, cuda-version: cu118}
+          - {torch-version: 2.3.0, cuda-version: cu121}
+          - {torch-version: 2.3.0, cuda-version: cu118}
 
     steps:
       - name: Checkout repository
