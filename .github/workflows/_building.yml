@@ -13,11 +13,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {torch-version: 2.7.0, cuda-version: cu128, python-version: 3.13}
-          - {torch-version: 2.7.0, cuda-version: cu128, python-version: 3.12}
-          - {torch-version: 2.7.0, cuda-version: cu128, python-version: 3.11}
-          - {torch-version: 2.7.0, cuda-version: cu128, python-version: 3.10}
-          - {torch-version: 2.7.0, cuda-version: cu128, python-version: 3.9}
+          - {torch-version: 2.7.0, cuda-version: cu128, python-version: '3.13'}
+          - {torch-version: 2.7.0, cuda-version: cu128, python-version: '3.12'}
+          - {torch-version: 2.7.0, cuda-version: cu128, python-version: '3.11'}
+          - {torch-version: 2.7.0, cuda-version: cu128, python-version: '3.10'}
+          - {torch-version: 2.7.0, cuda-version: cu128, python-version: '3.9'}
 
     steps:
       - name: Checkout repository
