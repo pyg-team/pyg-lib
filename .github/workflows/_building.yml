@@ -98,6 +98,16 @@ jobs:
             pip install --progress-bar off ninja
             && pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/manylinux:${{ matrix.cuda-version }}
+          CIBW_REPAIR_WHEEL_COMMAND: >
+            auditwheel repair -w {dest_dir} {wheel} --plat manylinux_2_28_x86_64
+            --exclude libcudart.so*
+            --exclude libcublasLt.so*
+            --exclude libcublas.so*
+            --exclude libcublas_api.so*
+            --exclude libcudnn.so*
+            --exclude libcusparse.so*
+            --exclude libcufft.so*
+            --exclude libcupti.so*
 
       - name: Configure AWS
         if: false
