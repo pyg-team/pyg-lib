@@ -10,6 +10,7 @@ RUN bash /tmp/install_cuda.sh ${CUDA_VERSION}
 
 # Final stage
 FROM quay.io/pypa/manylinux_2_28_x86_64:2025.05.10-2
+ARG CUDA_VERSION=12.8
 
 # Copy CUDA and Python installations from builder
 COPY --from=builder /usr/local/cuda-${CUDA_VERSION} /usr/local/cuda-${CUDA_VERSION}
