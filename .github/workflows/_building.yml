@@ -92,11 +92,10 @@ jobs:
             FORCE_CUDA=1
             CUDA_HOME=/usr/local/cuda
             TORCH_CUDA_ARCH_LIST='${{ env.TORCH_CUDA_ARCH_LIST }}'
-            PATH=/opt/rh/gcc-toolset-11/root/usr/bin:${PATH}
-            LD_LIBRARY_PATH=/opt/rh/gcc-toolset-11/root/usr/lib64:/opt/rh/gcc-toolset-11/root/usr/lib:${LD_LIBRARY_PATH}
-            CC=/opt/rh/gcc-toolset-11/root/usr/bin/gcc
-            CXX=/opt/rh/gcc-toolset-11/root/usr/bin/g++
-            CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            # PATH=/opt/rh/gcc-toolset-11/root/usr/bin:$PATH
+            # LD_LIBRARY_PATH=/opt/rh/gcc-toolset-11/root/usr/lib64:/opt/rh/gcc-toolset-11/root/usr/lib:$LD_LIBRARY_PATH
+            # CC=/opt/rh/gcc-toolset-11/root/usr/bin/gcc
+            # CXX=/opt/rh/gcc-toolset-11/root/usr/bin/g++
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BUILD: "cp311-manylinux_x86_64"  # TODO: Unpin Python version.
           CIBW_BEFORE_BUILD: >
