@@ -22,7 +22,7 @@ FROM quay.io/pypa/manylinux_2_28_x86_64
 COPY --from=builder /usr/local/cuda-12.8 /usr/local/cuda-12.8
 COPY --from=builder /opt/python/cp311-cp311 /opt/python/cp311-cp311
 
-RUN dnf install -y python3.11-devel python3.11-libs
+RUN dnf install -y python3.11-devel
 
 # Set environment variables
 ENV PATH=/usr/local/cuda-12.8/bin:${PATH}
