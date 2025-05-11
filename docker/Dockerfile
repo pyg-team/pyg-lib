@@ -10,17 +10,29 @@ COPY install_cuda.sh /tmp/
 RUN bash /tmp/install_cuda.sh ${CUDA_VERSION}
 
 # Install Python build dependencies
+RUN /opt/python/cp313-cp313/bin/python -m pip install --progress-bar off -q setuptools ninja wheel build
+RUN /opt/python/cp312-cp312/bin/python -m pip install --progress-bar off -q setuptools ninja wheel build
 RUN /opt/python/cp311-cp311/bin/python -m pip install --progress-bar off -q setuptools ninja wheel build
+RUN /opt/python/cp310-cp310/bin/python -m pip install --progress-bar off -q setuptools ninja wheel build
+RUN /opt/python/cp39-cp39/bin/python -m pip install --progress-bar off -q setuptools ninja wheel build
 
 # Install PyTorch
+RUN /opt/python/cp313-cp313/bin/python -m pip install --progress-bar off torch==$TORCH_VERSION --index-url https://download.pytorch.org/whl/$CUDA_VERSION
+RUN /opt/python/cp312-cp312/bin/python -m pip install --progress-bar off torch==$TORCH_VERSION --index-url https://download.pytorch.org/whl/$CUDA_VERSION
 RUN /opt/python/cp311-cp311/bin/python -m pip install --progress-bar off torch==$TORCH_VERSION --index-url https://download.pytorch.org/whl/$CUDA_VERSION
+RUN /opt/python/cp310-cp310/bin/python -m pip install --progress-bar off torch==$TORCH_VERSION --index-url https://download.pytorch.org/whl/$CUDA_VERSION
+RUN /opt/python/cp39-cp39/bin/python -m pip install --progress-bar off torch==$TORCH_VERSION --index-url https://download.pytorch.org/whl/$CUDA_VERSION
 
 # Final stage
-FROM quay.io/pypa/manylinux_2_28_x86_64
+FROM quay.io/pypa/manylinux_2_28_x86_64:2025.05.10-2
 
 # Copy CUDA and Python installations from builder
 COPY --from=builder /usr/local/cuda-12.8 /usr/local/cuda-12.8
+COPY --from=builder /opt/python/cp313-cp313 /opt/python/cp313-cp313
+COPY --from=builder /opt/python/cp312-cp312 /opt/python/cp312-cp312
 COPY --from=builder /opt/python/cp311-cp311 /opt/python/cp311-cp311
+COPY --from=builder /opt/python/cp310-cp310 /opt/python/cp310-cp310
+COPY --from=builder /opt/python/cp39-cp39 /opt/python/cp39-cp39
 
 RUN dnf install -y python3.11-devel
 
