@@ -64,9 +64,6 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
-            # '-DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/gcc',
-            # '-DCMAKE_CXX_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++',
-            # '-DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++',  # noqa: E501
         ]
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
