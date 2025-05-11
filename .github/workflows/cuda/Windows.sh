@@ -26,26 +26,6 @@ case ${1} in
     CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers
     CUDA_FILE=cuda_${CUDA_SHORT}.0_522.06_windows.exe
     ;;
-  cu117)
-    CUDA_SHORT=11.7
-    CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.1/local_installers
-    CUDA_FILE=cuda_${CUDA_SHORT}.1_516.94_windows.exe
-    ;;
-  cu116)
-    CUDA_SHORT=11.3
-    CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers
-    CUDA_FILE=cuda_${CUDA_SHORT}.0_465.89_win10.exe
-    ;;
-  cu115)
-    CUDA_SHORT=11.3
-    CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers
-    CUDA_FILE=cuda_${CUDA_SHORT}.0_465.89_win10.exe
-    ;;
-  cu113)
-    CUDA_SHORT=11.3
-    CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers
-    CUDA_FILE=cuda_${CUDA_SHORT}.0_465.89_win10.exe
-    ;;
   *)
     echo "Unrecognized CUDA_VERSION=${1}"
     exit 1
