@@ -10,6 +10,10 @@ concurrency:
   group: aki_sunday
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   wheel:
     runs-on: ubuntu-latest
@@ -57,7 +61,7 @@ jobs:
         with:
           python-version: 3.13
 
-      - name: Build wheels
+      - name: Prepare for build
         run: |
           # Install dependencies:
           pip install --progress-bar off cibuildwheel auditwheel
@@ -70,20 +74,26 @@ jobs:
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" setup.py
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
 
+          # Set torch cuda arch list:
+          TORCH_CUDA_ARCH_LIST=`python -c "import torch; print(torch.cuda.get_arch_list())"`
+          echo "TORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST" >> $GITHUB_ENV
+          echo $TORCH_CUDA_ARCH_LIST
+          echo ${{ env.TORCH_CUDA_ARCH_LIST }}
+
+      - name: Build wheels
+        run: |
           # Build wheels:
           python -m cibuildwheel --output-dir dist
-
           # Show wheels:
           auditwheel show dist/*.whl
         env:
-          CIBW_ENVIRONMENT: "FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST=9.0 CUDA_HOME=/usr/local/cuda"
+          CIBW_ENVIRONMENT: "FORCE_CUDA=1 CUDA_HOME=/usr/local/cuda TORCH_CUDA_ARCH_LIST=${{ env.TORCH_CUDA_ARCH_LIST }}"
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BUILD: "cp311-manylinux_x86_64"  # TODO: Unpin Python version.
           CIBW_BEFORE_BUILD: >
             pip install --progress-bar off ninja
             && pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/manylinux:${{ matrix.cuda-version }}
-        shell: bash
 
       - name: Configure AWS
         if: false
