@@ -103,7 +103,7 @@ jobs:
             pip install --progress-bar off ninja &&
             pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/manylinux:${{ matrix.cuda-version }}
-          CIBW_REPAIR_WHEEL_COMMAND: bash ./tools/repair_wheel.sh ${TORCH_VERSION} {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND: bash ./tools/repair_wheel.sh ${{ matrix.torch-version }} {dest_dir} {wheel}
       - name: Configure AWS
         if: false
         uses: aws-actions/configure-aws-credentials@v4
