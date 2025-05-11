@@ -100,20 +100,10 @@ jobs:
           CIBW_BUILD_FRONTEND: "build; args: --no-isolation"
           CIBW_BUILD: "cp311-manylinux_x86_64"  # TODO: Unpin Python version.
           CIBW_BEFORE_BUILD: >
-            pip install --progress-bar off ninja
-            && pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
+            pip install --progress-bar off ninja &&
+            pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/manylinux:${{ matrix.cuda-version }}
-          CIBW_REPAIR_WHEEL_COMMAND: >
-            auditwheel repair -w {dest_dir} {wheel} --plat manylinux_2_28_x86_64
-            --exclude libcudart.so*
-            --exclude libcublasLt.so*
-            --exclude libcublas.so*
-            --exclude libcublas_api.so*
-            --exclude libcudnn.so*
-            --exclude libcusparse.so*
-            --exclude libcufft.so*
-            --exclude libcupti.so*
-
+          CIBW_REPAIR_WHEEL_COMMAND: bash ./tools/repair_wheel.sh ${TORCH_VERSION} {dest_dir} {wheel}
       - name: Configure AWS
         if: false
         uses: aws-actions/configure-aws-credentials@v4
