@@ -75,7 +75,7 @@ jobs:
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
 
           # Set torch cuda arch list:
-          source .github/workflows/cuda/Linux-env.sh
+          source .github/workflows/cuda/Linux-env.sh ${{ matrix.cuda-version }}
           echo "TORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST" >> $GITHUB_ENV
           echo $TORCH_CUDA_ARCH_LIST
           echo ${{ env.TORCH_CUDA_ARCH_LIST }}
