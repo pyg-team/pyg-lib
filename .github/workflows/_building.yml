@@ -1,10 +1,9 @@
 name: Build Wheels for Linux
 
 on:  # yamllint disable-line rule:truthy
-  push:
-    branches:
-      - aki/manylinux0
-  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
 
 concurrency:
   group: aki_sunday
@@ -75,9 +74,10 @@ jobs:
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
           CUDA_VERSION=`echo ${{ matrix.cuda-version }}`
-          echo "New version name: $VERSION+$TORCH_VERSION$CUDA_VERSION"
-          sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" setup.py
-          sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
+          TODAY=`date +'%Y%m%d'`
+          echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION"
+          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" setup.py
+          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
 
           # Set torch cuda arch list:
           source .github/workflows/cuda/Linux-env.sh ${{ matrix.cuda-version }}
@@ -91,6 +91,7 @@ jobs:
           python -m cibuildwheel --output-dir dist
           # Show wheels:
           auditwheel show dist/*.whl
+          ls -ahl dist/
         env:
           CIBW_ENVIRONMENT: >
             FORCE_NINJA=1
@@ -104,8 +105,8 @@ jobs:
             pip install --progress-bar off torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/${{ matrix.cuda-version }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/manylinux:${{ matrix.cuda-version }}
           CIBW_REPAIR_WHEEL_COMMAND: bash ./tools/repair_wheel.sh ${{ matrix.torch-version }} {dest_dir} {wheel}
+
       - name: Configure AWS
-        if: false
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -113,6 +114,30 @@ jobs:
           aws-region: us-west-1
 
       - name: Upload wheel
-        if: false
         run: |
-          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+
+  boto3:
+    if: ${{ always() }}
+    needs: [wheel]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: pip install boto3
+
+      - name: Upload index
+        run: |
+          python ./.github/workflows/aws/upload_nightly_index.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
