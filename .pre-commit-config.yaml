@@ -60,7 +60,7 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.8
+    rev: v0.11.9
     hooks:
       - id: ruff
         name: Ruff formatting
@@ -73,7 +73,7 @@ repos:
         name: Check PEP8
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v20.1.3
+    rev: v20.1.4
     hooks:
       - id: clang-format
         name: Format C++ code
