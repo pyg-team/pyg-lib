@@ -8,7 +8,6 @@
 
 // If we are in a Windows environment, we need to define
 // initialization functions for the _custom_ops extension.
-// For PyMODINIT_FUNC to work, we need to include Python.h
 #ifdef _WIN32
 void* PyInit__C(void) {
   return NULL;
