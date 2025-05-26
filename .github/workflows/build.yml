@@ -27,7 +27,7 @@ jobs:
           if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             filename=".github/matrix_minimal.json"
           else
-            filename=".github/matrix.json"
+            filename=".github/matrix_full.json"
           fi
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
