@@ -1,0 +1,35 @@
+name: Build wheels
+
+on:
+  push:
+    branches:
+      - aki/testbuild
+  workflow_dispatch:
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read and flatten matrix.json
+        id: set-matrix
+        run: |
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' .github/matrix.json)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix=$matrix"
+
+  build-wheel:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Print matrix
+        run: |
+          echo "Torch: ${{ matrix.torch-version }}"
+          echo "Python: ${{ matrix.python-version }}"
+          echo "CUDA: ${{ matrix.cuda-version }}"
