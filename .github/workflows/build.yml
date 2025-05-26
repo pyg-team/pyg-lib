@@ -26,7 +26,8 @@ jobs:
     needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
     steps:
       - name: Print matrix
         run: |
