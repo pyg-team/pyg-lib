@@ -78,6 +78,7 @@ repos:
       - id: clang-format
         name: Format C++ code
         args: [--style=file]
+        exclude: '\.json$'
 
   - repo: https://github.com/sphinx-contrib/sphinx-lint
     rev: v1.0.0

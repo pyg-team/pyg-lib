@@ -1,10 +1,16 @@
 name: Build wheels
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
     branches:
       - aki/testbuild
+  pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ startsWith(github.ref, 'refs/pull/') || github.run_number }}
+  # Only cancel intermediate builds if on a PR:
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
   generate-matrix:
@@ -18,7 +24,12 @@ jobs:
       - name: Read and flatten matrix.json
         id: set-matrix
         run: |
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' .github/matrix.json)
+          if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            filename=".github/matrix_minimal.json"
+          else
+            filename=".github/matrix.json"
+          fi
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
           echo "matrix=$matrix"
 
