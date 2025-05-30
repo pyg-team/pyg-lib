@@ -24,6 +24,8 @@ runs:
       if: ${{ runner.os == 'Linux' }}
       run: |
         sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/hostedtoolcache/Android
       shell: bash
 
     - name: Set up Windows developer command prompt
