@@ -1,0 +1,61 @@
+name: Build macOS Wheels
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      test-matrix:
+        type: string
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  wheel:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.test-matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        uses: ./.github/actions/setup
+        with:
+          python-version: ${{ matrix.python-version }}
+          torch-version: ${{ matrix.torch-version }}
+          cuda-version: ${{ matrix.cuda-version }}
+
+      - name: Set version
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
+          echo "New version name: $VERSION+$TORCH_VERSION"
+          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" setup.py
+          sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" pyg_lib/__init__.py
+
+      - name: Build wheel
+        run: |
+          source ./.github/workflows/cuda/macOS-env.sh ${{ matrix.cuda-version }}
+          pip install build
+          python -m build --wheel --no-isolation --outdir dist
+
+      - name: Install wheel
+        run: |
+          cd dist
+          ls -lah
+          pip install *.whl
+          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
+          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
+          cd ..
+
+      - name: Test wheel
+        run: |
+          pip install pytest pytest-cov
+          pytest --cov --cov-report=xml

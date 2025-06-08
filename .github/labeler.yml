@@ -1,35 +1,59 @@
 installation:
-  - pyproject.toml
-  - setup.py
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - pyproject.toml
+              - setup.py
 
 ci:
-  - .github/**/*
-  - codecov.yaml
-  - .pre-commit-config.yaml
-  - .ruff.toml
-  - .style.yapf
-  - setup.cfg
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - .github/**/*
+              - codecov.yaml
+              - .pre-commit-config.yaml
+              - .ruff.toml
+              - .style.yapf
+              - setup.cfg
 
 documentation:
-  - docs/**/*
-  - readthedocs.yml
-  - README.MD
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - docs/**/*
+              - readthedocs.yml
+              - README.MD
 
 benchmark:
-  - benchmark/**/*
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - benchmark/**/*
 
 sampler:
-  - pyg_lib/csrc/random/**/*
-  - pyg_lib/csrc/sampler/**/*
-  - pyg_lib/sampler/**/*
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - pyg_lib/csrc/random/**/*
+              - pyg_lib/csrc/sampler/**/*
+              - pyg_lib/sampler/**/*
 
 ops:
-  - pyg_lib/csrc/ops/**/*
-  - pyg_lib/ops/**/*
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - pyg_lib/csrc/ops/**/*
+              - pyg_lib/ops/**/*
 
 classes:
-  - pyg_lib/csrc/classes/**/*
-  - pyg_lib/classes/**/*
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - pyg_lib/csrc/classes/**/*
+              - pyg_lib/classes/**/*
 
 utils:
-  - pyg_lib/csrc/utils/**/*
+  - any:
+      - changed-files:
+          - any-glob-to-any-file:
+              - pyg_lib/csrc/utils/**/*

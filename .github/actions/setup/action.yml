@@ -22,15 +22,11 @@ runs:
 
     - name: Free up disk space
       if: ${{ runner.os == 'Linux' }}
-      uses: jlumbroso/free-disk-space@v1.3.1
-      with:
-        android: true
-        dotnet: true
-        haskell: true
-        large-packages: true
-        docker-images: true
-        swap-storage: true
-        tool-cache: true
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/hostedtoolcache/Android
+      shell: bash
 
     - name: Set up Windows developer command prompt
       uses: ilammy/msvc-dev-cmd@v1
