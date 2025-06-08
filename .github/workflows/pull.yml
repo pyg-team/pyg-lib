@@ -8,13 +8,14 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      linux-matrix: ${{ steps.set-matrix.outputs.linux-matrix }}
+      macos-matrix: ${{ steps.set-matrix.outputs.macos-matrix }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # TODO: Filter out the matrix.json based on PR changes or labels.
-      - name: Read and flatten matrix.json
+      - name: Configure matrix
         id: set-matrix
         run: |
           if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
@@ -23,13 +24,27 @@ jobs:
             # TODO: Use full_matrix.json once workflows are ready.
             filename=".github/workflows/utils/minimal_matrix.json"
           fi
+
+          # Set Linux matrix
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
-          echo "matrix=$matrix"
+          echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "linux-matrix=$matrix"
+
+          # Set macOS matrix
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
+          echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "macos-matrix=$matrix"
 
   test-linux:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
     with:
-      test-matrix: ${{ needs.trigger.outputs.matrix }}
+      test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      test-python: true
+
+  test-mac:
+    needs: [trigger]
+    uses: ./.github/workflows/_build_mac.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
       test-python: true
