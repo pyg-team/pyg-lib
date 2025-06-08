@@ -48,7 +48,7 @@ jobs:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
 
   macos:
-    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'os:\ macos') }}
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'os: macos') }}
     needs: [trigger]
     uses: ./.github/workflows/_build_macos.yml
     with:
