@@ -35,13 +35,13 @@ jobs:
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
 
-  test-linux:
+  linux:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
 
-  test-mac:
+  macos:
     needs: [trigger]
     uses: ./.github/workflows/_build_macos.yml
     with:
