@@ -18,7 +18,8 @@ jobs:
           if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             filename=".github/workflows/utils/minimal_matrix.json"
           else
-            filename=".github/workflows/utils/full_matrix.json"
+            # TODO: Use full_matrix.json once workflows are ready.
+            filename=".github/workflows/utils/minimal_matrix.json"
           fi
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
