@@ -1,4 +1,4 @@
-name: Build Linux Wheels
+name: Build Windows Wheels
 
 on:  # yamllint disable-line rule:truthy
   workflow_call:
