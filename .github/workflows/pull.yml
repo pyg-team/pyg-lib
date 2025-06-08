@@ -27,7 +27,7 @@ jobs:
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
           echo "matrix=$matrix"
 
-  linux:
+  test-linux:
     needs: [trigger]
     runs-on: ubuntu-latest
     strategy:
