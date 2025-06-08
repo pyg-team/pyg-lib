@@ -68,7 +68,7 @@ jobs:
     if: always()
     steps:
       - name: Check build status
-        if: ${{ needs.linux.result != 'success' || needs.macos.result != 'success' || needs.windows.result != 'success' }}
+        if: ${{ needs.linux.result == 'failure' || needs.macos.result == 'failure' || needs.windows.result == 'failure' }}
         run: |
           echo "One or more builds failed:"
           echo "Linux: ${{ needs.linux.result }}"
