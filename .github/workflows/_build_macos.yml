@@ -6,13 +6,6 @@ on:  # yamllint disable-line rule:truthy
       test-matrix:
         type: string
         required: true
-      test-python:
-        type: boolean
-        required: true
-      # TODO: Run C++ tests
-      # test-cpp:
-      #   type: boolean
-      #   required: true
 
 defaults:
   run:
@@ -63,7 +56,6 @@ jobs:
           cd ..
 
       - name: Test wheel
-        if: ${{ inputs.test-python }}
         run: |
           pip install pytest pytest-cov
           pytest --cov --cov-report=xml
