@@ -39,6 +39,8 @@ jobs:
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
 
+          echo "${{ toJSON(github.event.pull_request.labels) }}"
+
   linux:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
