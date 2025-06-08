@@ -14,12 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       linux-matrix: ${{ steps.set-matrix.outputs.linux-matrix }}
+      linux-trigger: ${{ steps.set-matrix.outputs.linux-trigger }}
       macos-matrix: ${{ steps.set-matrix.outputs.macos-matrix }}
+      macos-trigger: ${{ steps.set-matrix.outputs.macos-trigger }}
+      windows-matrix: ${{ steps.set-matrix.outputs.windows-matrix }}
+      windows-trigger: ${{ steps.set-matrix.outputs.windows-trigger }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # TODO: Filter out the matrix.json based on PR changes or labels.
       - name: Configure matrix
         id: set-matrix
         run: |
@@ -34,20 +37,57 @@ jobs:
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
+          trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
+          echo "linux-trigger=$trigger" >> $GITHUB_OUTPUT
+          echo "linux-trigger=$trigger"
 
           # Set macOS matrix
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
+          trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
+          echo "macos-trigger=$trigger" >> $GITHUB_OUTPUT
+          echo "macos-trigger=$trigger"
+
+          # Set Windows matrix
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "windows-matrix=$matrix"
+          trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}
+          echo "windows-trigger=$trigger" >> $GITHUB_OUTPUT
+          echo "windows-trigger=$trigger"
 
   linux:
     needs: [trigger]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.linux-trigger == 'true' }}
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
 
   macos:
     needs: [trigger]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.macos-trigger == 'true' }}
     uses: ./.github/workflows/_build_macos.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
+
+  windows:
+    needs: [trigger]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.windows-trigger == 'true' }}
+    uses: ./.github/workflows/_build_windows.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
+
+  status:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Fail if any build failed or cancelled
+        if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
+        run: |
+          echo "One or more builds failed or cancelled:"
+          echo "Linux: ${{ needs.linux.result }}"
+          echo "macOS: ${{ needs.macos.result }}"
+          echo "Windows: ${{ needs.windows.result }}"
+          exit 1
