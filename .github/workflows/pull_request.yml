@@ -1,9 +1,6 @@
 name: Trigger on Pull Requests
 
 on:  # yamllint disable-line rule:truthy
-  push:
-    branches:
-      - aki/refactor-workflows
   pull_request:
   workflow_dispatch:
 
