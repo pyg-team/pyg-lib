@@ -60,11 +60,6 @@ jobs:
           echo "windows-trigger=$trigger"
           echo "::endgroup::"
 
-          echo "${{ toJSON(github.event.pull_request.labels) }}"
-          echo "${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}"
-          echo "${{ contains(github.event.pull_request.labels.*.name, 'os\: windows') }}"
-          echo "${{ contains(github.event.pull_request.labels.*.name, 'os\:\ windows') }}"
-
   linux:
     needs: [trigger]
     if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.linux-trigger }}
