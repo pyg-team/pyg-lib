@@ -31,4 +31,4 @@ jobs:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
     with:
-      test-matrix: ${{ fromJSON(needs.trigger.outputs.matrix) }}
+      test-matrix: ${{ needs.trigger.outputs.matrix }}
