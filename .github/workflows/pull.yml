@@ -33,32 +33,29 @@ jobs:
             filename=".github/workflows/utils/minimal_matrix.json"
           fi
 
-          echo "::group::Set Linux matrix"
+          # Set Linux matrix
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
           echo "linux-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "linux-trigger=$trigger"
-          echo "::endgroup::"
 
-          echo "::group::Set macOS matrix"
+          # Set macOS matrix
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
           echo "macos-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "macos-trigger=$trigger"
-          echo "::endgroup::"
 
-          echo "::group::Set Windows matrix"
+          # Set Windows matrix
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}
           echo "windows-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "windows-trigger=$trigger"
-          echo "::endgroup::"
 
   linux:
     needs: [trigger]
