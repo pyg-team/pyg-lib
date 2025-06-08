@@ -3,6 +3,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+        exclude: '\.json$'
       - id: trailing-whitespace
       - id: mixed-line-ending
         args: [--fix, lf]
@@ -78,6 +79,7 @@ repos:
       - id: clang-format
         name: Format C++ code
         args: [--style=file]
+        exclude: '\.json$'
 
   - repo: https://github.com/sphinx-contrib/sphinx-lint
     rev: v1.0.0
