@@ -51,3 +51,10 @@ jobs:
     uses: ./.github/workflows/_build_macos.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
+
+  windows:
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'os:\ windows') }}
+    needs: [trigger]
+    uses: ./.github/workflows/_build_windows.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.linux-matrix }}  # same as linux
