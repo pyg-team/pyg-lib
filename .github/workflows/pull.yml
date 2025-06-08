@@ -44,7 +44,7 @@ jobs:
 
   test-mac:
     needs: [trigger]
-    uses: ./.github/workflows/_build_mac.yml
+    uses: ./.github/workflows/_build_macos.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
       test-python: true
