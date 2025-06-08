@@ -9,6 +9,10 @@ on:  # yamllint disable-line rule:truthy
       test-python:
         type: boolean
         required: true
+      # TODO: Run C++ tests
+      # test-cpp:
+      #   type: boolean
+      #   required: true
 
 defaults:
   run:
