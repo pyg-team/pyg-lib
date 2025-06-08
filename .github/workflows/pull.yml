@@ -61,3 +61,17 @@ jobs:
     uses: ./.github/workflows/_build_windows.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}  # same as linux
+
+  status:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check build status
+        if: ${{ needs.linux.result != 'success' || needs.macos.result != 'success' || needs.windows.result != 'success' }}
+        run: |
+          echo "One or more builds failed:"
+          echo "Linux: ${{ needs.linux.result }}"
+          echo "macOS: ${{ needs.macos.result }}"
+          echo "Windows: ${{ needs.windows.result }}"
+          exit 1
