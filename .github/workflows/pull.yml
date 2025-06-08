@@ -19,7 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # TODO: Filter out the matrix.json based on PR changes or labels.
       - name: Configure matrix
         id: set-matrix
         run: |
@@ -47,6 +46,7 @@ jobs:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
 
   macos:
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'os:\ macos') }}
     needs: [trigger]
     uses: ./.github/workflows/_build_macos.yml
     with:
