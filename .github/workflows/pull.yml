@@ -1,0 +1,41 @@
+name: pull
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # TODO: Filter out the matrix.json based on PR changes or labels.
+      - name: Read and flatten matrix.json
+        id: set-matrix
+        run: |
+          if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            filename=".github/workflows/utils/minimal_matrix.json"
+          else
+            # TODO: Use full_matrix.json once workflows are ready.
+            filename=".github/workflows/utils/minimal_matrix.json"
+          fi
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix=$matrix"
+
+  test-linux:
+    needs: [trigger]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.trigger.outputs.matrix) }}
+    steps:
+      - name: Print matrix
+        run: |
+          echo "Torch: ${{ matrix.torch-version }}"
+          echo "Python: ${{ matrix.python-version }}"
+          echo "CUDA: ${{ matrix.cuda-version }}"
