@@ -49,6 +49,7 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/Linux-env.sh ${{ matrix.cuda-version }}
+          echo $TORCH_CUDA_ARCH_LIST
           pip install build
           python -m build --wheel --no-isolation --outdir dist
 
@@ -59,6 +60,8 @@ jobs:
           pip install *.whl
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
+          python -c "import pyg_lib.ops"
+          python -c "import pyg_lib.sampler"
           cd ..
 
       - name: Test wheel
