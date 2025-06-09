@@ -14,7 +14,14 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
 export CIBW_BEFORE_BUILD="pip install --progress-bar off ninja wheel && pip install --progress-bar off torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
-export CIBW_MANYLINUX_X86_64_IMAGE=akihironitta/manylinux:${CUDA_VERSION}
+
+# If cu***, use akihironitta/manylinux:cu***
+# Otherwise, use quay.io/pypa/manylinux_2_34_x86_64
+if [[ "${CUDA_VERSION}" == "cu"* ]]; then
+  export CIBW_MANYLINUX_X86_64_IMAGE=akihironitta/manylinux:${CUDA_VERSION}
+else
+  export CIBW_MANYLINUX_X86_64_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+fi
 
 rm -rf Testing libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist

@@ -81,4 +81,4 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
