@@ -54,7 +54,7 @@ jobs:
 
   linux:
     needs: [trigger]
-    # if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.linux-trigger == 'true' }}
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.linux-trigger == 'true' }}
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
@@ -64,30 +64,30 @@ jobs:
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  # macos:
-  #   needs: [trigger]
-  #   if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.macos-trigger == 'true' }}
-  #   uses: ./.github/workflows/_build_macos.yml
-  #   with:
-  #     test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
+  macos:
+    needs: [trigger]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.macos-trigger == 'true' }}
+    uses: ./.github/workflows/_build_macos.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
 
-  # windows:
-  #   needs: [trigger]
-  #   if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.windows-trigger == 'true' }}
-  #   uses: ./.github/workflows/_build_windows.yml
-  #   with:
-  #     test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
+  windows:
+    needs: [trigger]
+    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.windows-trigger == 'true' }}
+    uses: ./.github/workflows/_build_windows.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
 
-  # status:
-  #   needs: [linux, macos, windows]
-  #   runs-on: ubuntu-latest
-  #   if: always()
-  #   steps:
-  #     - name: Fail if any build failed or cancelled
-  #       if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
-  #       run: |
-  #         echo "One or more builds failed or cancelled:"
-  #         echo "Linux: ${{ needs.linux.result }}"
-  #         echo "macOS: ${{ needs.macos.result }}"
-  #         echo "Windows: ${{ needs.windows.result }}"
-  #         exit 1
+  status:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Fail if any build failed or cancelled
+        if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
+        run: |
+          echo "One or more builds failed or cancelled:"
+          echo "Linux: ${{ needs.linux.result }}"
+          echo "macOS: ${{ needs.macos.result }}"
+          echo "Windows: ${{ needs.windows.result }}"
+          exit 1
