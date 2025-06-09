@@ -11,13 +11,10 @@ on:  # yamllint disable-line rule:truthy
         required: true
     secrets:
       docker-hub-token:
-        type: string
         required: true
       aws-access-key-id:
-        type: string
         required: true
       aws-secret-access-key:
-        type: string
         required: true
 
 defaults:
