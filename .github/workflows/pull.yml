@@ -27,14 +27,8 @@ jobs:
       - name: Configure matrix
         id: set-matrix
         run: |
-          if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            filename=".github/workflows/utils/minimal_matrix.json"
-          else
-            # TODO: Use full_matrix.json once workflows are ready.
-            filename=".github/workflows/utils/minimal_matrix.json"
-          fi
-
           # Set Linux matrix
+          filename=".github/workflows/utils/manylinux_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
@@ -43,6 +37,7 @@ jobs:
           echo "linux-trigger=$trigger"
 
           # Set macOS matrix
+          filename=".github/workflows/utils/minimal_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
@@ -51,6 +46,7 @@ jobs:
           echo "macos-trigger=$trigger"
 
           # Set Windows matrix
+          filename=".github/workflows/utils/minimal_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
