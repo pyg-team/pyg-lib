@@ -15,7 +15,7 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
 export CIBW_BEFORE_BUILD="pip install --progress-bar off ninja wheel && pip install --progress-bar off torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-export CIBW_BEFORE_TEST="pip install --progress-bar off pytest pytest-cov && pip install --progress-bar off torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
+export CIBW_BEFORE_TEST="pip install --progress-bar off pytest && pip install --progress-bar off torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
 
 # If cu***, use akihironitta/manylinux:cu***
 # Otherwise, use quay.io/pypa/manylinux_2_34_x86_64
@@ -29,3 +29,7 @@ rm -rf Testing libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist
 ls -ahl dist/
 python -m auditwheel show dist/*.whl
+
+unzip dist/*.whl -d debug/
+ldd debug/libpyg.so
+readelf -d debug/libpyg.so
