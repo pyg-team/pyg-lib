@@ -63,6 +63,10 @@ jobs:
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
+      docker-hub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   macos:
     needs: [trigger]
