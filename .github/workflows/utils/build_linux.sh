@@ -17,9 +17,8 @@ export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torc
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
 export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
 
-# If cu***, use akihironitta/manylinux:cu***
-# Otherwise, use quay.io/pypa/manylinux_2_34_x86_64
 if [[ "${CUDA_VERSION}" == "cu"* ]]; then
+  # Use CUDA-pre-installed image
   export CIBW_MANYLINUX_X86_64_IMAGE=akihironitta/manylinux:${CUDA_VERSION}
 else
   export CIBW_MANYLINUX_X86_64_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
