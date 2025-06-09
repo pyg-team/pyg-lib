@@ -32,6 +32,7 @@ jobs:
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      release-type: nightly
       docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
     secrets:
       docker-hub-token: ${{ secrets.DOCKERHUB_TOKEN }}
