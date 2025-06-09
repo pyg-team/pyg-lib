@@ -58,6 +58,7 @@ jobs:
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      push-to-s3: false
       docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
     secrets:
       docker-hub-token: ${{ secrets.DOCKERHUB_TOKEN }}
