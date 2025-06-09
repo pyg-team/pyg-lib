@@ -13,7 +13,7 @@ defaults:
 
 jobs:
   wheel:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -25,12 +25,40 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        uses: ./.github/actions/setup
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          tool-cache: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # NOTE: This is the version used for cibuildwheel but not for wheels.
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          # TODO: Unpin --pre once cibuildwheel 3.0.0 is released.
+          pip install --pre cibuildwheel auditwheel
 
       - name: Set version
         run: |
@@ -43,23 +71,4 @@ jobs:
 
       - name: Build wheel
         run: |
-          source ./.github/workflows/cuda/Linux-env.sh ${{ matrix.cuda-version }}
-          echo $TORCH_CUDA_ARCH_LIST
-          pip install build
-          python -m build --wheel --no-isolation --outdir dist
-
-      - name: Install wheel
-        run: |
-          cd dist
-          ls -lah
-          pip install *.whl
-          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
-          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          python -c "import pyg_lib.ops"
-          python -c "import pyg_lib.sampler"
-          cd ..
-
-      - name: Test wheel
-        run: |
-          pip install pytest pytest-cov
-          pytest --cov --cov-report=xml
+          bash ./.github/workflows/utils/build.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
