@@ -49,6 +49,8 @@ jobs:
           submodules: recursive
 
       - name: Free up disk space
+        # Disk space required for CPU builds is usually small enough
+        if: ${{ matrix.cuda-version != 'cpu' }}
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           android: true
