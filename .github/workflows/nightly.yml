@@ -1,0 +1,61 @@
+name: Build Nightly Wheels
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      linux-matrix: ${{ steps.set-matrix.outputs.linux-matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure matrix
+        id: set-matrix
+        run: |
+          # Set Linux matrix
+          filename=".github/workflows/utils/full_matrix.json"
+          # TODO: Build for CUDA versions.
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
+          echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "linux-matrix=$matrix"
+
+  linux:
+    needs: [trigger]
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      release-type: nightly
+      docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
+    secrets:
+      docker-hub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  index:
+    if: always()
+    needs: [linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install boto3
+
+      - name: Upload index
+        run: |
+          python ./.github/workflows/aws/upload_nightly_index.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
