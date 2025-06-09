@@ -1,14 +1,12 @@
 name: pull
 
 on:  # yamllint disable-line rule:truthy
-  push:
-    branches:
-      - aki/ci-manylinux
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ startsWith(github.ref, 'refs/pull/') || github.run_number }}  # yamllint disable-line
   # Only cancel intermediate builds if on a PR:
-  cancel-in-progress: true
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
   trigger:

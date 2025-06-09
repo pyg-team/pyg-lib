@@ -49,7 +49,8 @@ jobs:
           submodules: recursive
 
       - name: Free up disk space
-        # Disk space required for CPU builds is usually small enough
+        # Disk space required for CPU builds is usually small enough, so we
+        # save a few minutes by skipping this step.
         if: ${{ matrix.cuda-version != 'cpu' }}
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -64,7 +65,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # NOTE: This is the version used for cibuildwheel but not for wheels.
+          # NOTE: This is a version used for cibuildwheel but not for wheels.
           python-version: 3.11
 
       - name: Install dependencies
