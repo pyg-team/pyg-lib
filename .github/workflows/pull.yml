@@ -26,7 +26,7 @@ jobs:
         id: set-matrix
         run: |
           # Set Linux matrix
-          filename=".github/workflows/utils/manylinux_matrix.json"
+          filename=".github/workflows/utils/minimal_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
