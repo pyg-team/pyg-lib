@@ -84,17 +84,16 @@ jobs:
   #   with:
   #     test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
 
-  status:
-    # needs: [linux, macos, windows]
-    needs: [linux]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Fail if any build failed or cancelled
-        if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
-        run: |
-          echo "One or more builds failed or cancelled:"
-          echo "Linux: ${{ needs.linux.result }}"
-          echo "macOS: ${{ needs.macos.result }}"
-          echo "Windows: ${{ needs.windows.result }}"
-          exit 1
+  # status:
+  #   needs: [linux, macos, windows]
+  #   runs-on: ubuntu-latest
+  #   if: always()
+  #   steps:
+  #     - name: Fail if any build failed or cancelled
+  #       if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
+  #       run: |
+  #         echo "One or more builds failed or cancelled:"
+  #         echo "Linux: ${{ needs.linux.result }}"
+  #         echo "macOS: ${{ needs.macos.result }}"
+  #         echo "Windows: ${{ needs.windows.result }}"
+  #         exit 1
