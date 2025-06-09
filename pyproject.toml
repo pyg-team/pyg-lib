@@ -38,7 +38,6 @@ changelog="https://github.com/pyg-team/pyg-lib/blob/master/CHANGELOG.md"
 
 [tool.cibuildwheel]
 build-frontend = {name = "build", args = ["--no-isolation"] }
-test-extras = ["test"]
 test-command = "pytest --cov --cov-report=xml {project}/test"
 
 [tool.cibuildwheel.linux]
