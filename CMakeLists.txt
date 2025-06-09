@@ -12,7 +12,7 @@ option(WITH_COV "Enable code coverage" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
-  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
   execute_process(
       COMMAND ${Python3_EXECUTABLE} "-c"
               "import torch; print(torch.compiled_with_cxx11_abi(),end='');"
