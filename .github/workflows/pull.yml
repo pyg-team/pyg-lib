@@ -50,30 +50,34 @@ jobs:
           echo "macos-trigger=$trigger"
 
           # Set Windows matrix
+          filename=".github/workflows/utils/full_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            trigger=true
+          fi
           echo "windows-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "windows-trigger=$trigger"
 
   linux:
     needs: [trigger]
-    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.linux-trigger == 'true' }}
+    if: ${{ needs.trigger.outputs.linux-trigger == 'true' }}
     uses: ./.github/workflows/_build_linux.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
 
   macos:
     needs: [trigger]
-    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.macos-trigger == 'true' }}
+    if: ${{ needs.trigger.outputs.macos-trigger == 'true' }}
     uses: ./.github/workflows/_build_macos.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.macos-matrix }}
 
   windows:
     needs: [trigger]
-    if: ${{ github.event_name == 'pull_request' && needs.trigger.outputs.windows-trigger == 'true' }}
+    if: ${{ needs.trigger.outputs.windows-trigger == 'true' }}
     uses: ./.github/workflows/_build_windows.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
