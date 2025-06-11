@@ -50,6 +50,7 @@ jobs:
           echo "macos-trigger=$trigger"
 
           # Set Windows matrix
+          filename=".github/workflows/utils/full_matrix.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
