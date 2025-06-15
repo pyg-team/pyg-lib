@@ -40,7 +40,7 @@ jobs:
           # Set Linux matrix
           echo ::group::Set Linux matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_linux.json"
-          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
@@ -52,7 +52,7 @@ jobs:
           # Set macOS matrix
           echo ::group::Set macOS matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_macos.json"
-          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
@@ -63,7 +63,7 @@ jobs:
           # Set Windows matrix
           echo ::group::Set Windows matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_windows.json"
-          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}
