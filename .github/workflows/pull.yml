@@ -88,7 +88,7 @@ jobs:
       test-matrix: ${{ needs.trigger.outputs.windows-matrix }}
 
   status:
-    needs: [linux, macos, windows]
+    needs: [trigger, linux, macos, windows]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -96,7 +96,8 @@ jobs:
         if: ${{ contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled') }}
         run: |
           echo "One or more builds failed or cancelled:"
-          echo "Linux: ${{ needs.linux.result }}"
-          echo "macOS: ${{ needs.macos.result }}"
-          echo "Windows: ${{ needs.windows.result }}"
+          echo "trigger: ${{ needs.trigger.result }}"
+          echo "linux: ${{ needs.linux.result }}"
+          echo "macos: ${{ needs.macos.result }}"
+          echo "windows: ${{ needs.windows.result }}"
           exit 1
