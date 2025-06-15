@@ -32,7 +32,11 @@ def softmax_reference(src, ptr, dim):
     return out / out_sum
 
 
-@pytest.mark.parametrize('dim', list(range(3)))
+@pytest.mark.skipif(
+    torch.__version__.startswith('2.4.0'),
+    reason="https://github.com/pytorch/pytorch/issues/130619",
+)
+@pytest.mark.parametrize('dim', [0, 1, 2])
 def test_softmax_csr_autograd(dim):
     sizes = (16, 32, 64)
     src1 = torch.rand(sizes, requires_grad=True)
