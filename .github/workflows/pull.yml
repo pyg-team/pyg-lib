@@ -26,6 +26,7 @@ jobs:
       - name: Configure matrix
         id: set-matrix
         run: |
+          set -x
           if [ ${{ github.event_name }} = 'pull_request' ]; then
             if [ ${{ contains(github.event.pull_request.labels.*.name, 'ci: full') }} == 'true' ]; then
               matrix_type="full"
@@ -37,6 +38,7 @@ jobs:
           fi
 
           # Set Linux matrix
+          echo ::group::Set Linux matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_linux.json"
           matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
@@ -44,8 +46,11 @@ jobs:
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
           echo "linux-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "linux-trigger=$trigger"
+          echo ::endgroup::
+
 
           # Set macOS matrix
+          echo ::group::Set macOS matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_macos.json"
           matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
@@ -53,8 +58,10 @@ jobs:
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
           echo "macos-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "macos-trigger=$trigger"
+          echo ::endgroup::
 
           # Set Windows matrix
+          echo ::group::Set Windows matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_windows.json"
           matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
@@ -65,6 +72,7 @@ jobs:
           fi
           echo "windows-trigger=$trigger" >> $GITHUB_OUTPUT
           echo "windows-trigger=$trigger"
+          echo ::endgroup::
 
   linux:
     needs: [trigger]
