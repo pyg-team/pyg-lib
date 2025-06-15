@@ -26,15 +26,19 @@ jobs:
       - name: Configure matrix
         id: set-matrix
         run: |
-          if [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            filename=".github/workflows/utils/minimal_matrix.json"
+          if [ ${{ github.event_name }} = 'pull_request' ]; then
+            if [ ${{ contains(github.event.pull_request.labels.*.name, 'ci: full') }} == 'true' ]; then
+              matrix_type="full"
+            else
+              matrix_type="minimal"
+            fi
           else
-            # TODO: Use full_matrix.json once workflows are ready.
-            filename=".github/workflows/utils/minimal_matrix.json"
+            matrix_type="full"
           fi
 
           # Set Linux matrix
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          filename=".github/workflows/utils/${matrix_type}_matrix_linux.json"
+          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
@@ -42,7 +46,8 @@ jobs:
           echo "linux-trigger=$trigger"
 
           # Set macOS matrix
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": "cpu" }]' $filename)
+          filename=".github/workflows/utils/${matrix_type}_matrix_macos.json"
+          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "macos-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "macos-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
@@ -50,8 +55,8 @@ jobs:
           echo "macos-trigger=$trigger"
 
           # Set Windows matrix
-          filename=".github/workflows/utils/full_matrix.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          filename=".github/workflows/utils/${matrix_type}_matrix_windows.json"
+          matrix=$(jq '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "windows-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "windows-matrix=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}
