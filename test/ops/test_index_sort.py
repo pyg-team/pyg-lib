@@ -14,10 +14,11 @@ if torch.cuda.is_available():
 )
 @pytest.mark.parametrize('device', [
     pytest.param('cpu'),
-    pytest.param('cuda', marks=pytest.mark.skipif(
-        not torch.cuda.is_available(),
-        reason="CUDA is not available",
-    )),
+    pytest.param(
+        'cuda', marks=pytest.mark.skipif(
+            not torch.cuda.is_available(),
+            reason="CUDA is not available",
+        )),
 ])
 def test_index_sort(device):
     inputs = torch.randperm(100_000, device=device)
