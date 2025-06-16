@@ -9,11 +9,10 @@ set(NO_METIS 0)
 option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
-option(USE_PYTHON "Link to Python when building" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
-  find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
   execute_process(
       COMMAND ${Python3_EXECUTABLE} "-c"
               "import torch; print(torch.compiled_with_cxx11_abi(),end='');"
@@ -46,17 +45,6 @@ if(USE_MKL_BLAS AND DEFINED BLAS_INCLUDE_DIR)
   endif()
 endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h")
-
-if (USE_PYTHON)
-  # Needed for GitHub CI in order to pick up the correct Python version:
-  cmake_policy(SET CMP0094 NEW)
-  set(Python3_FIND_REGISTRY "LAST")
-  set(Python3_FIND_FRAMEWORK "LAST")
-  set(Python3_FIND_VIRTUALENV "FIRST")
-
-  add_definitions(-DUSE_PYTHON)
-  find_package(Python3 REQUIRED COMPONENTS Development)
-endif()
 
 if(WITH_CUDA)
   enable_language(CUDA)
@@ -132,10 +120,6 @@ if(OpenMP_CXX_FOUND)
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-if (USE_PYTHON)
-  target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)
-endif()
-
 if(WITH_CUDA)
   target_include_directories(${PROJECT_NAME} PRIVATE
                              third_party/cccl/thrust
@@ -169,6 +153,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Cmake creates *.dylib by default, but python expects *.so by default
 if (APPLE)
   set_property(TARGET ${PROJECT_NAME} PROPERTY SUFFIX .so)
-elseif (MSVC AND USE_PYTHON)
+elseif (MSVC)
   set_property(TARGET ${PROJECT_NAME} PROPERTY SUFFIX .pyd)
 endif()
