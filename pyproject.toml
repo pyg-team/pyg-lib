@@ -36,6 +36,26 @@ documentation="https://pyg-lib.readthedocs.io"
 repository="https://github.com/pyg-team/pyg-lib.git"
 changelog="https://github.com/pyg-team/pyg-lib/blob/master/CHANGELOG.md"
 
+[tool.cibuildwheel]
+build-frontend = {name = "build", args = ["--no-isolation"] }
+test-command = "pytest {project}/test"
+
+[tool.cibuildwheel.linux]
+environment-pass = [
+    "FORCE_NINJA",
+    "FORCE_CUDA",
+    "CUDA_HOME",
+    "TORCH_CUDA_ARCH_LIST",
+]
+repair-wheel-command = """
+auditwheel repair \
+  --wheel-dir {dest_dir} {wheel} \
+  --exclude 'libtorch*.so' \
+  --exclude 'libc10*.so' \
+  --exclude 'libgomp*.so*' \
+  --exclude 'libcuda.so*'
+"""
+
 [tool.pytest.ini_options]
 addopts=[
     "--capture=no",
