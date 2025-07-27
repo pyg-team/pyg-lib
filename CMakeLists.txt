@@ -47,8 +47,15 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h")
 
 if(WITH_CUDA)
-  # Set CUDA flags BEFORE enabling CUDA language for compiler detection
-  set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr -allow-unsupported-compiler" CACHE STRING "CUDA compiler flags" FORCE)
+  # Set CUDA flags for compiler detection phase - this is crucial for Windows Visual Studio compatibility
+  if(NOT DEFINED CMAKE_CUDA_FLAGS_INIT)
+    set(CMAKE_CUDA_FLAGS_INIT "--expt-relaxed-constexpr -allow-unsupported-compiler" CACHE STRING "Initial CUDA compiler flags")
+  endif()
+
+  # Also set as environment variable as backup for older CMake versions
+  if(WIN32 AND NOT DEFINED ENV{CUDAFLAGS})
+    set(ENV{CUDAFLAGS} "-allow-unsupported-compiler")
+  endif()
 
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
