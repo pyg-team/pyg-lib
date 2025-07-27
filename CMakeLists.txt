@@ -47,9 +47,11 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h")
 
 if(WITH_CUDA)
+  # Set CUDA flags BEFORE enabling CUDA language for compiler detection
+  set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr -allow-unsupported-compiler" CACHE STRING "CUDA compiler flags" FORCE)
+
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
 
   if (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.8)
     set(CMAKE_CUDA_ARCHITECTURES "75;80;86;90;100;120")
