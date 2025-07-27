@@ -8,7 +8,18 @@ if torch.cuda.is_available():
     DEVICES.append(torch.device('cuda'))
 
 
-@pytest.mark.parametrize('device', DEVICES)
+@pytest.mark.skipif(
+    torch.__version__.startswith('2.4.0'),
+    reason="https://github.com/pytorch/pytorch/issues/130619",
+)
+@pytest.mark.parametrize('device', [
+    pytest.param('cpu'),
+    pytest.param(
+        'cuda', marks=pytest.mark.skipif(
+            not torch.cuda.is_available(),
+            reason="CUDA is not available",
+        )),
+])
 def test_index_sort(device):
     inputs = torch.randperm(100_000, device=device)
     ref_sorted_input, ref_indices = torch.sort(inputs, stable=True)
