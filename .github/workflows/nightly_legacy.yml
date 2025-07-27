@@ -1,4 +1,4 @@
-name: Nightly Wheels
+name: Nightly Wheels (Legacy)
 
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
