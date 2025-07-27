@@ -70,8 +70,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # TODO: Unpin --pre once cibuildwheel 3.0.0 is released.
-          pip install --pre cibuildwheel auditwheel
+          pip install cibuildwheel auditwheel
 
       - name: Set version
         run: |

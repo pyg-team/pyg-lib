@@ -52,7 +52,8 @@ auditwheel repair \
   --wheel-dir {dest_dir} {wheel} \
   --exclude 'libtorch*.so' \
   --exclude 'libc10*.so' \
-  --exclude 'libgomp*.so*'
+  --exclude 'libgomp*.so*' \
+  --exclude 'libcuda.so*'
 """
 
 [tool.pytest.ini_options]

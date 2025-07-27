@@ -11,7 +11,7 @@
   },
   {
     "torch-version": "2.5.0",
-    "python-version": ["3.9", "3.10", "3.11", "3.12", "3.13"],
+    "python-version": ["3.9", "3.10", "3.11", "3.12"],
     "cuda-version": ["cpu", "cu118", "cu121", "cu124"]
   },
   {
@@ -41,7 +41,7 @@
   },
   {
     "torch-version": "1.13.0",
-    "python-version": ["3.9", "3.10", "3.11"],
+    "python-version": ["3.9", "3.10"],
     "cuda-version": ["cpu", "cu116", "cu117"]
   }
 ]
