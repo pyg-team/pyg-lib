@@ -6,6 +6,11 @@ on:  # yamllint disable-line rule:truthy
       test-matrix:
         type: string
         required: true
+      release-type:
+        type: string
+        required: false
+        default: ''
+        description: 'nightly or final'
       docker-hub-username:
         type: string
         required: true
@@ -72,7 +77,8 @@ jobs:
         run: |
           pip install cibuildwheel auditwheel
 
-      - name: Set version
+      - name: Set version (final)
+        if: ${{ inputs.release-type == 'final' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
@@ -81,6 +87,28 @@ jobs:
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" setup.py
           sed -i "s/$VERSION/$VERSION+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
 
+      - name: Set version (nightly)
+        if: ${{ inputs.release-type == 'nightly' }}
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
+          CUDA_VERSION=`echo ${{ matrix.cuda-version }}`
+          TODAY=`date +'%Y%m%d'`
+          echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION"
+          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" setup.py
+          sed -i "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION$CUDA_VERSION/" pyg_lib/__init__.py
+        shell: bash
+
       - name: Build wheel
         run: |
           bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
+
+      - name: Upload wheel (final)
+        if: ${{ inputs.release-type == 'final' }}
+        run: |
+          aws s3 sync --dryrun dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+      - name: Upload wheel (nightly)
+        if: ${{ inputs.release-type == 'nightly' }}
+        run: |
+          aws s3 sync --dryrun dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
