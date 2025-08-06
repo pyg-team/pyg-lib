@@ -1,6 +1,11 @@
 #!/bin/bash
 
 case ${1} in
+  cu129)
+    CUDA_SHORT=12.9
+    CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.1/local_installers
+    CUDA_FILE=cuda_${CUDA_SHORT}.1_576.57_windows.exe
+    ;;
   cu128)
     CUDA_SHORT=12.8
     CUDA_URL=https://developer.download.nvidia.com/compute/cuda/${CUDA_SHORT}.0/local_installers

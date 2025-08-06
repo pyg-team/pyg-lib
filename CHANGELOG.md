@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.5.0] - 2023-MM-DD
 ### Added
-- Added `manylinux_2_28` support to nightly releases ([#480](https://github.com/pyg-team/pyg-lib/pull/480))
+- Added `manylinux_2_28` wheel support in nightly releases ([#480](https://github.com/pyg-team/pyg-lib/pull/480))
+- Added CUDA 12.9 support ([#494](https://github.com/pyg-team/pyg-lib/pull/494))
+- Added PyTorch 2.8 support ([#494](https://github.com/pyg-team/pyg-lib/pull/494))
 - Added PyTorch 2.7 support ([#442](https://github.com/pyg-team/pyg-lib/pull/442))
 - Added CUDA >= 12.6 support ([#431](https://github.com/pyg-team/pyg-lib/pull/431))
 - Added PyTorch 2.5 support ([#360](https://github.com/pyg-team/pyg-lib/pull/338))
