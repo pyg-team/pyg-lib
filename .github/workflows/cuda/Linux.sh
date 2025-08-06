@@ -2,7 +2,14 @@
 
 OS=ubuntu2204
 
+# https://developer.nvidia.com/cuda-toolkit-archive
 case ${1} in
+  cu129)
+    CUDA=12.9
+    APT_KEY=${OS}-${CUDA/./-}-local
+    FILENAME=cuda-repo-${APT_KEY}_${CUDA}.1-575.57.08-1_amd64.deb
+    URL=https://developer.download.nvidia.com/compute/cuda/${CUDA}.1/local_installers
+    ;;
   cu128)
     CUDA=12.8
     APT_KEY=${OS}-${CUDA/./-}-local
@@ -74,7 +81,7 @@ sudo mv cuda-${OS}.pin /etc/apt/preferences.d/cuda-repository-pin-600
 wget -nv ${URL}/${FILENAME}
 sudo dpkg -i ${FILENAME}
 
-if [ "${1}" = "cu117" ] || [ "${1}" = "cu118" ] || [ "${1}" = "cu121" ] || [ "${1}" = "cu124" ] || [ "${1}" = "cu126" ] || [ "${1}" = "cu128" ]; then
+if [ "${1}" = "cu117" ] || [ "${1}" = "cu118" ] || [ "${1}" = "cu121" ] || [ "${1}" = "cu124" ] || [ "${1}" = "cu126" ] || [ "${1}" = "cu128" ] || [ "${1}" = "cu129" ]; then
   sudo cp /var/cuda-repo-${APT_KEY}/cuda-*-keyring.gpg /usr/share/keyrings/
 else
   sudo apt-key add /var/cuda-repo-${APT_KEY}/7fa2af80.pub
