@@ -10,7 +10,7 @@ on:  # yamllint disable-line rule:truthy
         type: string
         required: false
         default: ''
-        description: 'nightly or stable'
+        description: 'nightly or final'
       docker-hub-username:
         type: string
         required: true
@@ -77,8 +77,8 @@ jobs:
         run: |
           pip install cibuildwheel auditwheel
 
-      - name: Set version (stable)
-        if: ${{ inputs.release-type == 'stable' }}
+      - name: Set version (final)
+        if: ${{ inputs.release-type == 'final' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
@@ -103,8 +103,8 @@ jobs:
         run: |
           bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
 
-      - name: Upload wheel (stable)
-        if: ${{ inputs.release-type == 'stable' }}
+      - name: Upload wheel (final)
+        if: ${{ inputs.release-type == 'final' }}
         run: |
           aws s3 sync --dryrun dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 
