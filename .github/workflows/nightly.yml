@@ -19,7 +19,7 @@ jobs:
         run: |
           # Set Linux matrix
           filename=".github/workflows/utils/full_matrix_linux.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] } | select(."cuda-version" | IN("cpu", "cu118", "cu124", "cu126", "cu128", "cu129"))]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
           echo "linux-matrix=$matrix"
 
