@@ -106,9 +106,9 @@ jobs:
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
         run: |
-          aws s3 sync --dryrun dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 
       - name: Upload wheel (nightly)
         if: ${{ inputs.release-type == 'nightly' }}
         run: |
-          aws s3 sync --dryrun dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
