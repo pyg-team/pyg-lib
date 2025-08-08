@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import boto3
 
-ROOT_URL = 'https://data.pyg.org/whl/nightly'
+ROOT_URL = 'https://data.pyg.org/whl'
 html = '<!DOCTYPE html>\n<html>\n<body>\n{}\n</body>\n</html>'
 href = '  <a href="{}">{}</a><br/>'
 args = {
@@ -14,7 +14,7 @@ args = {
 bucket = boto3.resource('s3').Bucket(name='data.pyg.org')
 
 wheels_dict = defaultdict(list)
-for obj in bucket.objects.filter(Prefix='whl/nightly'):
+for obj in bucket.objects.filter(Prefix='whl'):
     if obj.key[-3:] != 'whl':
         continue
     torch_version, wheel = obj.key.split('/')[-2:]
@@ -39,6 +39,8 @@ for obj in bucket.objects.filter(Prefix='whl/nightly'):
         wheels_dict[torch_version.replace('2.4.0', '2.4.1')].append(wheel)
     if '2.5.0' in torch_version:
         wheels_dict[torch_version.replace('2.5.0', '2.5.1')].append(wheel)
+    if '2.7.0' in torch_version:
+        wheels_dict[torch_version.replace('2.7.0', '2.7.1')].append(wheel)
 
 index_html = html.format('\n'.join([
     href.format(f'{version}.html'.replace('+', '%2B'), version)
@@ -47,7 +49,7 @@ index_html = html.format('\n'.join([
 
 with open('index.html', 'w') as f:
     f.write(index_html)
-bucket.Object('whl/nightly/index.html').upload_file('index.html', args)
+bucket.Object('whl/index.html').upload_file('index.html', args)
 
 for torch_version, wheel_names in wheels_dict.items():
     torch_version_html = html.format('\n'.join([
@@ -57,5 +59,5 @@ for torch_version, wheel_names in wheels_dict.items():
 
     with open(f'{torch_version}.html', 'w') as f:
         f.write(torch_version_html)
-    bucket.Object(f'whl/nightly/{torch_version}.html').upload_file(
+    bucket.Object(f'whl/{torch_version}.html').upload_file(
         f'{torch_version}.html', args)
