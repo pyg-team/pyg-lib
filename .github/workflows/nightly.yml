@@ -11,6 +11,7 @@ jobs:
     outputs:
       matrix-linux: ${{ steps.set-matrix.outputs.matrix-linux }}
       matrix-macos: ${{ steps.set-matrix.outputs.matrix-macos }}
+      matrix-windows: ${{ steps.set-matrix.outputs.matrix-windows }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,6 +35,14 @@ jobs:
           echo "matrix-macos=$matrix"
           echo ::endgroup::
 
+          # Set Windows matrix
+          echo ::group::Set Windows matrix
+          filename=".github/workflows/utils/full_matrix_windows.json"
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          echo "matrix-windows=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix-windows=$matrix"
+          echo ::endgroup::
+
   linux:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
@@ -54,9 +63,17 @@ jobs:
       release-type: nightly
     secrets: inherit
 
+  windows:
+    needs: [trigger]
+    uses: ./.github/workflows/_build_windows.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.matrix-windows }}
+      release-type: nightly
+    secrets: inherit
+
   index:
     if: always()
-    needs: [linux, macos]
+    needs: [linux, macos, windows]
     uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: nightly
