@@ -9,7 +9,8 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     outputs:
-      linux-matrix: ${{ steps.set-matrix.outputs.linux-matrix }}
+      matrix-linux: ${{ steps.set-matrix.outputs.matrix-linux }}
+      matrix-macos: ${{ steps.set-matrix.outputs.matrix-macos }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,16 +19,26 @@ jobs:
         id: set-matrix
         run: |
           # Set Linux matrix
+          echo ::group::Set Linux matrix
           filename=".github/workflows/utils/full_matrix_linux.json"
           matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
-          echo "linux-matrix=$matrix" >> $GITHUB_OUTPUT
-          echo "linux-matrix=$matrix"
+          echo "matrix-linux=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix-linux=$matrix"
+          echo ::endgroup::
+
+          # Set macOS matrix
+          echo ::group::Set macOS matrix
+          filename=".github/workflows/utils/full_matrix_macos.json"
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          echo "matrix-macos=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix-macos=$matrix"
+          echo ::endgroup::
 
   linux:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
     with:
-      test-matrix: ${{ needs.trigger.outputs.linux-matrix }}
+      test-matrix: ${{ needs.trigger.outputs.matrix-linux }}
       release-type: nightly
       docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
     secrets:
@@ -35,9 +46,17 @@ jobs:
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+  macos:
+    needs: [trigger]
+    uses: ./.github/workflows/_build_macos.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.matrix-macos }}
+      release-type: nightly
+    secrets: inherit
+
   index:
     if: always()
-    needs: [linux]
+    needs: [linux, macos]
     uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: nightly
