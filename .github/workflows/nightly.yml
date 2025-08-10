@@ -53,6 +53,7 @@ jobs:
     with:
       test-matrix: ${{ needs.trigger.outputs.matrix-macos }}
       release-type: nightly
+    secrets: inherit
 
   index:
     if: always()
