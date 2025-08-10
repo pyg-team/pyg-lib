@@ -11,6 +11,7 @@ jobs:
     outputs:
       matrix-linux: ${{ steps.set-matrix.outputs.matrix-linux }}
       matrix-macos: ${{ steps.set-matrix.outputs.matrix-macos }}
+      matrix-windows: ${{ steps.set-matrix.outputs.matrix-windows }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
