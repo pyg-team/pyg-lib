@@ -9,14 +9,13 @@ on:  # yamllint disable-line rule:truthy
         options:
           - final
           - nightly
+        description: 'Either "final" or "nightly".'
   workflow_call:
     inputs:
       release-type:
         required: true
-        type: choice
-        options:
-          - final
-          - nightly
+        type: string
+        description: 'Either "final" or "nightly".'
 
 concurrency:
   group: upload-index-${{ inputs.release-type }}
