@@ -48,7 +48,6 @@ jobs:
 
   macos:
     needs: [trigger]
-    if: ${{ needs.trigger.outputs.trigger-macos == 'true' || inputs.trigger-macos }}
     uses: ./.github/workflows/_build_macos.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.matrix-macos }}
