@@ -28,15 +28,7 @@ defaults:
 jobs:
   wheel:
     runs-on: ubuntu-latest
-    strategy:
     steps:
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: us-west-1
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
