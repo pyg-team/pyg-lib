@@ -1,0 +1,57 @@
+name: Upload Index
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      release-type:
+        required: true
+        type: choice
+        options:
+          - final
+          - nightly
+  workflow_call:
+    inputs:
+      release-type:
+        required: true
+        type: choice
+        options:
+          - final
+          - nightly
+
+concurrency:
+  group: upload-index-${{ inputs.release-type }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  wheel:
+    runs-on: ubuntu-latest
+    strategy:
+    steps:
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: us-west-1
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install boto3
+        run: pip install boto3
+
+      - name: Upload index files (${{ inputs.release-type }})
+        run: |
+          python .github/workflows/aws/upload_${{ inputs.release-type }}_index.py
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

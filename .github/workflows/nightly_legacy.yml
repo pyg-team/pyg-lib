@@ -192,24 +192,7 @@ jobs:
   boto3:
     if: ${{ always() }}
     needs: [wheel]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          pip install boto3
-
-      - name: Upload index
-        run: |
-          python ./.github/workflows/aws/upload_nightly_index.py
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    uses: .github/workflows/_upload_index.yml
+    with:
+      release-type: nightly
+    secrets: inherit
