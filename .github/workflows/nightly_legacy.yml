@@ -14,8 +14,8 @@ jobs:
       max-parallel: 10
       fail-fast: false
       matrix:
-        # NOTE: ubuntu-22.04 is disabled in favor of nightly.yml.
-        os: [macos-14, windows-2022]
+        # NOTE: ubuntu and macos are disabled here in favor of nightly.yml.
+        os: [windows-2022]
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
         # TODO: Uncomment this once we split the workflow to avoid GitHub Actions' 256 matrix configuration limit.
         # torch-version: [1.13.0, 2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0, 2.5.0, 2.6.0, 2.7.0]

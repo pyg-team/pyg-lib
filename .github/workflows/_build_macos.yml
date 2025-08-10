@@ -6,6 +6,11 @@ on:  # yamllint disable-line rule:truthy
       test-matrix:
         type: string
         required: true
+      release-type:
+        type: string
+        required: false
+        default: ''
+        description: 'nightly or final'
 
 defaults:
   run:
@@ -32,13 +37,24 @@ jobs:
           torch-version: ${{ matrix.torch-version }}
           cuda-version: ${{ matrix.cuda-version }}
 
-      - name: Set version
+      - name: Set version (final)
+        if: ${{ inputs.release-type == 'final' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
           echo "New version name: $VERSION+$TORCH_VERSION"
           sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" setup.py
           sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" pyg_lib/__init__.py
+
+      - name: Set version (nightly)
+        if: ${{ inputs.release-type == 'nightly' }}
+        run: |
+          VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
+          TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
+          TODAY=$(date +'%Y%m%d')
+          echo "New version name: $VERSION.dev$TODAY+$TORCH_VERSION"
+          sed -i "" "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION/" setup.py
+          sed -i "" "s/$VERSION/$VERSION.dev$TODAY+$TORCH_VERSION/" pyg_lib/__init__.py
 
       - name: Build wheel
         run: |
@@ -59,3 +75,19 @@ jobs:
         run: |
           pip install pytest pytest-cov
           pytest --cov --cov-report=xml
+
+      - name: Upload wheel (final)
+        if: ${{ inputs.release-type == 'final' }}
+        run: |
+          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Upload wheel (nightly)
+        if: ${{ inputs.release-type == 'nightly' }}
+        run: |
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
