@@ -28,7 +28,6 @@ defaults:
 jobs:
   wheel:
     runs-on: ubuntu-latest
-    strategy:
     steps:
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
