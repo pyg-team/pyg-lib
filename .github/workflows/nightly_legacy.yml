@@ -220,7 +220,7 @@ jobs:
   boto3:
     if: ${{ always() }}
     needs: [wheel]
-    uses: .github/workflows/_upload_index.yml
+    uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: nightly
     secrets: inherit
