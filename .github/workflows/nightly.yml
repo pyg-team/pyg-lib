@@ -56,7 +56,8 @@ jobs:
 
   index:
     if: always()
-    needs: [linux, macos]
+    # needs: [linux, macos]
+    needs: [macos]
     uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: nightly
