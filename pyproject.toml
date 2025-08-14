@@ -60,11 +60,7 @@ auditwheel repair \
   --exclude 'libamdhip64.so*' \
   --exclude 'libhsa-runtime64.so*' \
   --exclude 'librocblas*.so*' \
-  --exclude 'libhipblaslt*.so*' \
-  --exclude 'libhipfft*.so*' \
-  --exclude 'libhiprand*.so*' \
-  --exclude 'libMIOpen*.so*' \
-  --exclude 'librccl*.so*'
+  --exclude 'libhipblaslt*.so*'
 """
 
 [tool.pytest.ini_options]
