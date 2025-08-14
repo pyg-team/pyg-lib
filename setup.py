@@ -54,16 +54,32 @@ class CMakeBuild(build_ext):
 
         WITH_CUDA = torch.cuda.is_available()
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+        
+        WITH_ROCM = torch.version.hip is not None
+        WITH_ROCM = bool(int(os.getenv('FORCE_ROCM', WITH_ROCM)))
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            f'-DWITH_ROCM={"ON" if WITH_ROCM else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
-            f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
+        
+        prefix_list = []
+        if torch.utils.cmake_prefix_path:
+            prefix_list.append(torch.utils.cmake_prefix_path)
+        env_prefix = os.getenv('CMAKE_PREFIX_PATH')
+        if env_prefix:
+            prefix_list.append(env_prefix)
+        if WITH_ROCM:
+            rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
+            prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
+            
+        cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
+        
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
