@@ -9,6 +9,7 @@ import os.path as osp
 import re
 import subprocess
 import warnings
+import multiprocessing
 
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
@@ -52,7 +53,7 @@ class CMakeBuild(build_ext):
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        WITH_CUDA = torch.cuda.is_available()
+        WITH_CUDA = torch.cuda.is_available() and not getattr(torch.version, 'hip', None)
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
         
         WITH_ROCM = torch.version.hip is not None
@@ -95,10 +96,10 @@ class CMakeBuild(build_ext):
                           " by installing 'ninja': `pip install ninja`")
 
         build_args = []
-
+        num_jobs = os.getenv('MAX_JOBS', str(multiprocessing.cpu_count()))
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
                               cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args,
+        subprocess.check_call(['cmake', '--build', '.', f'-j{num_jobs}'] + build_args,
                               cwd=self.build_temp)
 
 
