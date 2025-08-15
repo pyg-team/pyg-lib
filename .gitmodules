@@ -16,3 +16,6 @@
 [submodule "third_party/hipCollections"]
 	path = third_party/hipCollections
 	url = https://github.com/ROCm/hipCollections.git
+[submodule "third_party/libhipcxx"]
+	path = third_party/libhipcxx
+	url = https://github.com/ROCm/libhipcxx.git
