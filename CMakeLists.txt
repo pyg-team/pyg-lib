@@ -97,7 +97,9 @@ if (WITH_ROCM)
   find_package(rocblas REQUIRED)
   find_package(rocprim REQUIRED)
   find_package(rocthrust REQUIRED)
+  set(LIBHIPCXX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/libhipcxx")
   set(HIP_COLLECTIONS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hipCollections/include)
+  find_package(libhipcxx REQUIRED CONFIG  PATHS "${LIBHIPCXX_DIR}/lib/cmake/libhipcxx"  NO_DEFAULT_PATH)
   include_directories(${HIP_COLLECTIONS_DIR})
 endif()
 
@@ -176,6 +178,7 @@ if (WITH_ROCM)
       roc::hipblaslt
       roc::rocblas
       roc::rocthrust
+      libhipcxx::libhipcxx
   )
 endif()
 

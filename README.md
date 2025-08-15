@@ -113,5 +113,3 @@ pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.h
 pip install ninja wheel
 pip install --no-build-isolation git+https://github.com/pyg-team/pyg-lib.git
 ```
-
-**Note:** For ROCM backend, you need to install [libhipcxx](https://github.com/ROCm/libhipcxx) to ```/opt/rocm``` firstly.
