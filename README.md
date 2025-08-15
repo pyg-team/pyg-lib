@@ -93,7 +93,7 @@ The following combinations are supported:
 | **Linux**    | ✅    | ✅      |         |         |         |         |         |         |
 | **Windows**  | ✅    | ✅      |         |         |         |         |         |         |
 | **macOS**    | ✅    |         |         |         |         |         |         |         |
-  
+
 For ROCM backend, there is an external [`pyg-rocm-build` repository](https://github.com/Looong01/pyg-rocm-build) provides wheels and detailed instructions on how to install PyG for ROCm.
 If you have any questions about it, please open an issue [here](https://github.com/Looong01/pyg-rocm-build/issues).
 
