@@ -8,6 +8,10 @@
 
 #include "pyg_lib/csrc/utils/convert.h"
 
+#define HIPBLASLT_CHECK(expr) \
+  do { hipblasStatus_t _st = (expr); \
+       TORCH_CHECK(_st == HIPBLAS_STATUS_SUCCESS, "hipBLASLt error: ", int(_st), " @ ", #expr); } while(0)
+
 namespace pyg {
 namespace ops {
 
@@ -26,94 +30,122 @@ void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList out,
                       bool segment) {
   TORCH_CHECK(input.size() == other.size() && input.size() == out.size(),
-              "Grouped GEMM: list sizes mismatch");
+              "input/other/out list sizes must match");
+  const int64_t num_mats = input.size();
+  TORCH_CHECK(num_mats > 0, "empty problem");
 
-  const int64_t G = input.size();
-
-  hipblasLtHandle_t ltHandle;
-  TORCH_CHECK(hipblasLtCreate(&ltHandle) == HIPBLAS_STATUS_SUCCESS,
-              "hipBLASLt: create handle failed");
-
-  std::vector<int64_t> m(G), n(G), k(G), batch(G, 1);
-  std::vector<int64_t> lda(G), ldb(G), ldc(G), ldd(G);
-  std::vector<int64_t> strideA(G, 0), strideB(G, 0), strideC(G, 0), strideD(G, 0);
-  std::vector<hipblaslt_ext::GemmInputs> inputs(G);
-  std::vector<hipblaslt_ext::GemmEpilogue> epis(G);
-
-  static float alpha = 1.0f, beta = 0.0f;
-
-  for (int64_t i = 0; i < G; ++i) {
-    at::Tensor A = input[i].contiguous();
-    at::Tensor B = other[i].contiguous();
-    at::Tensor D = out[i].contiguous();
-
-    int64_t mi = A.size(0);
-    int64_t ki = B.size(static_cast<int>(segment));
-    int64_t ni = D.size(1);
-
-    m[i] = mi; n[i] = ni; k[i] = ki;
-
-    lda[i] = ki;
-    ldb[i] = ni;
-    ldc[i] = ni;
-    ldd[i] = ni;
-
-    inputs[i].setA(A.data_ptr<float>());
-    inputs[i].setB(B.data_ptr<float>());
-    inputs[i].setC(D.data_ptr<float>());
-    inputs[i].setD(D.data_ptr<float>());
-    inputs[i].setAlpha(&alpha);
-    inputs[i].setBeta(&beta);
+  // 仅支持 float32（与原实现一致）；如需支持半精度/FP8，可改 typeA/B/C/D 与 compute type
+  for (int64_t i = 0; i < num_mats; ++i) {
+    TORCH_CHECK(input[i].is_cuda() && other[i].is_cuda() && out[i].is_cuda(),
+                "all tensors must be on HIP device");
+    TORCH_CHECK(input[i].scalar_type() == at::kFloat &&
+                other[i].scalar_type() == at::kFloat &&
+                out[i].scalar_type() == at::kFloat,
+                "only float32 supported in this path");
+    TORCH_CHECK(input[i].is_contiguous() && other[i].is_contiguous() && out[i].is_contiguous(),
+                "tensors must be contiguous for V2 simple setProblem");
   }
 
-  hipblaslt_ext::Gemm gemm(
-      ltHandle,
-      HIPBLAS_OP_N, HIPBLAS_OP_N,
+  // op 设定：A 恒不转置；B 是否转置由 segment 决定（与原逻辑一致）
+  hipblasOperation_t opA = HIPBLAS_OP_N;
+  hipblasOperation_t opB = segment ? HIPBLAS_OP_T : HIPBLAS_OP_N;
+
+  // hipBLASLt 句柄
+  hipblasLtHandle_t handle = nullptr;
+  HIPBLASLT_CHECK(hipblasLtCreate(&handle));
+
+  // 创建 GroupedGemm 实例（指定 opA/opB 与数据/计算类型）
+  hipblaslt_ext::GroupedGemm grouped(
+      handle,
+      opA, opB,
       HIP_R_32F, HIP_R_32F, HIP_R_32F, HIP_R_32F,
-      HIPBLAS_COMPUTE_32F);
+      HIPBLAS_COMPUTE_32F); // V2 构造与 setProblem 描述见官方文档。:contentReference[oaicite:1]{index=1}
 
-  hipblaslt_ext::GemmProblemType problemtype;
-  problemtype.setTransposeA(HIPBLAS_OP_N);
-  problemtype.setTransposeB(HIPBLAS_OP_N);
-  problemtype.setAType(HIP_R_32F);
-  problemtype.setBType(HIP_R_32F);
-  problemtype.setCType(HIP_R_32F);
-  problemtype.setDType(HIP_R_32F);
-  problemtype.setComputeType(HIPBLAS_COMPUTE_32F);
+  // 为每个 GEMM 准备 (m,n,k,batch=1)、epilogue、inputs（V2）
+  std::vector<int64_t> m_vec(num_mats), n_vec(num_mats), k_vec(num_mats), batch_vec(num_mats, 1);
 
-  hipblasStatus_t s = gemm.setProblem(
-      m, n, k, batch,
-      lda, ldb, ldc, ldd,
-      strideA, strideB, strideC, strideD,
-      epis, inputs, problemtype);
-  TORCH_CHECK(s == HIPBLAS_STATUS_SUCCESS, "hipBLASLt setProblem failed");
+  std::vector<hipblaslt_ext::GemmEpilogueV2> epi_vec(num_mats); // 默认为 DEFAULT
+  std::vector<hipblaslt_ext::GemmInputsV2>   in_vec(num_mats);
 
-  hipblaslt_ext::GemmPreference pref;
-  pref.setMaxWorkspaceBytes(64ull << 20);
-  std::vector<hipblasLtMatmulHeuristicResult_t> heuristic;
-  s = gemm.algoGetHeuristic(gemm, pref, heuristic);
-  TORCH_CHECK(s == HIPBLAS_STATUS_SUCCESS && !heuristic.empty(),
-              "hipBLASLt algoGetHeuristic failed or empty");
+  // alpha/beta 存在 host 上，传指针（生命周期覆盖本函数）
+  std::vector<float> alpha(num_mats, 1.0f), beta(num_mats, 0.0f);
 
-  size_t ws_bytes = 0;
-  s = gemm.isAlgoSupported(heuristic[0].algo, ws_bytes);
-  TORCH_CHECK(s == HIPBLAS_STATUS_SUCCESS, "hipBLASLt isAlgoSupported failed");
+  for (int64_t i = 0; i < num_mats; ++i) {
+    const auto A = input[i];
+    const auto B = other[i];
+    const auto D = out[i];
 
-  at::Tensor ws;
-  void* ws_ptr = nullptr;
-  if (ws_bytes > 0) {
-    ws = at::empty({static_cast<long>(ws_bytes)}, out[0].options().dtype(at::kByte));
-    ws_ptr = ws.data_ptr<void>();
+    const int64_t m = A.size(0);
+    const int64_t n = D.size(1);
+    // 与原代码保持一致：k = other.size((int)segment)
+    const int64_t k = B.size(static_cast<int>(segment));
+
+    // 形状基本检查
+    TORCH_CHECK(A.size(1) == k, "A(m,k) mismatch: A.size(1)=", A.size(1), " vs k=", k);
+    if (segment) {
+      // B 视为给的是 (n,k)，通过 opB=T 作为 (k,n) 使用
+      TORCH_CHECK(B.size(0) == n && B.size(1) == k, "B(n,k) expected when segment=true");
+    } else {
+      // B 视为 (k,n)，opB=N
+      TORCH_CHECK(B.size(0) == k && B.size(1) == n, "B(k,n) expected when segment=false");
+    }
+    TORCH_CHECK(D.size(0) == m, "D(m,n) mismatch on dim0");
+
+    m_vec[i] = m;
+    n_vec[i] = n;
+    k_vec[i] = k;
+
+    // V2 Inputs
+    in_vec[i].setA(A.data_ptr<float>());
+    in_vec[i].setB(B.data_ptr<float>());
+    in_vec[i].setC(D.data_ptr<float>()); // 与原实现一致：C 与 D 同址（beta=0 时等价）
+    in_vec[i].setD(D.data_ptr<float>());
+    in_vec[i].setAlpha(&alpha[i]);
+    in_vec[i].setBeta(&beta[i]);
+    // 如需 bias/aux/scale/amaxD，可在此补充 V2 的 setter
   }
 
-  hipStream_t stream = at::cuda::getCurrentHIPStream().stream();
-  s = gemm.initialize(heuristic[0].algo, ws_ptr, /*useUserArgs=*/true, stream);
-  TORCH_CHECK(s == HIPBLAS_STATUS_SUCCESS, "hipBLASLt initialize failed");
+  // 设定问题（V2 的批量 API）
+  HIPBLASLT_CHECK(grouped.setProblem(m_vec, n_vec, k_vec, batch_vec, epi_vec, in_vec));  // :contentReference[oaicite:2]{index=2}
 
-  s = gemm.run(stream);
-  TORCH_CHECK(s == HIPBLAS_STATUS_SUCCESS, "hipBLASLt run failed");
+  // 要求/限制工作区大小（V2 Preference）
+  hipblaslt_ext::GemmPreferenceV2 pref;
+  pref.setMaxWorkspaceBytes(1 << 20); // 1MB，按官方示例与经验值，可按需调大。:contentReference[oaicite:3]{index=3}
 
-  hipblasLtDestroy(ltHandle);
+  // 基于实例获取启发式算法
+  std::vector<hipblasLtMatmulHeuristicResult_t> heuristic;
+  HIPBLASLT_CHECK(grouped.algoGetHeuristic(/*requestedAlgoCount=*/64, pref, heuristic)); // :contentReference[oaicite:4]{index=4}
+  TORCH_CHECK(!heuristic.empty(), "No heuristic algorithm found for grouped GEMM.");
+
+  // 选择可用的第一个算法，并获取所需 workspace 大小
+  size_t workspace_bytes = 0;
+  int picked = -1;
+  for (int j = 0; j < (int)heuristic.size(); ++j) {
+    if (grouped.isAlgoSupported(heuristic[j].algo, workspace_bytes) == HIPBLAS_STATUS_SUCCESS) {
+      picked = j;
+      break;
+    }
+  }
+  TORCH_CHECK(picked >= 0, "No supported algorithm found for grouped GEMM.");
+
+  // 分配 workspace（需 16B 对齐；PyTorch 分配通常已满足对齐需求）
+  at::Tensor workspace;
+  if (workspace_bytes > 0) {
+    workspace = at::empty({(long long)workspace_bytes}, out[0].options().dtype(at::kByte));
+  }
+
+  // 使用当前 HIP stream
+  hipStream_t stream = at::cuda::getCurrentHIPStream();
+
+  // 初始化并运行
+  HIPBLASLT_CHECK(grouped.initialize(heuristic[picked].algo,
+                                     workspace_bytes ? workspace.data_ptr() : nullptr,
+                                     /*useUserArgs=*/true,
+                                     stream)); // :contentReference[oaicite:5]{index=5}
+  HIPBLASLT_CHECK(grouped.run(stream)); // 普通路径（非 UserArguments 外置）:contentReference[oaicite:6]{index=6}
+
+  // 清理
+  HIPBLASLT_CHECK(hipblasLtDestroy(handle));
 }
 
 void grouped_matmul_out_kernel(const at::TensorList input,
