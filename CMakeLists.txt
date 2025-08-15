@@ -149,7 +149,6 @@ if (NOT MSVC)
     endif()
   endif()
 
-
   target_link_libraries(${PROJECT_NAME} PRIVATE metis)
 endif()
 
