@@ -18,10 +18,10 @@
 
 ## Installation
 
-We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.9 till 3.13, see [here](https://data.pyg.org/whl).
+We provide pre-built Python wheels for all major OS/PyTorch/CUDA/ROCM(HIP) combinations from Python 3.9 till 3.13, see [here](https://data.pyg.org/whl).
 Note that currently, Windows wheels are not supported (we are working on fixing this as soon as possible).
 
-To install the wheels, simply run
+To install the wheels for CPU/CUDA backend, simply run
 
 ```
 pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
@@ -93,6 +93,11 @@ The following combinations are supported:
 | **Linux**    | ✅    | ✅      |         |         |         |         |         |         |
 | **Windows**  | ✅    | ✅      |         |         |         |         |         |         |
 | **macOS**    | ✅    |         |         |         |         |         |         |         |
+  
+For ROCM backend, there is an external [`pyg-rocm-build` repository](https://github.com/Looong01/pyg-rocm-build) provides wheels and detailed instructions on how to install PyG for ROCm.
+If you have any questions about it, please open an issue [here](https://github.com/Looong01/pyg-rocm-build/issues).
+
+**Note:** ROCM backend only support Linux up to now.
 
 ### From nightly
 
@@ -108,3 +113,5 @@ pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.h
 pip install ninja wheel
 pip install --no-build-isolation git+https://github.com/pyg-team/pyg-lib.git
 ```
+
+**Note:** For ROCM backend, you need to install [libhipcxx](https://github.com/ROCm/libhipcxx) to ```/opt/rocm``` firstly.
