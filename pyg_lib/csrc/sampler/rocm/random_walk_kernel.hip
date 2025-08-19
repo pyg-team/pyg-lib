@@ -87,7 +87,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
 
 }  // namespace
 
-TORCH_LIBRARY_IMPL(pyg, HIP, m) {
+TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::random_walk"),
          TORCH_FN(random_walk_kernel));
 }

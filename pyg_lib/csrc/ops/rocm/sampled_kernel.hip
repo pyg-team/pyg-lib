@@ -108,7 +108,7 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
 
 }  // namespace
 
-TORCH_LIBRARY_IMPL(pyg, HIP, m) {
+TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::sampled_op"), TORCH_FN(sampled_op_kernel));
 }
 
