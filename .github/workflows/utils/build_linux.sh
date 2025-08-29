@@ -13,9 +13,14 @@ echo "FORCE_CUDA: ${FORCE_CUDA}"
 echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
-export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
+if [[ "${TORCH_VERSION}" == "2.9.0" ]]; then
+  export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
+  export CIBW_BEFORE_TEST="pip install pytest && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
+else
+  export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
+  export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
+fi
 
 if [[ "${CUDA_VERSION}" == "cu"* ]]; then
   # Use CUDA-pre-installed image

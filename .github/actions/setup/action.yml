@@ -39,7 +39,11 @@ runs:
 
     - name: Install PyTorch ${{ inputs.torch-version }}+${{ inputs.cuda-version }}
       run: |
-        pip install torch==${{ inputs.torch-version }} --extra-index-url https://download.pytorch.org/whl/${{ inputs.cuda-version }}
+        if [ ${{ inputs.torch-version }} == '2.9.0' ]; then
+          pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${{ inputs.cuda-version }}
+        else
+          pip install torch==${{ inputs.torch-version }} --index-url https://download.pytorch.org/whl/${{ inputs.cuda-version }}
+        fi
         python -c "import torch; print('PyTorch:', torch.__version__)"
         python -c "import torch; print('CUDA:', torch.version.cuda)"
         python -c "import torch; print('CXX11 ABI:', torch.compiled_with_cxx11_abi())"

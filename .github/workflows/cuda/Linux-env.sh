@@ -1,6 +1,11 @@
 #!/bin/bash
 
 case ${1} in
+  cu130)
+    export FORCE_CUDA=1
+    export PATH=/usr/local/cuda-13.0/bin:${PATH}
+    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    ;;
   cu129)
     export FORCE_CUDA=1
     export PATH=/usr/local/cuda-12.9/bin:${PATH}
