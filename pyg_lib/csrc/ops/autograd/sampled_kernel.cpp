@@ -23,7 +23,8 @@ class SampledOp : public torch::autograd::Function<SampledOp> {
     ctx->saved_data["has_right_index"] = right_index.has_value();
     ctx->saved_data["fn"] = fn;
     ctx->save_for_backward({
-        left, right,
+        left,
+        right,
         left_index.has_value() ? left_index.value() : left,     // dummy
         right_index.has_value() ? right_index.value() : right,  // dummy
     });
