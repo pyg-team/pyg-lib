@@ -5,6 +5,23 @@ import torch.utils._pytree as pytree
 from torch import Tensor
 
 
+def _broadcast_scatter(src: Tensor, other: Tensor, dim: int) -> Tensor:
+    r"""Broadcasts scatter index tensor to match dimensions of source tensor.
+    
+    This utility function ensures that the index tensor has the same shape
+    as the source tensor along all dimensions except the scatter dimension.
+    """
+    if dim < 0:
+        dim = other.dim() + dim
+    if src.dim() == 1:
+        for _ in range(0, dim):
+            src = src.unsqueeze(0)
+    for _ in range(src.dim(), other.dim()):
+        src = src.unsqueeze(-1)
+    src = src.expand(other.size())
+    return src
+
+
 def _pytreeify(cls):
     r"""A pytree is Python nested data structure. It is a tree in the sense
     that nodes are Python collections (e.g., list, tuple, dict) and the leaves
@@ -350,6 +367,92 @@ def softmax_csr(
     return torch.ops.pyg.softmax_csr(src, ptr, dim)
 
 
+def scatter_add(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Sums all values from the :obj:`src` tensor into :obj:`out` at the indices
+    specified in the :obj:`index` tensor along a given axis :obj:`dim`.
+    
+    This operation uses optimized CUDA kernels for enhanced performance compared
+    to PyTorch's built-in scatter_add_ operation. For each value in :obj:`src`, 
+    its output index is specified by its index in :obj:`src` for dimensions 
+    outside of :obj:`dim` and by the corresponding value in :obj:`index` for 
+    dimension :obj:`dim`.
+
+    This operation is equivalent to::
+
+        out[index[i]][...] += src[i][...]
+
+    but allows for efficient batched operations and broadcasting.
+
+    .. code-block:: python
+
+        src = torch.tensor([1, 3, 2, 4, 5, 6])
+        index = torch.tensor([0, 1, 0, 1, 1, 3])
+        out = pyg_lib.ops.scatter_add(src, index)
+        # Result: [3, 12, 0, 6]
+
+        # 2D example
+        src = torch.tensor([[1, 2], [5, 6], [3, 4], [7, 8], [9, 10], [11, 12]])
+        index = torch.tensor([0, 1, 0, 1, 1, 3])
+        out = pyg_lib.ops.scatter_add(src, index, dim=0)
+        # Result: [[4, 6], [21, 24], [0, 0], [11, 12]]
+
+    Args:
+        src: The source tensor to scatter from.
+        index: The indices of elements to scatter.
+        dim: The axis along which to index. Default: :obj:`-1`.
+        out: The destination tensor. If not provided, a new tensor is created.
+        dim_size: If :obj:`out` is not given, automatically create output with
+            size :obj:`dim_size` at dimension :obj:`dim`. If :obj:`dim_size`
+            is not given, a minimal sized output tensor is returned.
+
+    Returns:
+        The output tensor.
+    """
+    return torch.ops.pyg.scatter_add(src, index, dim, out, dim_size)
+
+
+def scatter_mean(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Computes the mean of all values from the :obj:`src` tensor into :obj:`out`
+    at the indices specified in the :obj:`index` tensor along a given axis :obj:`dim`.
+
+    This operation uses optimized CUDA kernels for enhanced performance. It first 
+    sums values using optimized scatter_add, then divides by the number of 
+    contributions to each output element.
+
+    .. code-block:: python
+
+        src = torch.tensor([1.0, 3.0, 2.0, 4.0, 5.0, 6.0])
+        index = torch.tensor([0, 1, 0, 1, 1, 3])
+        out = pyg_lib.ops.scatter_mean(src, index)
+        # Result: [1.5, 4.0, 0.0, 6.0]
+
+    Args:
+        src: The source tensor to scatter from.
+        index: The indices of elements to scatter.
+        dim: The axis along which to index. Default: :obj:`-1`.
+        out: The destination tensor. If not provided, a new tensor is created.
+        dim_size: If :obj:`out` is not given, automatically create output with
+            size :obj:`dim_size` at dimension :obj:`dim`. If :obj:`dim_size`
+            is not given, a minimal sized output tensor is returned.
+
+    Returns:
+        The output tensor.
+    """
+    return torch.ops.pyg.scatter_mean(src, index, dim, out, dim_size)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -358,5 +461,7 @@ __all__ = [
     'sampled_mul',
     'sampled_div',
     'index_sort',
+    'scatter_add',
+    'scatter_mean',
     'softmax_csr',
 ]
