@@ -265,7 +265,7 @@ class NeighborSampler {
     else {
       at::Tensor index;
       if (replace) {
-        // at::multinomial only has good perfomance for `replace=true`, see:
+        // at::multinomial only has good performance for `replace=true`, see:
         // https://github.com/pytorch/pytorch/issues/11931
         index = at::multinomial(weight, count, replace);
       } else {
@@ -707,7 +707,7 @@ sample(const std::vector<node_type>& node_types,
       phmap::flat_hash_map<node_type, std::vector<node_t>>
           dst_sampled_nodes_dict;
       if (parallel) {
-        for (const auto& k : threads_edge_types) {  // Intialize empty vectors.
+        for (const auto& k : threads_edge_types) {  // Initialize empty vectors.
           dst_sampled_nodes_dict[!csc ? std::get<2>(k[0]) : std::get<0>(k[0])];
         }
       }

@@ -42,7 +42,7 @@ class PrefetchedRandint {
   T next(T range) {
     unsigned needed = 64;
 
-    // Mutiple levels of range to save prefetched bits.
+    // Multiple levels of range to save prefetched bits.
     if (range < (1 << 16)) {
       needed = 16;
     } else if (range < (1UL << 32)) {

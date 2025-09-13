@@ -24,7 +24,7 @@ namespace random {
  *
  * @param bias the pointer to the start of the bias array
  *
- * @param len the length of the index/bias arraay
+ * @param len the length of the index/bias array
  *
  * @returns the chosen index
  *
@@ -141,7 +141,7 @@ index_t biased_random_alias(const index_t* idx,
  *
  * @returns (optional) the cdf array which is grouped by the neighbors of each
  * node. For each group of neighbors, the weight is exclusively summed to form a
- * cdf array. The sum of each group will be guranteed be equal to 1.
+ * cdf array. The sum of each group will be guaranteed be equal to 1.
  *
  * Example:
  *
@@ -153,7 +153,7 @@ c10::optional<at::Tensor> biased_to_cdf(const at::Tensor& rowptr,
                                         at::Tensor& bias,
                                         bool inplace);
 
-// The implementation of coverting to CDF representation for biased sampling.
+// The implementation of converting to CDF representation for biased sampling.
 template <typename scalar_t>
 void biased_to_cdf_helper(int64_t* rowptr_data,
                           size_t rowptr_size,
@@ -190,7 +190,7 @@ void biased_to_cdf_helper(int64_t* rowptr_data,
 std::pair<at::Tensor, at::Tensor> biased_to_alias(at::Tensor rowptr,
                                                   at::Tensor bias);
 
-// The implementation of coverting to alias table for biased sampling.
+// The implementation of converting to alias table for biased sampling.
 template <typename scalar_t>
 void biased_to_alias_helper(int64_t* rowptr_data,
                             size_t rowptr_size,
