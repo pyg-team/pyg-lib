@@ -89,7 +89,7 @@ at::Tensor softmax_csr_forward_kernel_impl(const at::Tensor& src,
                     range *= src.size(i);
                   return range;
                 }();
-                // inner_range says how many contigous elements we can visit
+                // inner_range says how many contiguous elements we can visit
                 const auto inner_range = local_dim_size * dim_stride;
                 const auto inout_offset = dim_beg * dim_stride;
                 const auto aux_offset = group_id * n_heads;
@@ -189,7 +189,7 @@ at::Tensor softmax_csr_backward_kernel_impl(const at::Tensor& out,
                     range *= out.size(i);
                   return range;
                 }();
-                // inner_range says how many contigous elements we can visit
+                // inner_range says how many contiguous elements we can visit
                 const auto inner_range = local_dim_size * dim_stride;
                 const auto inout_offset = dim_beg * dim_stride;
                 const auto sum_offset = group_id * n_heads;
