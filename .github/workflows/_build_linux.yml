@@ -42,7 +42,7 @@ jobs:
           password: ${{ secrets.docker-hub-token }}
 
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
@@ -68,7 +68,7 @@ jobs:
           tool-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
           python-version: 3.11

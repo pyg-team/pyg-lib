@@ -22,16 +22,14 @@ def test_fused_scatter_reduce():
     assert torch.allclose(out[1, 8:12], x[index == 1].max(dim=0)[0])
 
 
-if __name__ == '__main__':  # Benchmarking
-    import time
-
+if __name__ == '__main__':
     import torch_scatter
 
-    x = torch.randn(50000, 64, device='cuda')
-    index = torch.randint(1000, (x.size(0), ), device='cuda')
+    x = torch.randn(50_000, 64, device='cuda')
+    index = torch.randint(1_000, (x.size(0), ), device='cuda')
 
-    num_warmups = 1000
-    num_steps = 10000
+    num_warmups = 1_000
+    num_steps = 10_000
 
     aggrs = [
         ['sum', 'mean'],
@@ -42,27 +40,34 @@ if __name__ == '__main__':  # Benchmarking
     for aggr in aggrs:
         print(f'Aggregation: {aggr}')
 
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+
         for i in range(num_warmups + num_steps):
             if i == num_warmups:
-                torch.cuda.synchronize()
-                t = time.perf_counter()
-            out_fused = fused_scatter_reduce(x, index, dim_size=1000,
+                start_event.record()
+
+            out_fused = fused_scatter_reduce(x, index, dim_size=1_000,
                                              reduce_list=aggr)
+
+        end_event.record()
         torch.cuda.synchronize()
-        t = time.perf_counter() - t
+        t = start_event.elapsed_time(end_event) / 1_000
         print(f'  Fused implementation: {t:.4f} seconds')
 
         for i in range(num_warmups + num_steps):
             if i == num_warmups:
-                torch.cuda.synchronize()
-                t = time.perf_counter()
+                start_event.record()
+
             outs = [
-                torch_scatter.scatter(x, index, dim_size=1000, dim=0,
+                torch_scatter.scatter(x, index, dim_size=1_000, dim=0,
                                       reduce=reduce) for reduce in aggr
             ]
             out_vanilla = torch.cat(outs, dim=-1)
+
+        end_event.record()
         torch.cuda.synchronize()
-        t = time.perf_counter() - t
+        t = start_event.elapsed_time(end_event) / 1_000
         print(f'Vanilla implementation: {t:.4f} seconds')
         print()
 

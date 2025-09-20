@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Added
 - Added support for `manylinux_2_28` wheels built with CUDA in nightly releases ([#496](https://github.com/pyg-team/pyg-lib/pull/496))
 - Added support for `manylinux_2_28` wheels in nightly releases ([#480](https://github.com/pyg-team/pyg-lib/pull/480))
+- Added CUDA 13.0 support ([#509](https://github.com/pyg-team/pyg-lib/pull/509), [#511](https://github.com/pyg-team/pyg-lib/pull/511))
 - Added CUDA 12.9 support ([#494](https://github.com/pyg-team/pyg-lib/pull/494))
 - Added PyTorch 2.8 support ([#494](https://github.com/pyg-team/pyg-lib/pull/494))
 - Added PyTorch 2.7 support ([#442](https://github.com/pyg-team/pyg-lib/pull/442))
@@ -19,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added ROCM 6.4 support ([#507](https://github.com/pyg-team/pyg-lib/pull/507))
 ### Changed
 ### Removed
+- Dropped Python 3.9 support ([#525](https://github.com/pyg-team/pyg-lib/pull/525))
 - Dropped Python 3.8 support ([#356](https://github.com/pyg-team/pyg-lib/pull/356))
 - Removed linking to Python ([#462](https://github.com/pyg-team/pyg-lib/pull/462))
 
