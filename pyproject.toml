@@ -10,7 +10,7 @@ authors=[
 dynamic=["version", "dependencies", "optional-dependencies"]
 description="Low-Level Graph Neural Network Operators for PyG"
 readme="README.md"
-requires-python=">=3.9"
+requires-python=">=3.10"
 keywords=[
     "deep-learning",
     "pytorch",
@@ -22,7 +22,6 @@ license={file="LICENSE"}
 classifiers=[
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -81,7 +80,7 @@ skip=[".gitignore", "__init__.py"]
 src=["pyg_lib"]
 line-length=80
 indent-width=4
-target-version="py39"
+target-version="py310"
 
 [tool.ruff.lint]
 select=[
