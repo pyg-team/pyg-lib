@@ -1,20 +1,22 @@
-[python-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml/badge.svg
-[python-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml
-[cpp-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml/badge.svg
-[cpp-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml
-[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
-[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
+[contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat&color=4B26A4
+[contributing-url]: https://github.com/pyg-team/pytorch_geometric/blob/master/.github/CONTRIBUTING.md
 [coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
 [coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=master
+[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
+[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
+[slack-image]: https://img.shields.io/badge/slack-join-white.svg?logo=slack&color=4B26A4
+[slack-url]: https://data.pyg.org/slack.html
 
 # pyg-lib
 
-[![Python Testing Status][python-testing-image]][python-testing-url]
-[![CPP Testing Status][cpp-testing-image]][cpp-testing-url]
+<div align="center">
+
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
+[![Slack][slack-image]][slack-url]
+[![Contributing][contributing-image]][contributing-url]
 
-* [Installation](#installation)
+</div>
 
 ## Installation
 
