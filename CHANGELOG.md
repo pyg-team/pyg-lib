@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added macOS Apple Silicon support ([#310](https://github.com/pyg-team/pyg-lib/pull/310))
 ### Changed
 ### Removed
+- Removed Support for Python 1.13-2.5 ([#532](https://github.com/pyg-team/pyg-lib/pull/532))
 - Dropped Python 3.9 support ([#525](https://github.com/pyg-team/pyg-lib/pull/525))
 - Dropped Python 3.8 support ([#356](https://github.com/pyg-team/pyg-lib/pull/356))
 - Removed linking to Python ([#462](https://github.com/pyg-team/pyg-lib/pull/462))
