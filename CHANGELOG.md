@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
 ## [0.5.0] - 2025-10-14
 ### Added
 - Added support for `manylinux_2_28` wheels built with CUDA in nightly releases ([#496](https://github.com/pyg-team/pyg-lib/pull/496))
