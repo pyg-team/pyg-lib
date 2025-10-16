@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- Added PyTorch 2.9 support ([#539](https://github.com/pyg-team/pyg-lib/pull/539))
+- Added PyTorch 2.9 support ([#536](https://github.com/pyg-team/pyg-lib/pull/536))
 ### Changed
 ### Deprecated
 ### Removed
