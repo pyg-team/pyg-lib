@@ -10,6 +10,12 @@ namespace ops {
 PYG_API std::tuple<at::Tensor, at::Tensor> index_sort(
     const at::Tensor& input,
     const at::optional<int64_t> max) {
+  
+  at::TensorArg input_arg{input, "input", 0};
+  at::CheckedFrom c{"index_sort"};    
+  
+  at::checkAllDefined(c, {input_arg}); // this is a guess
+  at::checkContiguous(c, input_arg); // this is a guess
 
 
   static auto op = c10::Dispatcher::singleton()
