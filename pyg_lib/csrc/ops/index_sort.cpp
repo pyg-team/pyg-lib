@@ -6,7 +6,6 @@
 namespace pyg {
 namespace ops {
 
-// I think this is needed as well?
 PYG_API std::tuple<at::Tensor, at::Tensor> index_sort(
     const at::Tensor& input,
     const at::optional<int64_t> max) {
