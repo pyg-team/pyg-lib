@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
-project(pyg)
+if(WITH_ROCM)
+  set(CMAKE_C_COMPILER  /opt/rocm/bin/hipcc CACHE FILEPATH "" FORCE)
+  set(CMAKE_CXX_COMPILER /opt/rocm/bin/hipcc CACHE FILEPATH "" FORCE)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  project(pyg LANGUAGES C CXX HIP)
+else()
+  project(pyg)
+endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
@@ -10,6 +18,10 @@ option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
+option(WITH_ROCM "Enable ROCm/HIP support" OFF)
+if (WITH_ROCM AND WITH_CUDA)
+  message(FATAL_ERROR "WITH_ROCM and WITH_CUDA cannot both be ON")
+endif()
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -75,10 +87,31 @@ if(WITH_CUDA)
   include_directories(${CUCOLLECTIONS_DIR})
 endif()
 
+if (WITH_ROCM)
+  if (CMAKE_VERSION VERSION_LESS "3.23.1")
+    message(FATAL_ERROR "WITH_ROCM requires CMake >= 3.23.1 (now ${CMAKE_VERSION})")
+  endif()
+  enable_language(HIP)
+  add_definitions(-DWITH_ROCM)
+  find_package(Threads REQUIRED)
+  find_package(hip REQUIRED)
+  find_package(hipblaslt REQUIRED)
+  find_package(rocblas REQUIRED)
+  find_package(rocprim REQUIRED)
+  find_package(rocthrust REQUIRED)
+  set(LIBHIPCXX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/libhipcxx")
+  set(HIP_COLLECTIONS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hipCollections/include)
+  find_package(libhipcxx REQUIRED CONFIG  PATHS "${LIBHIPCXX_DIR}/lib/cmake/libhipcxx"  NO_DEFAULT_PATH)
+  include_directories(${HIP_COLLECTIONS_DIR})
+endif()
+
 set(CSRC pyg_lib/csrc)
 file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp)
 if (WITH_CUDA)
   file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.cu)
+endif()
+if (WITH_ROCM)
+  file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.hip)
 endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -110,6 +143,16 @@ if (NOT MSVC)
   include_directories(${GKLIB_PATH})
   include_directories("${METIS_DIR}/include")
   add_subdirectory("${METIS_DIR}/libmetis")
+
+  if (WITH_ROCM)
+    if (TARGET metis)
+      set_target_properties(metis PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
+    if (TARGET GKlib)
+      set_target_properties(GKlib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
+  endif()
+
   target_link_libraries(${PROJECT_NAME} PRIVATE metis)
 endif()
 
@@ -127,6 +170,18 @@ if(WITH_CUDA)
                              third_party/cccl/thrust
                              third_party/cccl/cub
                              third_party/cccl/libcudacxx/include)
+endif()
+
+if (WITH_ROCM)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+  target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+      hip::device
+      roc::hipblaslt
+      roc::rocblas
+      roc::rocthrust
+      libhipcxx::libhipcxx
+  )
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
