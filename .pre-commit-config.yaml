@@ -22,7 +22,7 @@ repos:
         args: [-d, '{extends: default, rules: {line-length: disable, document-start: disable, truthy: {level: error}, braces: {max-spaces-inside: 1}}}']
 
   - repo: https://github.com/regebro/pyroma
-    rev: "5.0"
+    rev: "5.0.1"
     hooks:
       - id: pyroma
         name: Check packaging
@@ -61,7 +61,7 @@ repos:
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.8
+    rev: v0.14.9
     hooks:
       - id: ruff
         name: Ruff formatting
