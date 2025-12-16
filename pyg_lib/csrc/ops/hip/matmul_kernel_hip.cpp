@@ -16,11 +16,11 @@ namespace ops {
 namespace {
 
 // Helper to check rocBLAS status
-#define ROCBLAS_CHECK(status)                                                  \
-  do {                                                                         \
-    rocblas_status err = (status);                                             \
-    TORCH_CHECK(err == rocblas_status_success,                                 \
-                "rocBLAS error: ", rocblas_status_to_string(err));             \
+#define ROCBLAS_CHECK(status)                                      \
+  do {                                                             \
+    rocblas_status err = (status);                                 \
+    TORCH_CHECK(err == rocblas_status_success,                     \
+                "rocBLAS error: ", rocblas_status_to_string(err)); \
   } while (0)
 
 // Get or create rocBLAS handle for current stream
@@ -68,14 +68,14 @@ void grouped_matmul_out_kernel(const at::TensorList input,
         m,                       // cols of op(A^T) = rows of A = m
         k,                       // inner dimension
         &alpha,
-        B.data_ptr<float>(),     // B in row-major = B^T in col-major
-        n,                       // leading dim of B (row-major stride)
-        A.data_ptr<float>(),     // A in row-major = A^T in col-major
-        k,                       // leading dim of A (row-major stride)
+        B.data_ptr<float>(),  // B in row-major = B^T in col-major
+        n,                    // leading dim of B (row-major stride)
+        A.data_ptr<float>(),  // A in row-major = A^T in col-major
+        k,                    // leading dim of A (row-major stride)
         &beta,
-        C.data_ptr<float>(),     // C in row-major = C^T in col-major
-        n                        // leading dim of C (row-major stride)
-    ));
+        C.data_ptr<float>(),  // C in row-major = C^T in col-major
+        n                     // leading dim of C (row-major stride)
+        ));
   }
 }
 
