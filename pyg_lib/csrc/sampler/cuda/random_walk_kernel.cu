@@ -1,5 +1,12 @@
 #include <ATen/ATen.h>
+#ifdef USE_ROCM
+#include <ATen/hip/HIPContext.h>
+#include <hip/hip_runtime.h>
+#define getCurrentCUDAStream getCurrentHIPStream
+#define C10_CUDA_KERNEL_LAUNCH_CHECK C10_HIP_KERNEL_LAUNCH_CHECK
+#else
 #include <ATen/cuda/CUDAContext.h>
+#endif
 #include <torch/library.h>
 
 namespace pyg {

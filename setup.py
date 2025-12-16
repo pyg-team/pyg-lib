@@ -55,10 +55,18 @@ class CMakeBuild(build_ext):
         WITH_CUDA = torch.cuda.is_available()
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
 
+        # Detect HIP/ROCm (PyTorch built with ROCm has torch.version.hip set)
+        WITH_HIP = hasattr(torch.version, 'hip') and torch.version.hip is not None
+        WITH_HIP = bool(int(os.getenv('FORCE_HIP', WITH_HIP)))
+
+        if WITH_HIP:
+            print(f"Building with HIP/ROCm support (torch.version.hip={torch.version.hip})")
+
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            f'-DWITH_HIP={"ON" if WITH_HIP else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',

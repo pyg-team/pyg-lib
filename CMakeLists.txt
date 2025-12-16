@@ -10,6 +10,7 @@ option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
+option(WITH_HIP "Enable HIP/ROCm support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -46,7 +47,7 @@ if(USE_MKL_BLAS AND DEFINED BLAS_INCLUDE_DIR)
 endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h")
 
-if(WITH_CUDA)
+if(WITH_CUDA AND NOT WITH_HIP)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
@@ -75,10 +76,67 @@ if(WITH_CUDA)
   include_directories(${CUCOLLECTIONS_DIR})
 endif()
 
+# HIP/ROCm support
+if(WITH_HIP)
+  # Find HIP package
+  if(NOT DEFINED ENV{ROCM_PATH})
+    set(ROCM_PATH "/opt/rocm")
+  else()
+    set(ROCM_PATH $ENV{ROCM_PATH})
+  endif()
+
+  list(APPEND CMAKE_PREFIX_PATH "${ROCM_PATH}")
+  find_package(HIP REQUIRED)
+
+  add_definitions(-DWITH_CUDA)  # Use same macro for GPU code paths
+  add_definitions(-DUSE_ROCM)
+  add_definitions(-D__HIP_PLATFORM_AMD__)
+
+  # Let CMake find HIP compiler (don't set hipcc directly - CMake 3.21+ prefers clang)
+  enable_language(HIP)
+
+  # GPU architectures for AMD (gfx900=Vega, gfx906=MI50, gfx908=MI100,
+  # gfx90a=MI200, gfx940/942=MI300, gfx1100=RDNA3)
+  set(CMAKE_HIP_ARCHITECTURES "gfx906;gfx908;gfx90a;gfx940;gfx942;gfx1100")
+
+  # Find rocBLAS for GEMM operations
+  find_package(rocblas REQUIRED)
+  find_package(hipblas REQUIRED)
+
+  # Find rocThrust (HIP port of Thrust)
+  find_path(ROCTHRUST_INCLUDE_DIR thrust/version.h
+    HINTS ${ROCM_PATH}/include)
+  if(ROCTHRUST_INCLUDE_DIR)
+    include_directories(${ROCTHRUST_INCLUDE_DIR})
+    message(STATUS "Found rocThrust: ${ROCTHRUST_INCLUDE_DIR}")
+  endif()
+
+  message(STATUS "Building with HIP/ROCm support")
+  message(STATUS "  ROCM_PATH: ${ROCM_PATH}")
+  message(STATUS "  HIP_VERSION: ${HIP_VERSION}")
+endif()
+
 set(CSRC pyg_lib/csrc)
 file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp)
-if (WITH_CUDA)
+if(WITH_CUDA AND NOT WITH_HIP)
   file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.cu)
+endif()
+if(WITH_HIP)
+  # For HIP, compile .cu files as HIP sources
+  file(GLOB_RECURSE HIP_SOURCES ${CSRC}/*.cu)
+  # Exclude CUTLASS-dependent files (matmul_kernel.cu) and cuCollections files
+  # (hash_map.cu) - these have HIP replacements in hip/ subdirs
+  list(FILTER HIP_SOURCES EXCLUDE REGEX ".*/cuda/matmul_kernel\\.cu$")
+  list(FILTER HIP_SOURCES EXCLUDE REGEX ".*/cuda/hash_map\\.cu$")
+  set_source_files_properties(${HIP_SOURCES} PROPERTIES LANGUAGE HIP)
+  list(APPEND ALL_SOURCES ${HIP_SOURCES})
+  # Add HIP-specific implementations (rocBLAS matmul, HIP hashmap)
+  # These need to be compiled as HIP to get proper HIP/ATen integration
+  file(GLOB_RECURSE HIP_CPP_SOURCES ${CSRC}/*/hip/*.cpp)
+  set_source_files_properties(${HIP_CPP_SOURCES} PROPERTIES LANGUAGE HIP)
+  list(APPEND ALL_SOURCES ${HIP_CPP_SOURCES})
+  message(STATUS "HIP sources: ${HIP_SOURCES}")
+  message(STATUS "HIP C++ sources: ${HIP_CPP_SOURCES}")
 endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -122,11 +180,19 @@ if(OpenMP_CXX_FOUND)
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-if(WITH_CUDA)
+if(WITH_CUDA AND NOT WITH_HIP)
   target_include_directories(${PROJECT_NAME} PRIVATE
                              third_party/cccl/thrust
                              third_party/cccl/cub
                              third_party/cccl/libcudacxx/include)
+endif()
+
+if(WITH_HIP)
+  # Link rocBLAS and hipBLAS for GEMM operations
+  # Targets are roc::rocblas and roc::hipblas per ROCm cmake configs
+  target_link_libraries(${PROJECT_NAME} PRIVATE roc::rocblas roc::hipblas)
+  # Include HIP runtime
+  target_include_directories(${PROJECT_NAME} PRIVATE ${ROCM_PATH}/include)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
