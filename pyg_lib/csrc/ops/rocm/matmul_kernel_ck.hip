@@ -42,6 +42,8 @@ using CDEElementOp = PassThrough;
 // DefaultGemmKernel_FP32 using Composable Kernel
 // This is the simplified FP32 GEMM kernel for AMD GPUs
 // No TF32 or architecture-specific versioning needed for AMD GPUs
+// Note: These kernel parameters are fixed similar to the original CUDA CUTLASS implementation
+// For different problem sizes, CK's runtime will handle the appropriate scheduling
 using DeviceGroupedGemmInstance = ck::tensor_operation::device::DeviceGroupedGemm_Xdl<
     ALayout,
     BLayout,
