@@ -99,6 +99,7 @@ if (WITH_ROCM)
   find_package(rocblas REQUIRED)
   find_package(rocprim REQUIRED)
   find_package(rocthrust REQUIRED)
+  find_package(composable_kernel REQUIRED)
   set(LIBHIPCXX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/libhipcxx")
   set(HIP_COLLECTIONS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/hipCollections/include)
   find_package(libhipcxx REQUIRED CONFIG  PATHS "${LIBHIPCXX_DIR}/lib/cmake/libhipcxx"  NO_DEFAULT_PATH)
@@ -181,6 +182,7 @@ if (WITH_ROCM)
       roc::rocblas
       roc::rocthrust
       libhipcxx::libhipcxx
+      composable_kernel::device_grouped_gemm_operations
   )
 endif()
 
