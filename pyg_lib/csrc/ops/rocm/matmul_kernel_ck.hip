@@ -8,6 +8,7 @@
 #include <ck/tensor_operation/gpu/device/gemm_specialization.hpp>
 #include <ck/tensor_operation/gpu/device/impl/device_grouped_gemm_xdl.hpp>
 #include <ck/tensor_operation/gpu/element/element_wise_operation.hpp>
+#include <ck/utility/data_type.hpp>
 
 #include "pyg_lib/csrc/utils/convert.h"
 
@@ -181,7 +182,8 @@ void run_grouped_gemm(const at::TensorList input,
   hipStream_t stream = at::cuda::getCurrentHIPStream();
 
   // Run the grouped GEMM
-  float avg_time = invoker.Run(argument, StreamConfig{stream, false});
+  // CK StreamConfig takes (stream, time_kernel, log_level, flush_icache)
+  float avg_time = invoker.Run(argument, ck::StreamConfig{stream, false});
   (void)avg_time;  // Suppress unused variable warning
 }
 
