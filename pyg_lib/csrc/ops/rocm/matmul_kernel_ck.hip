@@ -4,7 +4,10 @@
 #include <torch/library.h>
 
 // Composable Kernel headers for grouped GEMM
+// Following AMD official CK documentation:
+// https://rocm.docs.amd.com/projects/composable_kernel/en/latest/
 #include <ck/ck.hpp>
+#include <ck/tensor_operation/gpu/device/device_grouped_gemm.hpp>
 #include <ck/tensor_operation/gpu/device/gemm_specialization.hpp>
 #include <ck/tensor_operation/gpu/device/impl/device_grouped_gemm_xdl.hpp>
 #include <ck/tensor_operation/gpu/element/element_wise_operation.hpp>
@@ -17,33 +20,36 @@ namespace ops {
 
 namespace {
 
-// Define element-wise operations for the epilogue
+// Define element-wise operations for the epilogue (PassThrough = identity)
 using PassThrough = ck::tensor_operation::element_wise::PassThrough;
 
-// Define data types
-using ADataType       = float;
-using BDataType       = float;
-using AccDataType     = float;
+// Define scalar data types following CK documentation
+using ADataType        = float;
+using BDataType        = float;
+using AccDataType      = float;
 using CShuffleDataType = float;
-using DsDataType      = ck::Tuple<>;
-using EDataType       = float;
+using DsDataType       = ck::Tuple<>;  // No D tensors (bias, etc.)
+using EDataType        = float;
 
-// Define layouts for row-major matrices
-using ALayout = ck::tensor_layout::gemm::RowMajor;
-using BLayout = ck::tensor_layout::gemm::RowMajor;
+// Define tensor layouts for row-major matrices
+// CK uses RowMajor/ColumnMajor from tensor_layout::gemm namespace
+using ALayout  = ck::tensor_layout::gemm::RowMajor;
+using BLayout  = ck::tensor_layout::gemm::RowMajor;
 using DsLayout = ck::Tuple<>;
-using ELayout = ck::tensor_layout::gemm::RowMajor;
+using ELayout  = ck::tensor_layout::gemm::RowMajor;
 
-// Define element-wise operations
-using AElementOp = PassThrough;
-using BElementOp = PassThrough;
+// Define element-wise operations for A, B, and CDE (output)
+using AElementOp   = PassThrough;
+using BElementOp   = PassThrough;
 using CDEElementOp = PassThrough;
+
+// Number of D tensors (bias tensors) - we have none
+static constexpr ck::index_t NumDTensor = 0;
 
 // DefaultGemmKernel_FP32 using Composable Kernel
 // This is the simplified FP32 GEMM kernel for AMD GPUs
 // No TF32 or architecture-specific versioning needed for AMD GPUs
-// Note: These kernel parameters are fixed similar to the original CUDA CUTLASS implementation
-// For different problem sizes, CK's runtime will handle the appropriate scheduling
+// Kernel parameters are tuned for general-purpose grouped GEMM workloads
 using DeviceGroupedGemmInstance = ck::tensor_operation::device::DeviceGroupedGemm_Xdl<
     ALayout,
     BLayout,
@@ -59,132 +65,123 @@ using DeviceGroupedGemmInstance = ck::tensor_operation::device::DeviceGroupedGem
     BElementOp,
     CDEElementOp,
     ck::tensor_operation::device::GemmSpecialization::Default,
-    1,                    // NumGemmKBatch
-    256,                  // BlockSize
-    128,                  // MPerBlock
-    64,                   // NPerBlock
-    8,                    // KPerBlock
-    8,                    // AK1
-    2,                    // BK1
-    32,                   // MPerXdl
-    32,                   // NPerXdl
-    2,                    // MXdlPerWave
-    1,                    // NXdlPerWave
+    1,                    // NumPrefetch (number of software pipeline stages)
+    256,                  // BlockSize (threads per block)
+    128,                  // MPerBlock (M tile size)
+    64,                   // NPerBlock (N tile size)
+    8,                    // KPerBlock (K tile size per iteration)
+    8,                    // AK1 (inner K dimension for A tensor)
+    2,                    // BK1 (inner K dimension for B tensor)
+    32,                   // MPerXDL (M per XDL instruction)
+    32,                   // NPerXDL (N per XDL instruction)
+    2,                    // MXdlPerWave (M XDL tiles per wave)
+    1,                    // NXdlPerWave (N XDL tiles per wave)
     ck::Sequence<4, 64, 1>,   // ABlockTransferThreadClusterLengths_AK0_M_AK1
     ck::Sequence<1, 0, 2>,    // ABlockTransferThreadClusterArrangeOrder
     ck::Sequence<1, 0, 2>,    // ABlockTransferSrcAccessOrder
     2,                        // ABlockTransferSrcVectorDim
     8,                        // ABlockTransferSrcScalarPerVector
     8,                        // ABlockTransferDstScalarPerVector_AK1
-    true,                     // ABlockLdsExtraM
+    true,                     // ABlockLdsExtraM (extra LDS for A)
     ck::Sequence<4, 64, 1>,   // BBlockTransferThreadClusterLengths_BK0_N_BK1
     ck::Sequence<0, 2, 1>,    // BBlockTransferThreadClusterArrangeOrder
     ck::Sequence<0, 2, 1>,    // BBlockTransferSrcAccessOrder
     1,                        // BBlockTransferSrcVectorDim
     2,                        // BBlockTransferSrcScalarPerVector
     2,                        // BBlockTransferDstScalarPerVector_BK1
-    true,                     // BBlockLdsExtraN
+    true,                     // BBlockLdsExtraN (extra LDS for B)
     1,                        // CShuffleMXdlPerWavePerShuffle
     1,                        // CShuffleNXdlPerWavePerShuffle
-    ck::Sequence<1, 32, 1, 8>,  // CDEBlockTransferClusterLengths_MBlock_MPerBlock_NBlock_NPerBlock
-    8>;                         // CDEBlockTransferScalarPerVector_NWaveNPerXdl
+    ck::Sequence<1, 32, 1, 8>,  // CDEBlockTransferClusterLengths
+    8>;                         // CDEBlockTransferScalarPerVector
 
 void run_grouped_gemm(const at::TensorList input,
                       const at::TensorList other,
                       const at::TensorList out,
                       bool segment) {
-  const int64_t num_matrices = static_cast<int64_t>(input.size());
+  const std::size_t group_count = input.size();
 
-  // Prepare host-side argument arrays
+  // Prepare argument vectors following CK's MakeArgument API
+  // Reference: device_grouped_gemm.hpp - MakeArgumentPointer signature
   std::vector<const void*> p_a_vec;
   std::vector<const void*> p_b_vec;
-  std::vector<std::array<const void*, 0>> p_ds_vec;
+  std::vector<std::array<const void*, NumDTensor>> p_ds_vec;
   std::vector<void*> p_e_vec;
-  std::vector<ck::index_t> M_vec;
-  std::vector<ck::index_t> N_vec;
-  std::vector<ck::index_t> K_vec;
-  std::vector<ck::index_t> stride_a_vec;
-  std::vector<ck::index_t> stride_b_vec;
-  std::vector<std::array<ck::index_t, 0>> stride_ds_vec;
-  std::vector<ck::index_t> stride_e_vec;
+  std::vector<ck::tensor_operation::device::GemmDesc> gemm_descs;
 
-  p_a_vec.reserve(num_matrices);
-  p_b_vec.reserve(num_matrices);
-  p_ds_vec.reserve(num_matrices);
-  p_e_vec.reserve(num_matrices);
-  M_vec.reserve(num_matrices);
-  N_vec.reserve(num_matrices);
-  K_vec.reserve(num_matrices);
-  stride_a_vec.reserve(num_matrices);
-  stride_b_vec.reserve(num_matrices);
-  stride_ds_vec.reserve(num_matrices);
-  stride_e_vec.reserve(num_matrices);
+  p_a_vec.reserve(group_count);
+  p_b_vec.reserve(group_count);
+  p_ds_vec.reserve(group_count);
+  p_e_vec.reserve(group_count);
+  gemm_descs.reserve(group_count);
 
   // Fill argument vectors from input tensors
-  for (size_t i = 0; i < static_cast<size_t>(num_matrices); ++i) {
+  for (std::size_t i = 0; i < group_count; ++i) {
     const auto& A = input[i];
     const auto& B = other[i];
-    auto& E = out[i];
+    const auto& E = out[i];
 
+    // Get matrix dimensions
     ck::index_t M = static_cast<ck::index_t>(A.size(0));
     ck::index_t K = static_cast<ck::index_t>(B.size(static_cast<int>(segment)));
     ck::index_t N = static_cast<ck::index_t>(E.size(1));
 
-    // For row-major layout:
-    // A: MxK with stride K
-    // B: KxN with stride N
-    // E: MxN with stride N
+    // For row-major layout, stride is the number of columns
+    // A: MxK with stride K (row-major: StrideA = K)
+    // B: KxN with stride N (row-major: StrideB = N)
+    // E: MxN with stride N (row-major: StrideC = N)
     ck::index_t stride_a = K;
     ck::index_t stride_b = N;
     ck::index_t stride_e = N;
 
+    // Add pointers
     p_a_vec.push_back(A.data_ptr<float>());
     p_b_vec.push_back(B.data_ptr<float>());
-    p_ds_vec.push_back({});
+    p_ds_vec.push_back({});  // No D tensors
     p_e_vec.push_back(E.data_ptr<float>());
 
-    M_vec.push_back(M);
-    N_vec.push_back(N);
-    K_vec.push_back(K);
+    // Create GemmDesc for this GEMM problem
+    // GemmDesc structure: M_, N_, K_, stride_A_, stride_B_, stride_C_, stride_Ds_
+    ck::tensor_operation::device::GemmDesc gemm_desc;
+    gemm_desc.M_ = M;
+    gemm_desc.N_ = N;
+    gemm_desc.K_ = K;
+    gemm_desc.stride_A_ = stride_a;
+    gemm_desc.stride_B_ = stride_b;
+    gemm_desc.stride_C_ = stride_e;  // Output stride (E tensor)
+    gemm_desc.stride_Ds_ = {};       // No D tensor strides
 
-    stride_a_vec.push_back(stride_a);
-    stride_b_vec.push_back(stride_b);
-    stride_ds_vec.push_back({});
-    stride_e_vec.push_back(stride_e);
+    gemm_descs.push_back(gemm_desc);
   }
 
   // Create device GEMM instance
   auto gemm = DeviceGroupedGemmInstance{};
 
-  // Create invoker
+  // Create invoker using CK's factory method
   auto invoker = gemm.MakeInvoker();
 
-  // Create argument
+  // Create argument using CK's MakeArgument API
+  // Reference: device_grouped_gemm_xdl.hpp - MakeArgument
   auto argument = gemm.MakeArgument(
       p_a_vec,
       p_b_vec,
       p_ds_vec,
       p_e_vec,
-      M_vec,
-      N_vec,
-      K_vec,
-      stride_a_vec,
-      stride_b_vec,
-      stride_ds_vec,
-      stride_e_vec,
+      gemm_descs,
       AElementOp{},
       BElementOp{},
       CDEElementOp{});
 
-  // Check if the device operation is supported
+  // Validate that the device operation supports the given arguments
   TORCH_CHECK(gemm.IsSupportedArgument(argument),
-              "CK grouped GEMM: device operation not supported for given arguments");
+              "CK grouped GEMM: device operation not supported for given arguments. "
+              "Check matrix dimensions and strides are compatible with kernel configuration.");
 
-  // Get HIP stream
+  // Get HIP stream from PyTorch
   hipStream_t stream = at::cuda::getCurrentHIPStream();
 
-  // Run the grouped GEMM
-  // CK StreamConfig takes (stream, time_kernel, log_level, flush_icache)
+  // Run the grouped GEMM operation
+  // StreamConfig parameters: (stream, time_kernel, log_level, flush_icache)
   float avg_time = invoker.Run(argument, ck::StreamConfig{stream, false});
   (void)avg_time;  // Suppress unused variable warning
 }
