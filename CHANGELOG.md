@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Deprecated
 ### Removed
 - Removed CUDA 11.8 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
+- Removed PyTorch 2.6 and 2.7 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
 ### Fixed
 ### Security
 
