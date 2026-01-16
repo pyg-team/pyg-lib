@@ -11,6 +11,11 @@ on:  # yamllint disable-line rule:truthy
         required: false
         default: ''
         description: 'nightly or final'
+    secrets:
+      aws-access-key-id:
+        required: true
+      aws-secret-access-key:
+        required: true
 
 defaults:
   run:
