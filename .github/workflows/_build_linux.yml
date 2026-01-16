@@ -14,13 +14,6 @@ on:  # yamllint disable-line rule:truthy
       docker-hub-username:
         type: string
         required: true
-    secrets:
-      docker-hub-token:
-        required: true
-      aws-access-key-id:
-        required: true
-      aws-secret-access-key:
-        required: true
 
 defaults:
   run:

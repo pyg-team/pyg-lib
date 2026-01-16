@@ -110,6 +110,7 @@ jobs:
     uses: ./.github/workflows/_build_windows.yml
     with:
       test-matrix: ${{ needs.trigger.outputs.matrix-windows }}
+    secrets: inherit
 
   status:
     needs: [trigger, linux, macos, windows]

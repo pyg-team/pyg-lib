@@ -50,10 +50,7 @@ jobs:
       test-matrix: ${{ needs.trigger.outputs.matrix-linux }}
       release-type: nightly
       docker-hub-username: ${{ vars.DOCKERHUB_USERNAME }}
-    secrets:
-      docker-hub-token: ${{ secrets.DOCKERHUB_TOKEN }}
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    secrets: inherit
 
   macos:
     needs: [trigger]
