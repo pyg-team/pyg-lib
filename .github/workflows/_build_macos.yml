@@ -45,7 +45,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          # NOTE: This is a version used for cibuildwheel but not for wheels.
+          python-version: 3.11
 
       - name: Install dependencies
         run: |
