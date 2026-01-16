@@ -55,6 +55,17 @@ auditwheel repair \
   --exclude 'libcuda.so*'
 """
 
+[tool.cibuildwheel.macos]
+repair-wheel-command = """
+delocate-wheel \
+  --require-archs {delocate_archs} \
+  --wheel-dir {dest_dir} {wheel} \
+  --exclude libtorch.dylib \
+  --exclude libtorch_cpu.dylib \
+  --exclude libc10.dylib \
+  --exclude libomp.dylib
+"""
+
 [tool.pytest.ini_options]
 addopts=[
     "--capture=no",
