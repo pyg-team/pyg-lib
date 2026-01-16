@@ -72,7 +72,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
