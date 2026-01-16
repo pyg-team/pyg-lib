@@ -25,17 +25,27 @@ jobs:
         include: ${{ fromJSON(inputs.test-matrix) }}
 
     steps:
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: us-west-1
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        uses: ./.github/actions/setup
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
-          torch-version: ${{ matrix.torch-version }}
-          cuda-version: ${{ matrix.cuda-version }}
+          # NOTE: This is a version used for cibuildwheel but not for wheels.
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install cibuildwheel auditwheel
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -58,36 +68,14 @@ jobs:
 
       - name: Build wheel
         run: |
-          source ./.github/workflows/cuda/macOS-env.sh ${{ matrix.cuda-version }}
-          pip install build
-          python -m build --wheel --no-isolation --outdir dist
-
-      - name: Install wheel
-        run: |
-          cd dist
-          ls -lah
-          pip install *.whl
-          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
-          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          cd ..
-
-      - name: Test wheel
-        run: |
-          pip install pytest pytest-cov
-          pytest --cov --cov-report=xml
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
         run: |
-          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws s3 sync dist s3://data.pyg.org/whl/torch-${{ matrix.torch-version }}+cpu --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
 
       - name: Upload wheel (nightly)
         if: ${{ inputs.release-type == 'nightly' }}
         run: |
-          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+${{ matrix.cuda-version }} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+cpu --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
