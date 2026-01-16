@@ -17,7 +17,6 @@ on:  # yamllint disable-line rule:truthy
       aws-secret-access-key:
         required: true
 
-
 defaults:
   run:
     shell: bash
@@ -46,8 +45,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          # NOTE: This is a version used for cibuildwheel but not for wheels.
-          python-version: 3.11
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
