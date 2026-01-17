@@ -62,7 +62,7 @@ jobs:
           sed -i "" "s/$VERSION/$VERSION+$TORCH_VERSION/" pyg_lib/__init__.py
 
       - name: Set version (nightly)
-        if: ${{ inputs.release-type == 'nightly' }}
+        if: ${{ inputs.release-type != 'final' }}
         run: |
           VERSION=`sed -n "s/^__version__ = '\(.*\)'/\1/p" pyg_lib/__init__.py`
           TORCH_VERSION=`echo "pt${{ matrix.torch-version }}" | sed "s/..$//" | sed "s/\.//g"`
@@ -89,5 +89,5 @@ jobs:
         if: ${{ inputs.release-type == '' }}
         uses: actions/upload-artifact@v5
         with:
-          name: pyg-lib-${{ matrix.torch-version }}+cpu-wheel
+          name: wheel-macos-${{ matrix.python-version }}-${{ matrix.torch-version }}
           path: dist/*.whl
