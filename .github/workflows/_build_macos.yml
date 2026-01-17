@@ -84,3 +84,10 @@ jobs:
         if: ${{ inputs.release-type == 'nightly' }}
         run: |
           aws s3 sync dist s3://data.pyg.org/whl/nightly/torch-${{ matrix.torch-version }}+cpu --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+      - name: Upload wheel as GitHub artifact
+        if: ${{ inputs.release-type == '' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: pyg-lib-${{ matrix.torch-version }}+cpu-wheel
+          path: dist/*.whl
