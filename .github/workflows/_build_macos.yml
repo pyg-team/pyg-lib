@@ -50,7 +50,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install cibuildwheel auditwheel
+          pip install cibuildwheel delocate
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}

@@ -19,8 +19,8 @@ fi
 rm -rf Testing libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist
 ls -ahl dist/
-python -m auditwheel show dist/*.whl
+python -m delocate-listdeps -vv --all dist/*.whl
 
 unzip dist/*.whl -d debug/
-ldd debug/libpyg.so
-readelf -d debug/libpyg.so
+otool -L debug/libpyg.so
+otool -l debug/libpyg.so
