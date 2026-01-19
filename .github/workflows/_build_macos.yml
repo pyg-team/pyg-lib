@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload wheel as GitHub artifact
         if: ${{ inputs.release-type == '' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheel-macos-${{ matrix.python-version }}-${{ matrix.torch-version }}
           path: dist/*.whl
