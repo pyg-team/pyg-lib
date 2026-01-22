@@ -14,7 +14,7 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-if [[ "${TORCH_VERSION}" == "2.10.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.11.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
 else
