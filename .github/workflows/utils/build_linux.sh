@@ -3,7 +3,7 @@ set -ex
 
 CUDA_VERSION="${1:?Specify cuda version, e.g. cpu, cu130}"
 PYTHON_VERSION="${2:?Specify python version, e.g. 3.13}"
-TORCH_VERSION="${3:?Specify torch version, e.g. 2.9.0}"
+TORCH_VERSION="${3:?Specify torch version, e.g. 2.10.0}"
 echo "CUDA_VERSION: ${CUDA_VERSION}"
 echo "PYTHON_VERSION: ${PYTHON_VERSION//./}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"

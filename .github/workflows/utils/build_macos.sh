@@ -2,7 +2,7 @@
 set -ex
 
 PYTHON_VERSION="${1:?Specify python version, e.g. 3.13}"
-TORCH_VERSION="${2:?Specify torch version, e.g. 2.9.0}"
+TORCH_VERSION="${2:?Specify torch version, e.g. 2.10.0}"
 echo "PYTHON_VERSION: ${PYTHON_VERSION//./}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"
 
