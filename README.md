@@ -134,9 +134,9 @@ export FORCE_ROCM=1
 export FORCE_CUDA=0
 
 # Set your GPU architecture, for example gfx90a/gfx942/gfx1100:
-export PYTORCH_ROCM_ARCH="gfx1100;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gfx1030;gfx1031"
+export PYTORCH_ROCM_ARCH="gfx1100;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gfx1030"
 # Alternatively, you can use:
-# export AMDGPU_TARGETS=gfx90a
+# export AMDGPU_TARGETS=gfx90a;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gfx1030
 # If your hipcc does not recognize one of the targets, remove that target.
 
 # Optional: disable CK grouped matmul path (enabled by default).
