@@ -1,5 +1,5 @@
 [build-system]
-requires=["setuptools", "wheel"]
+requires=["setuptools", "wheel", "cmake>=3.23"]
 build-backend="setuptools.build_meta"
 
 [project]
@@ -47,6 +47,9 @@ environment-pass = [
     "TORCH_CUDA_ARCH_LIST",
     "FORCE_ROCM",
     "ROCM_PATH",
+    "PYTORCH_ROCM_ARCH",
+    "AMDGPU_TARGETS",
+    "PYG_ROCM_MATMUL_USE_CK",
     "CMAKE_PREFIX_PATH",
 ]
 repair-wheel-command = """
@@ -59,7 +62,8 @@ auditwheel repair \
   --exclude 'libamdhip64.so*' \
   --exclude 'libhsa-runtime64.so*' \
   --exclude 'librocblas*.so*' \
-  --exclude 'libhipblaslt*.so*'
+  --exclude 'libhipblaslt*.so*' \
+  --exclude 'libdevice_gemm_operations*.so*'
 """
 
 [tool.pytest.ini_options]

@@ -99,6 +99,79 @@ If you have any questions about it, please open an issue [here](https://github.c
 
 **Note:** ROCM backend only support Linux up to now.
 
+### Build from source on a ROCm machine (Linux)
+
+The following steps build and install `pyg-lib` with ROCm/HIP support from source.
+Ensure your ROCm installation includes `hipblaslt`, `rocblas`, `rocprim`,
+`rocthrust`, and `composable_kernel`.
+
+1. Install system build tools:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential python3-dev python3-pip cmake ninja-build
+```
+
+2. Install Python build dependencies:
+
+```bash
+python3 -m pip install --upgrade pip setuptools wheel ninja
+```
+
+3. Install a ROCm-enabled PyTorch build (matching your ROCm stack):
+
+```bash
+# Example:
+# python3 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.3
+```
+
+4. Configure environment variables:
+
+```bash
+export ROCM_PATH=/opt/rocm
+export CMAKE_PREFIX_PATH="${ROCM_PATH};${ROCM_PATH}/lib/cmake"
+export FORCE_ROCM=1
+export FORCE_CUDA=0
+
+# Set your GPU architecture, for example gfx90a/gfx942/gfx1100:
+export PYTORCH_ROCM_ARCH="gfx1100;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gfx1030;gfx1031"
+# Alternatively, you can use:
+# export AMDGPU_TARGETS=gfx90a
+# If your hipcc does not recognize one of the targets, remove that target.
+
+# Optional: disable CK grouped matmul path (enabled by default).
+# export PYG_ROCM_MATMUL_USE_CK=0
+```
+
+`grouped_matmul` / `segment_matmul` behavior on ROCm:
+
+- `fp16` input: use CK `DefaultGroupedGemmKernel_FP16` by default.
+- `bf16` input: use CK `DefaultGroupedGemmKernel_BF16` by default.
+- `fp32` input: first convert to `bf16` and try CK BF16 kernel; if that fails,
+  convert to `fp16` and try CK FP16 kernel; if both fail, fallback to
+  `at::mm_out`.
+- Any fallback prints a runtime warning that includes the reason.
+- On architectures without CK XDL support for the selected path (for example
+  some `gfx10` targets), fallback warnings are expected.
+
+5. Build and install:
+
+```bash
+python3 -m pip install -v .
+```
+
+For editable/development install:
+
+```bash
+python3 -m pip install -v -e .
+```
+
+Optional check:
+
+```bash
+python3 -c "import torch; print(torch.version.hip)"
+```
+
 ### From nightly
 
 Nightly wheels are provided for Linux from Python 3.10 till 3.13:

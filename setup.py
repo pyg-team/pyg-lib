@@ -79,6 +79,12 @@ class CMakeBuild(build_ext):
         if WITH_ROCM:
             rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
             prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
+            rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
+                'AMDGPU_TARGETS')
+            if rocm_arch:
+                rocm_arch = ';'.join(
+                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x])
+                cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
 
         cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 

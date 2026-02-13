@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
 if(WITH_ROCM)
-  set(CMAKE_C_COMPILER  /opt/rocm/bin/hipcc CACHE FILEPATH "" FORCE)
-  set(CMAKE_CXX_COMPILER /opt/rocm/bin/hipcc CACHE FILEPATH "" FORCE)
+  if(DEFINED ENV{ROCM_PATH} AND NOT "$ENV{ROCM_PATH}" STREQUAL "")
+    set(_ROCM_ROOT "$ENV{ROCM_PATH}")
+  else()
+    set(_ROCM_ROOT "/opt/rocm")
+  endif()
+  set(CMAKE_C_COMPILER  ${_ROCM_ROOT}/bin/hipcc CACHE FILEPATH "" FORCE)
+  set(CMAKE_CXX_COMPILER ${_ROCM_ROOT}/bin/hipcc CACHE FILEPATH "" FORCE)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   project(pyg LANGUAGES C CXX HIP)
@@ -182,8 +187,14 @@ if (WITH_ROCM)
       roc::rocblas
       roc::rocthrust
       libhipcxx::libhipcxx
-      composable_kernel::device_grouped_gemm_operations
   )
+  if(TARGET composable_kernel::device_gemm_operations)
+    target_link_libraries(${PROJECT_NAME} PRIVATE composable_kernel::device_gemm_operations)
+  elseif(TARGET composablekernels::device_gemm_operations)
+    target_link_libraries(${PROJECT_NAME} PRIVATE composablekernels::device_gemm_operations)
+  else()
+    message(WARNING "composable_kernel::device_gemm_operations target not found; building with CK headers only")
+  endif()
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
