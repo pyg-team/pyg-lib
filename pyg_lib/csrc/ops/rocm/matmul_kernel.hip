@@ -307,14 +307,21 @@ bool run_grouped_gemm_ck_xdl_best_effort(const at::TensorList input,
                                          bool segment,
                                          std::string& fail_reason) {
   const ck::index_t k_per_block = 32;
+  const ck::index_t n_per_vector = 4;
 
-  // Find the min and max K across all groups to decide the dispatch path.
+  // Find the min/max K and whether all groups satisfy N vectorization
+  // requirements for grouped CK kernels.
   ck::index_t min_k = std::numeric_limits<ck::index_t>::max();
   ck::index_t global_k = 0;
-  for (const auto& a : input) {
+  bool all_n_aligned_for_grouped = true;
+  for (std::size_t i = 0; i < input.size(); ++i) {
+    const auto& a = input[i];
     const ck::index_t k = static_cast<ck::index_t>(a.size(1));
+    const ck::index_t n = static_cast<ck::index_t>(out[i].size(1));
     min_k = std::min(min_k, k);
     global_k = std::max(global_k, k);
+    all_n_aligned_for_grouped =
+        all_n_aligned_for_grouped && (n % n_per_vector == 0);
   }
 
   // Only try Default / MNKPadding kernels when ALL groups have
@@ -328,7 +335,7 @@ bool run_grouped_gemm_ck_xdl_best_effort(const at::TensorList input,
   std::string default_reason = "skipped (min_k <= k_per_block)";
   std::string padded_reason  = "skipped (min_k <= k_per_block)";
 
-  if (min_k > k_per_block) {
+  if (min_k > k_per_block && all_n_aligned_for_grouped) {
     default_reason.clear();
     if (run_grouped_gemm_ck_xdl<DefaultGemmOp, ATScalar>(input, other, out,
                                                           segment,
@@ -342,6 +349,9 @@ bool run_grouped_gemm_ck_xdl_best_effort(const at::TensorList input,
                                                          padded_reason)) {
       return true;
     }
+  } else if (min_k > k_per_block) {
+    default_reason = "skipped (some group has N % 4 != 0)";
+    padded_reason = "skipped (some group has N % 4 != 0)";
   }
 
   // Runtime explicit K-padding: pad ALL groups to the same K so that every
@@ -362,12 +372,15 @@ bool run_grouped_gemm_ck_xdl_best_effort(const at::TensorList input,
       std::max(k_min_padded,
                ((global_k + k_per_block - 1) / k_per_block) * k_per_block);
 
+  // For non-vectorized N, also pad N to avoid tail write corruption from
+  // vectorized C output stores.
   std::string explicit_pad_reason = "not attempted";
   if (global_k_padded > 0) {
-    std::vector<at::Tensor> input_padded(input.size());
-    std::vector<at::Tensor> other_padded(other.size());
-
-    bool all_padded = true;
+    // Run each group individually through CK instead of batching all groups
+    // into a single grouped-GEMM launch. This avoids known cross-group
+    // instability with heterogeneous grouped dimensions.
+    bool per_group_ok = true;
+    std::string per_group_fail;
     for (std::size_t i = 0; i < input.size(); ++i) {
       const auto& A = input[i];
       const auto B2d = to_2d_other(other[i], segment);
@@ -375,47 +388,43 @@ bool run_grouped_gemm_ck_xdl_best_effort(const at::TensorList input,
       const ck::index_t M = static_cast<ck::index_t>(A.size(0));
       const ck::index_t K = static_cast<ck::index_t>(A.size(1));
       const ck::index_t N = static_cast<ck::index_t>(B2d.size(1));
+      const ck::index_t n_padded =
+          ((N + n_per_vector - 1) / n_per_vector) * n_per_vector;
 
       auto A_pad = at::zeros({M, global_k_padded}, A.options());
-      auto B_pad = at::zeros({global_k_padded, N}, B2d.options());
+      auto B_pad = at::zeros({global_k_padded, n_padded}, B2d.options());
       A_pad.narrow(1, 0, K).copy_(A);
-      B_pad.narrow(0, 0, K).copy_(B2d);
+      B_pad.narrow(0, 0, K).narrow(1, 0, N).copy_(B2d);
 
-      input_padded[i] = std::move(A_pad);
-      other_padded[i] = segment ? B_pad.unsqueeze(0) : std::move(B_pad);
-      all_padded = all_padded && (K == global_k_padded);
-    }
+      const bool needs_n_pad = (n_padded != N);
+      at::Tensor out_pad;
+      at::Tensor out_target = out[i];
+      if (needs_n_pad) {
+        out_pad = at::zeros({M, n_padded}, out[i].options());
+        out_target = out_pad;
+      }
 
-    if (!all_padded) {
-      // Run each group individually through CK instead of batching all
-      // groups into a single grouped-GEMM launch.  CK's
-      // DeviceGroupedGemm_Xdl + MNKPadding can produce silently corrupt
-      // results when groups have heterogeneous M/N dimensions (observed
-      // on gfx1100).  Per-group dispatch avoids this cross-group issue
-      // while still using the CK GEMM backend for each individual group.
-      bool per_group_ok = true;
-      std::string per_group_fail;
-      for (std::size_t i = 0; i < input_padded.size(); ++i) {
-        std::vector<at::Tensor> sg_in  = {input_padded[i]};
-        std::vector<at::Tensor> sg_oth = {other_padded[i]};
-        std::vector<at::Tensor> sg_out = {out[i]};
-        std::string reason;
+      std::vector<at::Tensor> sg_in = {A_pad};
+      std::vector<at::Tensor> sg_oth = {segment ? B_pad.unsqueeze(0) : B_pad};
+      std::vector<at::Tensor> sg_out = {out_target};
+
+      std::string reason;
+      if (!run_grouped_gemm_ck_xdl<PaddedGemmOp, ATScalar>(
+              sg_in, sg_oth, sg_out, segment, reason)) {
         if (!run_grouped_gemm_ck_xdl<DefaultGemmOp, ATScalar>(
                 sg_in, sg_oth, sg_out, segment, reason)) {
-          if (!run_grouped_gemm_ck_xdl<PaddedGemmOp, ATScalar>(
-                  sg_in, sg_oth, sg_out, segment, reason)) {
-            per_group_ok = false;
-            per_group_fail =
-                "group " + std::to_string(i) + ": " + reason;
-            break;
-          }
+          per_group_ok = false;
+          per_group_fail = "group " + std::to_string(i) + ": " + reason;
+          break;
         }
       }
-      if (per_group_ok) return true;
-      explicit_pad_reason = "per-group CK failed: " + per_group_fail;
-    } else {
-      explicit_pad_reason = "skipped (K already globally padded)";
+
+      if (needs_n_pad) {
+        out[i].copy_(out_target.narrow(1, 0, N));
+      }
     }
+    if (per_group_ok) return true;
+    explicit_pad_reason = "per-group CK failed: " + per_group_fail;
   }
 
   fail_reason = "default-kernel failed: " + default_reason +
