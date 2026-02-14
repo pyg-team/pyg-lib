@@ -56,16 +56,20 @@ def test_grouped_matmul_autograd(dtype, transposed, device):
     ]
     if transposed:
         others_origin = [
-            torch.randn(48, 16, device=device, dtype=dtype, requires_grad=True),
+            torch.randn(48, 16, device=device, dtype=dtype,
+                        requires_grad=True),
             torch.randn(42, 9, device=device, dtype=dtype, requires_grad=True),
-            torch.randn(64, 32, device=device, dtype=dtype, requires_grad=True),
+            torch.randn(64, 32, device=device, dtype=dtype,
+                        requires_grad=True),
         ]
         others = [other.t() for other in others_origin]
     else:
         others = [
-            torch.randn(16, 48, device=device, dtype=dtype, requires_grad=True),
+            torch.randn(16, 48, device=device, dtype=dtype,
+                        requires_grad=True),
             torch.randn(9, 42, device=device, dtype=dtype, requires_grad=True),
-            torch.randn(32, 64, device=device, dtype=dtype, requires_grad=True),
+            torch.randn(32, 64, device=device, dtype=dtype,
+                        requires_grad=True),
         ]
 
     biases = [

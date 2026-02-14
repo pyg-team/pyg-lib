@@ -506,7 +506,7 @@ void grouped_matmul_out_kernel(const at::TensorList input,
   }
 
   const auto scalar_type = input[0].scalar_type();
-  const bool ck_enabled = use_ck_grouped_gemm();  
+  const bool ck_enabled = use_ck_grouped_gemm();
   bool ran_ck = false;
   std::string fail_reason;
 
