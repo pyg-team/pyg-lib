@@ -147,12 +147,19 @@ export PYTORCH_ROCM_ARCH="gfx1100;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gf
 
 `grouped_matmul` / `segment_matmul` behavior on ROCm:
 
-- `fp16` input: use CK `DefaultGroupedGemmKernel_FP16` by default.
-- `bf16` input: use CK `DefaultGroupedGemmKernel_BF16` by default.
-- `fp32` input: first convert to `bf16` and try CK BF16 kernel; if that fails,
-  convert to `fp16` and try CK FP16 kernel; if both fail, fallback to
-  `at::mm_out`.
-- Any fallback prints a runtime warning that includes the reason.
+- **Important:** The CK backend in `pyg-lib` only provides native kernels for
+  `bf16` and `fp16`.
+- `fp16` input: use CK FP16 grouped GEMM path.
+- `bf16` input: use CK BF16 grouped GEMM path.
+- `fp32` input: CK does not run native FP32 kernels. `pyg-lib` first converts
+  to `bf16` and tries CK BF16, then converts to `fp16` and tries CK FP16.
+- Since `fp32` uses reduced-precision conversion on the CK path, numerical
+  differences at `bf16/fp16` precision are expected.
+- `PYG_ROCM_MATMUL_USE_CK=0`: disable CK grouped matmul and use ATen matmul.
+- `PYG_ROCM_MATMUL_REQUIRE_CK=1`: strict mode. If no CK path is accepted, an
+  error is raised instead of falling back.
+- Without strict mode, unsupported CK shapes/targets fall back to `at::mm_out`
+  with a warning that includes the reason.
 - On architectures without CK XDL support for the selected path (for example
   some `gfx10` targets), fallback warnings are expected.
 
