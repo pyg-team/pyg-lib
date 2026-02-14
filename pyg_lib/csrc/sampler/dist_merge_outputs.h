@@ -10,10 +10,10 @@ namespace sampler {
 // For distributed training purposes. Merges sampler outputs from different
 // partitions, so that they are sorted according to the sampling order.
 // Removes seed nodes from sampled nodes and calculates how many neighbors
-// were sampled by each source node based on the cummulative sum of sampled
+// were sampled by each source node based on the cumulative sum of sampled
 // neighbors for each input node.
 // Returns the unified node, edge and batch indices as well as the merged
-// cummulative sum of sampled neighbors.
+// cumulative sum of sampled neighbors.
 PYG_API
 std::tuple<at::Tensor,
            at::Tensor,

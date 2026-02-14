@@ -3,7 +3,20 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [0.5.0] - 2023-MM-DD
+## [Unreleased]
+### Added
+- Added PyTorch 2.10 support ([#561](https://github.com/pyg-team/pyg-lib/pull/561))
+- Added PyTorch 2.9 support ([#536](https://github.com/pyg-team/pyg-lib/pull/536))
+- Added macOS 11 support ([#558](https://github.com/pyg-team/pyg-lib/pull/558))
+### Changed
+### Deprecated
+### Removed
+- Removed CUDA 11.8 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
+- Removed PyTorch 2.6 and 2.7 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
+### Fixed
+### Security
+
+## [0.5.0] - 2025-10-14
 ### Added
 - Added support for `manylinux_2_28` wheels built with CUDA in nightly releases ([#496](https://github.com/pyg-team/pyg-lib/pull/496))
 - Added support for `manylinux_2_28` wheels in nightly releases ([#480](https://github.com/pyg-team/pyg-lib/pull/480))
@@ -20,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added ROCM 6.4 support ([#507](https://github.com/pyg-team/pyg-lib/pull/507))
 ### Changed
 ### Removed
+- Removed Support for PyTorch 1.13-2.5 ([#532](https://github.com/pyg-team/pyg-lib/pull/532))
 - Dropped Python 3.9 support ([#525](https://github.com/pyg-team/pyg-lib/pull/525))
 - Dropped Python 3.8 support ([#356](https://github.com/pyg-team/pyg-lib/pull/356))
 - Removed linking to Python ([#462](https://github.com/pyg-team/pyg-lib/pull/462))

@@ -1,20 +1,22 @@
-[python-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml/badge.svg
-[python-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/python_testing.yml
-[cpp-testing-image]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml/badge.svg
-[cpp-testing-url]: https://github.com/pyg-team/pyg-lib/actions/workflows/cpp_testing.yml
-[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
-[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
+[contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat&color=4B26A4
+[contributing-url]: https://github.com/pyg-team/pytorch_geometric/blob/master/.github/CONTRIBUTING.md
 [coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
 [coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=master
+[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
+[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
+[slack-image]: https://img.shields.io/badge/slack-join-white.svg?logo=slack&color=4B26A4
+[slack-url]: https://data.pyg.org/slack.html
 
 # pyg-lib
 
-[![Python Testing Status][python-testing-image]][python-testing-url]
-[![CPP Testing Status][cpp-testing-image]][cpp-testing-url]
+<div align="center">
+
 [![Docs Status][docs-image]][docs-url]
 [![Code Coverage][coverage-image]][coverage-url]
+[![Slack][slack-image]][slack-url]
+[![Contributing][contributing-image]][contributing-url]
 
-* [Installation](#installation)
+</div>
 
 ## Installation
 
@@ -28,70 +30,28 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 where
 
-* `${TORCH}` should be replaced by either `1.13.0`, `2.0.0`, `2.1.0`, `2.2.0`, `2.3.0`, `2.4.0`, `2.5.0`, `2.6.0`, `2.7.0`, or `2.8.0`
-* `${CUDA}` should be replaced by either `cpu`, `cu102`, `cu117`, `cu118`, `cu121`, `cu124`, `cu126`, `cu128`, or `cu129`
+* `${TORCH}` should be replaced by either `2.8.0`, `2.9.0`, or `2.10.0`
+* `${CUDA}` should be replaced by either `cpu`, `cu126`, `cu128`, `cu129`, or `cu130`
 
 The following combinations are supported:
 
-| PyTorch 2.8  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         |         |         |         | ✅      | ✅      | ✅      |
-| **Windows**  | ✅    |         |         |         |         | ✅      | ✅      | ✅      |
-| **macOS**    | ✅    |         |         |         |         |         |         |        |
+| PyTorch 2.10 | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
+|--------------|-------|---------|---------|---------|---------|
+| **Linux**    | ✅    | ✅      | ✅      |       | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |       | ✅      |
+| **macOS**    | ✅    |         |         |        |        |
 
-| PyTorch 2.7  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      |         |         | ✅      | ✅      |         |
-| **Windows**  | ✅    |         | ✅      |         |         | ✅      | ✅      |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
+| PyTorch 2.9  | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
+|--------------|-------|---------|---------|---------|---------|
+| **Linux**    | ✅    | ✅      | ✅      |       | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |       | ✅      |
+| **macOS**    | ✅    |         |         |        |        |
 
-| PyTorch 2.6  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      |         | ✅      | ✅      |         |         |
-| **Windows**  | ✅    |         | ✅      |         | ✅      | ✅      |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.5  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      | ✅      | ✅      |         |         |         |
-| **Windows**  | ✅    |         | ✅      | ✅      | ✅      |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.4  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      | ✅      | ✅      |         |         |         |
-| **Windows**  | ✅    |         | ✅      | ✅      | ✅      |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.3  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **Windows**  | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.2  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **Windows**  | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.1  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **Windows**  | ✅    |         | ✅      | ✅      |         |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 2.0  | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    | ✅      | ✅      | ✅      |         |         |         |         |
-| **Windows**  | ✅    | ✅      | ✅      |         |         |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
-
-| PyTorch 1.13 | `cpu` | `cu117` | `cu118` | `cu121` | `cu124` | `cu126` | `cu128` | `cu129` |
-|--------------|-------|---------|---------|---------|---------|---------|---------|---------|
-| **Linux**    | ✅    | ✅      |         |         |         |         |         |         |
-| **Windows**  | ✅    | ✅      |         |         |         |         |         |         |
-| **macOS**    | ✅    |         |         |         |         |         |         |         |
+| PyTorch 2.8  | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
+|--------------|-------|---------|---------|---------|---------|
+| **Linux**    | ✅    | ✅      | ✅      | ✅      |       |
+| **Windows**  | ✅    | ✅      | ✅      | ✅      |       |
+| **macOS**    | ✅    |         |         |        |        |
 
 For ROCM backend, there is an external [`pyg-rocm-build` repository](https://github.com/Looong01/pyg-rocm-build) provides wheels and detailed instructions on how to install PyG for ROCm.
 If you have any questions about it, please open an issue [here](https://github.com/Looong01/pyg-rocm-build/issues).

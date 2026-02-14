@@ -15,21 +15,21 @@ repos:
           )$
 
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
         name: Lint yaml
         args: [-d, '{extends: default, rules: {line-length: disable, document-start: disable, truthy: {level: error}, braces: {max-spaces-inside: 1}}}']
 
   - repo: https://github.com/regebro/pyroma
-    rev: "5.0"
+    rev: "5.0.1"
     hooks:
       - id: pyroma
         name: Check packaging
         args: [--min=10, .]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         name: Upgrade Python syntax
@@ -55,13 +55,13 @@ repos:
         name: Format code
 
   - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+    rev: 7.0.0
     hooks:
       - id: isort
         name: Sort imports
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.0
+    rev: v0.15.0
     hooks:
       - id: ruff
         name: Ruff formatting
@@ -74,7 +74,7 @@ repos:
         name: Check PEP8
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v21.1.0
+    rev: v21.1.8
     hooks:
       - id: clang-format
         name: Format C++ code
@@ -82,7 +82,7 @@ repos:
         exclude: '\.json$'
 
   - repo: https://github.com/sphinx-contrib/sphinx-lint
-    rev: v1.0.0
+    rev: v1.0.2
     hooks:
       - id: sphinx-lint
         name: Check Sphinx
