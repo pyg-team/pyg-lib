@@ -19,7 +19,6 @@
 ## Installation
 
 We provide pre-built Python wheels for all major OS/PyTorch/CUDA/ROCm(HIP) combinations from Python 3.10 till 3.13, see [here](https://data.pyg.org/whl).
-Note that currently, Windows wheels are not supported (we are working on fixing this as soon as possible).
 
 To install the wheels for CPU/CUDA backend, simply run
 
