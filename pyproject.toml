@@ -50,6 +50,7 @@ environment-pass = [
     "PYTORCH_ROCM_ARCH",
     "AMDGPU_TARGETS",
     "PYG_ROCM_MATMUL_USE_CK",
+    "PYG_ROCM_MATMUL_REQUIRE_CK",
     "CMAKE_PREFIX_PATH",
 ]
 repair-wheel-command = """

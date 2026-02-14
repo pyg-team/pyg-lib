@@ -141,6 +141,8 @@ export PYTORCH_ROCM_ARCH="gfx1100;gfx950;gfx942;gfx90a;gfx908;gfx1201;gfx1101;gf
 
 # Optional: disable CK grouped matmul path (enabled by default).
 # export PYG_ROCM_MATMUL_USE_CK=0
+# Optional: require CK path (fail fast if fallback would happen).
+# export PYG_ROCM_MATMUL_REQUIRE_CK=1
 ```
 
 `grouped_matmul` / `segment_matmul` behavior on ROCm:

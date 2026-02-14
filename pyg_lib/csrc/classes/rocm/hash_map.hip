@@ -117,7 +117,9 @@ struct CUDAHashMap : torch::CustomClassHolder {
 #ifndef _WIN32
     at::TensorArg key_arg{key, "key", 0};
     at::CheckedFrom c{"CUDAHashMap.init"};
-    at::checkDeviceType(c, key, at::DeviceType::HIP);
+    // In PyTorch ROCm builds, Python-visible accelerator tensors are still
+    // represented as "cuda" device type.
+    at::checkDeviceType(c, key, at::DeviceType::CUDA);
     at::checkDim(c, key_arg, 1);
     at::checkContiguous(c, key_arg);
 
@@ -133,7 +135,7 @@ struct CUDAHashMap : torch::CustomClassHolder {
 #ifndef _WIN32
     at::TensorArg query_arg{query, "query", 0};
     at::CheckedFrom c{"CUDAHashMap.get"};
-    at::checkDeviceType(c, query, at::DeviceType::HIP);
+    at::checkDeviceType(c, query, at::DeviceType::CUDA);
     at::checkDim(c, query_arg, 1);
     at::checkContiguous(c, query_arg);
 

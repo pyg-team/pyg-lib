@@ -118,6 +118,14 @@ if (WITH_CUDA)
 endif()
 if (WITH_ROCM)
   file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.hip)
+  # CK half math utilities require implicit half conversions/operators.
+  # PyTorch ROCm compile flags may define __HIP_NO_HALF_* globally.
+  # Restrict macro undefinition to the CK matmul TU.
+  set(PYG_ROCM_MATMUL_HIP "${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/ops/rocm/matmul_kernel.hip")
+  if(EXISTS "${PYG_ROCM_MATMUL_HIP}")
+    set_source_files_properties("${PYG_ROCM_MATMUL_HIP}" PROPERTIES
+      COMPILE_OPTIONS "-U__HIP_NO_HALF_OPERATORS__;-U__HIP_NO_HALF_CONVERSIONS__")
+  endif()
 endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
