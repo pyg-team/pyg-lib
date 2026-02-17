@@ -350,6 +350,48 @@ def softmax_csr(
     return torch.ops.pyg.softmax_csr(src, ptr, dim)
 
 
+def spline_basis(
+    pseudo: Tensor,
+    kernel_size: Tensor,
+    is_open_spline: Tensor,
+    degree: int = 1,
+) -> Tuple[Tensor, Tensor]:
+    r"""Computes the B-spline basis functions.
+
+    Args:
+        pseudo: Pseudo-coordinates of shape :obj:`[E, D]`.
+        kernel_size: Kernel size in each dimension of shape :obj:`[D]`.
+        is_open_spline: Whether to use open B-splines of shape :obj:`[D]`.
+        degree: B-spline degree (1, 2, or 3).
+
+    Returns:
+        Basis values of shape :obj:`[E, S]` and weight indices of shape
+        :obj:`[E, S]`.
+    """
+    return torch.ops.pyg.spline_basis(pseudo, kernel_size, is_open_spline,
+                                      degree)
+
+
+def spline_weighting(
+    x: Tensor,
+    weight: Tensor,
+    basis: Tensor,
+    weight_index: Tensor,
+) -> Tensor:
+    r"""Computes the spline weighting of input features.
+
+    Args:
+        x: Input features of shape :obj:`[E, M_in]`.
+        weight: Weight tensor of shape :obj:`[K, M_in, M_out]`.
+        basis: B-spline basis values of shape :obj:`[E, S]`.
+        weight_index: Weight indices of shape :obj:`[E, S]`.
+
+    Returns:
+        Output features of shape :obj:`[E, M_out]`.
+    """
+    return torch.ops.pyg.spline_weighting(x, weight, basis, weight_index)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -359,4 +401,6 @@ __all__ = [
     'sampled_div',
     'index_sort',
     'softmax_csr',
+    'spline_basis',
+    'spline_weighting',
 ]
