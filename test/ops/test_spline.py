@@ -12,7 +12,7 @@ except ImportError:
     HAS_TORCH_SPLINE_CONV = False
 
 
-def _basis_value(v, k_mod, degree):
+def _basis_value(v: float, k_mod: int, degree: int) -> float:
     """Compute B-spline basis value for a single dimension."""
     if degree == 1:
         return 1.0 - v - k_mod + 2.0 * v * k_mod
@@ -34,7 +34,12 @@ def _basis_value(v, k_mod, degree):
             return v**3 / 6.0
 
 
-def spline_basis_ref(pseudo, kernel_size, is_open_spline, degree):
+def spline_basis_ref(
+    pseudo: torch.Tensor,
+    kernel_size: torch.Tensor,
+    is_open_spline: torch.Tensor,
+    degree: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
     E, D = pseudo.shape
     S = (degree + 1)**D
 
@@ -67,7 +72,12 @@ def spline_basis_ref(pseudo, kernel_size, is_open_spline, degree):
     return basis, weight_index
 
 
-def spline_weighting_ref(x, weight, basis, weight_index):
+def spline_weighting_ref(
+    x: torch.Tensor,
+    weight: torch.Tensor,
+    basis: torch.Tensor,
+    weight_index: torch.Tensor,
+) -> torch.Tensor:
     E = x.size(0)
     M_out = weight.size(2)
     S = basis.size(1)
@@ -84,7 +94,7 @@ def spline_weighting_ref(x, weight, basis, weight_index):
 
 @pytest.mark.parametrize('degree', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_basis(degree, dtype):
+def test_spline_basis(degree: int, dtype: torch.dtype) -> None:
     E, D = 10, 3
     pseudo = torch.rand(E, D, dtype=dtype)
     kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
@@ -107,7 +117,7 @@ def test_spline_basis(degree, dtype):
 
 
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_weighting(dtype):
+def test_spline_weighting(dtype: torch.dtype) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
@@ -122,11 +132,16 @@ def test_spline_weighting(dtype):
     torch.testing.assert_close(out, out_ref)
 
 
-@pytest.mark.skipif(not HAS_TORCH_SPLINE_CONV,
-                    reason='torch_spline_conv not available')
+@pytest.mark.skipif(
+    not HAS_TORCH_SPLINE_CONV,
+    reason='torch_spline_conv not available',
+)
 @pytest.mark.parametrize('degree', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_basis_against_torch_spline_conv(degree, dtype):
+def test_spline_basis_against_torch_spline_conv(
+    degree: int,
+    dtype: torch.dtype,
+) -> None:
     E, D = 10, 3
     pseudo = torch.rand(E, D, dtype=dtype)
     kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
@@ -143,10 +158,13 @@ def test_spline_basis_against_torch_spline_conv(degree, dtype):
     assert torch.equal(wi, wi_ref)
 
 
-@pytest.mark.skipif(not HAS_TORCH_SPLINE_CONV,
-                    reason='torch_spline_conv not available')
+@pytest.mark.skipif(
+    not HAS_TORCH_SPLINE_CONV,
+    reason='torch_spline_conv not available',
+)
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_weighting_against_torch_spline_conv(dtype):
+def test_spline_weighting_against_torch_spline_conv(
+        dtype: torch.dtype) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
