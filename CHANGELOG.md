@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
-- Migrated `rusty1s/pytorch_spline_conv` to `pyg-lib` ([#566](https://github.com/pyg-team/pyg-lib/pull/566), [#567](https://github.com/pyg-team/pyg-lib/pull/567), [#568](https://github.com/pyg-team/pyg-lib/pull/568), [#569](https://github.com/pyg-team/pyg-lib/pull/569))
+- Migrated `rusty1s/pytorch_spline_conv` to `pyg-lib` ([#566](https://github.com/pyg-team/pyg-lib/pull/566), [#567](https://github.com/pyg-team/pyg-lib/pull/567), [#568](https://github.com/pyg-team/pyg-lib/pull/568), [#569](https://github.com/pyg-team/pyg-lib/pull/569), [#570](https://github.com/pyg-team/pyg-lib/pull/570))
 - Added PyTorch 2.10 support ([#561](https://github.com/pyg-team/pyg-lib/pull/561))
 - Added PyTorch 2.9 support ([#536](https://github.com/pyg-team/pyg-lib/pull/536))
 - Added macOS 11 support ([#558](https://github.com/pyg-team/pyg-lib/pull/558))
