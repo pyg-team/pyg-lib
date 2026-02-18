@@ -34,7 +34,7 @@ def _basis_value(v: float, k_mod: int, degree: int) -> float:
             return v**3 / 6.0
 
 
-def spline_basis_ref(
+def _spline_basis_ref(
     pseudo: torch.Tensor,
     kernel_size: torch.Tensor,
     is_open_spline: torch.Tensor,
@@ -72,7 +72,7 @@ def spline_basis_ref(
     return basis, weight_index
 
 
-def spline_weighting_ref(
+def _spline_weigting_ref(
     x: torch.Tensor,
     weight: torch.Tensor,
     basis: torch.Tensor,
@@ -94,7 +94,7 @@ def spline_weighting_ref(
 
 @pytest.mark.parametrize('degree', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_basis(degree: int, dtype: torch.dtype) -> None:
+def test_spline_basis_forward(degree: int, dtype: torch.dtype) -> None:
     E, D = 10, 3
     pseudo = torch.rand(E, D, dtype=dtype)
     kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
@@ -106,7 +106,7 @@ def test_spline_basis(degree: int, dtype: torch.dtype) -> None:
         is_open_spline,
         degree,
     )
-    basis_ref, wi_ref = spline_basis_ref(
+    basis_ref, wi_ref = _spline_basis_ref(
         pseudo,
         kernel_size,
         is_open_spline,
@@ -116,8 +116,35 @@ def test_spline_basis(degree: int, dtype: torch.dtype) -> None:
     assert torch.equal(wi, wi_ref)
 
 
+@pytest.mark.parametrize('degree', [1, 2, 3])
+def test_spline_basis_backward(degree: int) -> None:
+    E, D = 10, 3
+    p = torch.rand(E, D, dtype=torch.double, requires_grad=True)
+    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
+    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8)
+
+    basis, wi = pyg_lib.ops.spline_basis(
+        p,
+        kernel_size,
+        is_open_spline,
+        degree,
+    )
+    assert basis.requires_grad
+    assert not wi.requires_grad
+
+    def fn(p_: torch.Tensor) -> torch.Tensor:
+        return pyg_lib.ops.spline_basis(
+            p_,
+            kernel_size,
+            is_open_spline,
+            degree,
+        )[0]
+
+    torch.autograd.gradcheck(fn, p)
+
+
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_weighting(dtype: torch.dtype) -> None:
+def test_spline_weighting_forward(dtype: torch.dtype) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
@@ -128,8 +155,32 @@ def test_spline_weighting(dtype: torch.dtype) -> None:
     weight_index = torch.randint(0, K, (E, S), dtype=torch.long)
 
     out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
-    out_ref = spline_weighting_ref(x, weight, basis, weight_index)
+    out_ref = _spline_weigting_ref(x, weight, basis, weight_index)
     torch.testing.assert_close(out, out_ref)
+
+
+def test_spline_weighting_backward() -> None:
+    E, M_in, M_out = 10, 4, 8
+    K = 25
+    S = 4
+
+    x = torch.randn(E, M_in, dtype=torch.double, requires_grad=True)
+    weight = torch.randn(K, M_in, M_out, dtype=torch.double,
+                         requires_grad=True)
+    basis = torch.rand(E, S, dtype=torch.double, requires_grad=True)
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long)
+
+    out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
+    assert out.requires_grad
+
+    def fn(
+        x_: torch.Tensor,
+        w_: torch.Tensor,
+        b_: torch.Tensor,
+    ) -> torch.Tensor:
+        return pyg_lib.ops.spline_weighting(x_, w_, b_, weight_index)
+
+    torch.autograd.gradcheck(fn, (x, weight, basis))
 
 
 @pytest.mark.skipif(
@@ -138,7 +189,7 @@ def test_spline_weighting(dtype: torch.dtype) -> None:
 )
 @pytest.mark.parametrize('degree', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_basis_against_torch_spline_conv(
+def test_parity_spline_basis(
     degree: int,
     dtype: torch.dtype,
 ) -> None:
@@ -147,7 +198,7 @@ def test_spline_basis_against_torch_spline_conv(
     kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
     is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8)
 
-    basis, wi = spline_basis_ref(pseudo, kernel_size, is_open_spline, degree)
+    basis, wi = _spline_basis_ref(pseudo, kernel_size, is_open_spline, degree)
     basis_ref, wi_ref = torch_spline_conv.spline_basis(
         pseudo,
         kernel_size,
@@ -163,8 +214,7 @@ def test_spline_basis_against_torch_spline_conv(
     reason='torch_spline_conv not available',
 )
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_weighting_against_torch_spline_conv(
-        dtype: torch.dtype) -> None:
+def test_parity_spline_weighting(dtype: torch.dtype) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
@@ -174,7 +224,7 @@ def test_spline_weighting_against_torch_spline_conv(
     basis = torch.rand(E, S, dtype=dtype)
     weight_index = torch.randint(0, K, (E, S), dtype=torch.long)
 
-    out = spline_weighting_ref(x, weight, basis, weight_index)
+    out = _spline_weigting_ref(x, weight, basis, weight_index)
     out_ref = torch_spline_conv.spline_weighting(
         x,
         weight,
