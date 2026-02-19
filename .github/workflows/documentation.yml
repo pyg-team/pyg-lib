@@ -27,8 +27,8 @@ jobs:
 
       - name: Install package
         run: |
-          pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
-          BUILD_DOCS=1 pip install --no-build-isolation --verbose -e .
+          uv pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
+          BUILD_DOCS=1 uv pip install --no-build-isolation --verbose -e .
 
       - name: Build documentation
         run: |

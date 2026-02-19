@@ -66,7 +66,7 @@ jobs:
       - name: Build wheel
         run: |
           source ./.github/workflows/cuda/${{ runner.os }}-env.sh ${{ matrix.cuda-version }}
-          pip install build
+          uv pip install build
           python -m build --wheel --no-isolation --outdir dist
         shell: bash
 
@@ -74,7 +74,7 @@ jobs:
         run: |
           cd dist
           ls -lah
-          pip install *.whl
+          uv pip install *.whl
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           cd ..
