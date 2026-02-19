@@ -32,13 +32,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b  # v7.3.0
         with:
           python-version: '3.13'
+          activate-environment: true
 
       - name: Install boto3
-        run: pip install boto3
+        run: uv pip install boto3
 
       - name: Upload index files (${{ inputs.release-type }})
         run: |

@@ -62,14 +62,14 @@ jobs:
         run: |
           source ./.github/workflows/cuda/Windows-env.sh ${{ matrix.cuda-version }}
           echo $TORCH_CUDA_ARCH_LIST
-          pip install build
+          uv pip install build
           python -m build --wheel --no-isolation --outdir dist
 
       - name: Install wheel
         run: |
           cd dist
           ls -lah
-          pip install *.whl
+          uv pip install *.whl
           python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
           python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
           python -c "import pyg_lib.ops"
@@ -78,7 +78,7 @@ jobs:
 
       - name: Test wheel
         run: |
-          pip install pytest pytest-cov
+          uv pip install pytest pytest-cov
           pytest --cov --cov-report=xml
 
       - name: Upload wheel (final)

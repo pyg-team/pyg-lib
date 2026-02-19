@@ -42,15 +42,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b  # v7.3.0
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
-          python-version: 3.11
+          python-version: '3.11'
+          activate-environment: true
 
       - name: Install dependencies
         run: |
-          pip install cibuildwheel delocate
+          uv pip install cibuildwheel delocate
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}

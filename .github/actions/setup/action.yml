@@ -15,10 +15,11 @@ runs:
   using: composite
 
   steps:
-    - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v6
+    - name: Set up uv with Python ${{ inputs.python-version }}
+      uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b  # v7.3.0
       with:
         python-version: ${{ inputs.python-version }}
+        activate-environment: true
 
     - name: Free up disk space
       if: ${{ runner.os == 'Linux' }}
@@ -40,9 +41,9 @@ runs:
     - name: Install PyTorch ${{ inputs.torch-version }}+${{ inputs.cuda-version }}
       run: |
         if [ ${{ inputs.torch-version }} == '2.11.0' ]; then
-          pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${{ inputs.cuda-version }}
+          uv pip install --pre torch --torch-backend ${{ inputs.cuda-version }}
         else
-          pip install torch==${{ inputs.torch-version }} --index-url https://download.pytorch.org/whl/${{ inputs.cuda-version }}
+          uv pip install torch==${{ inputs.torch-version }} --torch-backend ${{ inputs.cuda-version }}
         fi
         python -c "import torch; print('PyTorch:', torch.__version__)"
         python -c "import torch; print('CUDA:', torch.version.cuda)"
@@ -66,5 +67,5 @@ runs:
 
     - name: Install additional dependencies
       run: |
-        pip install setuptools ninja wheel
+        uv pip install setuptools ninja wheel
       shell: bash
