@@ -4,6 +4,7 @@ import pytest
 import torch
 
 import pyg_lib
+from pyg_lib.testing import withCUDA
 
 try:
     import torch_spline_conv
@@ -40,11 +41,14 @@ def _spline_basis_ref(
     is_open_spline: torch.Tensor,
     degree: int,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    """Pure Python reference for spline_basis (correctness only)."""
+    device = pseudo.device
+
     E, D = pseudo.shape
     S = (degree + 1)**D
 
-    basis = torch.empty(E, S, dtype=pseudo.dtype)
-    weight_index = torch.empty(E, S, dtype=torch.long)
+    basis = torch.empty(E, S, dtype=pseudo.dtype, device=device)
+    weight_index = torch.empty(E, S, dtype=torch.long, device=device)
 
     for e in range(E):
         for s in range(S):
@@ -78,11 +82,14 @@ def _spline_weigting_ref(
     basis: torch.Tensor,
     weight_index: torch.Tensor,
 ) -> torch.Tensor:
+    """Pure Python reference for spline_weighting (correctness only)."""
+    device = x.device
+
     E = x.size(0)
     M_out = weight.size(2)
     S = basis.size(1)
 
-    out = torch.zeros(E, M_out, dtype=x.dtype)
+    out = torch.zeros(E, M_out, dtype=x.dtype, device=device)
     for e in range(E):
         for s in range(S):
             b = basis[e, s]
@@ -92,13 +99,18 @@ def _spline_weigting_ref(
     return out
 
 
+@withCUDA
 @pytest.mark.parametrize('degree', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_basis_forward(degree: int, dtype: torch.dtype) -> None:
+def test_spline_basis_forward(
+    degree: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> None:
     E, D = 10, 3
-    pseudo = torch.rand(E, D, dtype=dtype)
-    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
-    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8)
+    pseudo = torch.rand(E, D, dtype=dtype, device=device)
+    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long, device=device)
+    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8, device=device)
 
     basis, wi = pyg_lib.ops.spline_basis(
         pseudo,
@@ -116,12 +128,13 @@ def test_spline_basis_forward(degree: int, dtype: torch.dtype) -> None:
     assert torch.equal(wi, wi_ref)
 
 
+@withCUDA
 @pytest.mark.parametrize('degree', [1, 2, 3])
-def test_spline_basis_backward(degree: int) -> None:
+def test_spline_basis_backward(degree: int, device: torch.device) -> None:
     E, D = 10, 3
-    p = torch.rand(E, D, dtype=torch.double, requires_grad=True)
-    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long)
-    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8)
+    p = torch.rand(E, D, dtype=torch.double, device=device, requires_grad=True)
+    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long, device=device)
+    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8, device=device)
 
     basis, wi = pyg_lib.ops.spline_basis(
         p,
@@ -143,32 +156,55 @@ def test_spline_basis_backward(degree: int) -> None:
     torch.autograd.gradcheck(fn, p)
 
 
+@withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_spline_weighting_forward(dtype: torch.dtype) -> None:
+def test_spline_weighting_forward(
+    dtype: torch.dtype,
+    device: torch.device,
+) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
 
-    x = torch.randn(E, M_in, dtype=dtype)
-    weight = torch.randn(K, M_in, M_out, dtype=dtype)
-    basis = torch.rand(E, S, dtype=dtype)
-    weight_index = torch.randint(0, K, (E, S), dtype=torch.long)
+    x = torch.randn(E, M_in, dtype=dtype, device=device)
+    weight = torch.randn(K, M_in, M_out, dtype=dtype, device=device)
+    basis = torch.rand(E, S, dtype=dtype, device=device)
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long, device=device)
 
     out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
     out_ref = _spline_weigting_ref(x, weight, basis, weight_index)
     torch.testing.assert_close(out, out_ref)
 
 
-def test_spline_weighting_backward() -> None:
+@withCUDA
+def test_spline_weighting_backward(device: torch.device) -> None:
     E, M_in, M_out = 10, 4, 8
     K = 25
     S = 4
 
-    x = torch.randn(E, M_in, dtype=torch.double, requires_grad=True)
-    weight = torch.randn(K, M_in, M_out, dtype=torch.double,
-                         requires_grad=True)
-    basis = torch.rand(E, S, dtype=torch.double, requires_grad=True)
-    weight_index = torch.randint(0, K, (E, S), dtype=torch.long)
+    x = torch.randn(
+        E,
+        M_in,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    weight = torch.randn(
+        K,
+        M_in,
+        M_out,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    basis = torch.rand(
+        E,
+        S,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long, device=device)
 
     out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
     assert out.requires_grad
