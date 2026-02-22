@@ -26,10 +26,12 @@ PYG_API std::tuple<at::Tensor, at::Tensor> spline_basis(
   TORCH_CHECK(pseudo.size(1) == is_open_spline.numel(),
               "pseudo.size(1) must equal is_open_spline.numel()");
 
+  auto pseudo_c = pseudo.contiguous();
+
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::spline_basis", "")
                        .typed<decltype(spline_basis)>();
-  return op.call(pseudo, kernel_size, is_open_spline, degree);
+  return op.call(pseudo_c, kernel_size, is_open_spline, degree);
 }
 
 PYG_API at::Tensor spline_basis_backward(const at::Tensor& grad_basis,
@@ -57,10 +59,13 @@ PYG_API at::Tensor spline_basis_backward(const at::Tensor& grad_basis,
   TORCH_CHECK(pseudo.size(1) == is_open_spline.numel(),
               "pseudo.size(1) must equal is_open_spline.numel()");
 
+  auto grad_basis_c = grad_basis.contiguous();
+  auto pseudo_c = pseudo.contiguous();
+
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::spline_basis_backward", "")
                        .typed<decltype(spline_basis_backward)>();
-  return op.call(grad_basis, pseudo, kernel_size, is_open_spline, degree);
+  return op.call(grad_basis_c, pseudo_c, kernel_size, is_open_spline, degree);
 }
 
 PYG_API at::Tensor spline_weighting(const at::Tensor& x,
@@ -87,10 +92,15 @@ PYG_API at::Tensor spline_weighting(const at::Tensor& x,
   TORCH_CHECK(basis.size(1) == weight_index.size(1),
               "basis.size(1) must equal weight_index.size(1)");
 
+  auto x_c = x.contiguous();
+  auto weight_c = weight.contiguous();
+  auto basis_c = basis.contiguous();
+  auto weight_index_c = weight_index.contiguous();
+
   static auto op = c10::Dispatcher::singleton()
                        .findSchemaOrThrow("pyg::spline_weighting", "")
                        .typed<decltype(spline_weighting)>();
-  return op.call(x, weight, basis, weight_index);
+  return op.call(x_c, weight_c, basis_c, weight_index_c);
 }
 
 PYG_API at::Tensor spline_weighting_backward_x(const at::Tensor& grad_out,
@@ -106,11 +116,16 @@ PYG_API at::Tensor spline_weighting_backward_x(const at::Tensor& grad_out,
   at::checkAllDefined(c,
                       {grad_out_arg, weight_arg, basis_arg, weight_index_arg});
 
+  auto grad_out_c = grad_out.contiguous();
+  auto weight_c = weight.contiguous();
+  auto basis_c = basis.contiguous();
+  auto weight_index_c = weight_index.contiguous();
+
   static auto op =
       c10::Dispatcher::singleton()
           .findSchemaOrThrow("pyg::spline_weighting_backward_x", "")
           .typed<decltype(spline_weighting_backward_x)>();
-  return op.call(grad_out, weight, basis, weight_index);
+  return op.call(grad_out_c, weight_c, basis_c, weight_index_c);
 }
 
 PYG_API at::Tensor spline_weighting_backward_weight(
@@ -127,11 +142,16 @@ PYG_API at::Tensor spline_weighting_backward_weight(
 
   at::checkAllDefined(c, {grad_out_arg, x_arg, basis_arg, weight_index_arg});
 
+  auto grad_out_c = grad_out.contiguous();
+  auto x_c = x.contiguous();
+  auto basis_c = basis.contiguous();
+  auto weight_index_c = weight_index.contiguous();
+
   static auto op =
       c10::Dispatcher::singleton()
           .findSchemaOrThrow("pyg::spline_weighting_backward_weight", "")
           .typed<decltype(spline_weighting_backward_weight)>();
-  return op.call(grad_out, x, basis, weight_index, kernel_size);
+  return op.call(grad_out_c, x_c, basis_c, weight_index_c, kernel_size);
 }
 
 PYG_API at::Tensor spline_weighting_backward_basis(
@@ -147,11 +167,16 @@ PYG_API at::Tensor spline_weighting_backward_basis(
 
   at::checkAllDefined(c, {grad_out_arg, x_arg, weight_arg, weight_index_arg});
 
+  auto grad_out_c = grad_out.contiguous();
+  auto x_c = x.contiguous();
+  auto weight_c = weight.contiguous();
+  auto weight_index_c = weight_index.contiguous();
+
   static auto op =
       c10::Dispatcher::singleton()
           .findSchemaOrThrow("pyg::spline_weighting_backward_basis", "")
           .typed<decltype(spline_weighting_backward_basis)>();
-  return op.call(grad_out, x, weight, weight_index);
+  return op.call(grad_out_c, x_c, weight_c, weight_index_c);
 }
 
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
