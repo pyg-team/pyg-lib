@@ -219,6 +219,125 @@ def test_spline_weighting_backward(device: torch.device) -> None:
     torch.autograd.gradcheck(fn, (x, weight, basis))
 
 
+@withCUDA
+def test_spline_basis_non_contiguous_pseudo(device: torch.device) -> None:
+    pseudo = torch.rand(3, 10, dtype=torch.float, device=device).t()
+    assert not pseudo.is_contiguous()
+
+    kernel_size = torch.tensor([5, 5, 5], dtype=torch.long, device=device)
+    is_open_spline = torch.tensor([1, 0, 1], dtype=torch.uint8, device=device)
+
+    basis, wi = pyg_lib.ops.spline_basis(
+        pseudo,
+        kernel_size,
+        is_open_spline,
+        1,
+    )
+    basis_ref, wi_ref = pyg_lib.ops.spline_basis(
+        pseudo.contiguous(),
+        kernel_size,
+        is_open_spline,
+        1,
+    )
+    torch.testing.assert_close(basis, basis_ref)
+    assert torch.equal(wi, wi_ref)
+
+
+@withCUDA
+def test_spline_weighting_non_contiguous_x(device: torch.device) -> None:
+    E, M_in, M_out, K, S = 10, 4, 8, 25, 4
+
+    x = torch.randn(M_in, E, dtype=torch.float, device=device).t()
+    assert not x.is_contiguous()
+
+    weight = torch.randn(K, M_in, M_out, dtype=torch.float, device=device)
+    basis = torch.rand(E, S, dtype=torch.float, device=device)
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
+    out_ref = pyg_lib.ops.spline_weighting(
+        x.contiguous(),
+        weight,
+        basis,
+        weight_index,
+    )
+    torch.testing.assert_close(out, out_ref)
+
+
+@withCUDA
+def test_spline_weighting_non_contiguous_weight(device: torch.device) -> None:
+    E, M_in, M_out, K, S = 10, 4, 8, 25, 4
+
+    x = torch.randn(E, M_in, dtype=torch.float, device=device)
+    weight = torch.randn(
+        M_out,
+        M_in,
+        K,
+        dtype=torch.float,
+        device=device,
+    ).permute(2, 1, 0)
+    assert not weight.is_contiguous()
+
+    basis = torch.rand(E, S, dtype=torch.float, device=device)
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
+    out_ref = pyg_lib.ops.spline_weighting(
+        x,
+        weight.contiguous(),
+        basis,
+        weight_index,
+    )
+    torch.testing.assert_close(out, out_ref)
+
+
+@withCUDA
+def test_spline_weighting_non_contiguous_basis(device: torch.device) -> None:
+    E, M_in, M_out, K, S = 10, 4, 8, 25, 4
+
+    x = torch.randn(E, M_in, dtype=torch.float, device=device)
+    weight = torch.randn(K, M_in, M_out, dtype=torch.float, device=device)
+    basis = torch.rand(S, E, dtype=torch.float, device=device).t()
+    assert not basis.is_contiguous()
+    weight_index = torch.randint(0, K, (E, S), dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
+    out_ref = pyg_lib.ops.spline_weighting(
+        x,
+        weight,
+        basis.contiguous(),
+        weight_index,
+    )
+    torch.testing.assert_close(out, out_ref)
+
+
+@withCUDA
+def test_spline_weighting_non_contiguous_weight_index(
+        device: torch.device) -> None:
+    E, M_in, M_out, K, S = 10, 4, 8, 25, 4
+
+    x = torch.randn(E, M_in, dtype=torch.float, device=device)
+    weight = torch.randn(K, M_in, M_out, dtype=torch.float, device=device)
+    basis = torch.rand(E, S, dtype=torch.float, device=device)
+    weight_index = torch.randint(
+        0,
+        K,
+        (S, E),
+        dtype=torch.long,
+        device=device,
+    ).t()
+    assert not weight_index.is_contiguous()
+
+    out = pyg_lib.ops.spline_weighting(x, weight, basis, weight_index)
+    out_ref = pyg_lib.ops.spline_weighting(
+        x,
+        weight,
+        basis,
+        weight_index.contiguous(),
+    )
+    torch.testing.assert_close(out, out_ref)
+
+
 @pytest.mark.skipif(
     not HAS_TORCH_SPLINE_CONV,
     reason='torch_spline_conv not available',

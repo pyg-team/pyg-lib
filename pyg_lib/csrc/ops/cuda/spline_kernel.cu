@@ -155,6 +155,7 @@ std::tuple<at::Tensor, at::Tensor> spline_basis_forward_cuda(
     const at::Tensor& kernel_size,
     const at::Tensor& is_open_spline,
     int64_t degree) {
+  TORCH_CHECK(pseudo.is_contiguous(), "pseudo must be contiguous");
   auto E = pseudo.size(0);
   auto D = pseudo.size(1);
   auto S = (int64_t)(powf(degree + 1, D) + 0.5);
@@ -234,6 +235,8 @@ at::Tensor spline_basis_backward_cuda(const at::Tensor& grad_basis,
                                       const at::Tensor& kernel_size,
                                       const at::Tensor& is_open_spline,
                                       int64_t degree) {
+  TORCH_CHECK(grad_basis.is_contiguous(), "grad_basis must be contiguous");
+  TORCH_CHECK(pseudo.is_contiguous(), "pseudo must be contiguous");
   auto E = pseudo.size(0);
   auto D = pseudo.size(1);
   auto S = grad_basis.size(1);
@@ -301,6 +304,10 @@ at::Tensor spline_weighting_forward_cuda(const at::Tensor& x,
                                          const at::Tensor& weight,
                                          const at::Tensor& basis,
                                          const at::Tensor& weight_index) {
+  TORCH_CHECK(x.is_contiguous(), "x must be contiguous");
+  TORCH_CHECK(weight.is_contiguous(), "weight must be contiguous");
+  TORCH_CHECK(basis.is_contiguous(), "basis must be contiguous");
+  TORCH_CHECK(weight_index.is_contiguous(), "weight_index must be contiguous");
   auto E = x.size(0);
   auto M_in = x.size(1);
   auto M_out = weight.size(2);
@@ -367,6 +374,10 @@ at::Tensor spline_weighting_backward_x_cuda(const at::Tensor& grad_out,
                                             const at::Tensor& weight,
                                             const at::Tensor& basis,
                                             const at::Tensor& weight_index) {
+  TORCH_CHECK(grad_out.is_contiguous(), "grad_out must be contiguous");
+  TORCH_CHECK(weight.is_contiguous(), "weight must be contiguous");
+  TORCH_CHECK(basis.is_contiguous(), "basis must be contiguous");
+  TORCH_CHECK(weight_index.is_contiguous(), "weight_index must be contiguous");
   auto E = grad_out.size(0);
   auto M_in = weight.size(1);
   auto M_out = grad_out.size(1);
@@ -374,7 +385,7 @@ at::Tensor spline_weighting_backward_x_cuda(const at::Tensor& grad_out,
 
   auto grad_x = at::zeros({E, M_in}, grad_out.options());
   auto weight_t =
-      weight.transpose(1, 2).contiguous();  // Contiguous memory access.
+      weight.transpose(1, 2).contiguous();  // Intentional layout transform.
 
   auto weight_index_data = weight_index.data_ptr<int64_t>();
 
@@ -435,6 +446,10 @@ at::Tensor spline_weighting_backward_weight_cuda(const at::Tensor& grad_out,
                                                  const at::Tensor& basis,
                                                  const at::Tensor& weight_index,
                                                  int64_t kernel_size) {
+  TORCH_CHECK(grad_out.is_contiguous(), "grad_out must be contiguous");
+  TORCH_CHECK(x.is_contiguous(), "x must be contiguous");
+  TORCH_CHECK(basis.is_contiguous(), "basis must be contiguous");
+  TORCH_CHECK(weight_index.is_contiguous(), "weight_index must be contiguous");
   auto E = grad_out.size(0);
   auto M_in = x.size(1);
   auto M_out = grad_out.size(1);
@@ -503,6 +518,10 @@ at::Tensor spline_weighting_backward_basis_cuda(
     const at::Tensor& x,
     const at::Tensor& weight,
     const at::Tensor& weight_index) {
+  TORCH_CHECK(grad_out.is_contiguous(), "grad_out must be contiguous");
+  TORCH_CHECK(x.is_contiguous(), "x must be contiguous");
+  TORCH_CHECK(weight.is_contiguous(), "weight must be contiguous");
+  TORCH_CHECK(weight_index.is_contiguous(), "weight_index must be contiguous");
   auto E = grad_out.size(0);
   auto M_in = x.size(1);
   auto M_out = grad_out.size(1);
