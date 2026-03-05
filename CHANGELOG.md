@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added PyTorch 2.3 support ([#322](https://github.com/pyg-team/pyg-lib/pull/322))
 - Added Windows support ([#315](https://github.com/pyg-team/pyg-lib/pull/315))
 - Added macOS Apple Silicon support ([#310](https://github.com/pyg-team/pyg-lib/pull/310))
+- Added ROCM 6.4 support ([#507](https://github.com/pyg-team/pyg-lib/pull/507))
 ### Changed
 ### Removed
 - Removed Support for PyTorch 1.13-2.5 ([#532](https://github.com/pyg-team/pyg-lib/pull/532))
