@@ -108,7 +108,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added download script for benchmark data ([#44](https://github.com/pyg-team/pyg-lib/pull/44))
 - Added `biased sampling` utils ([#38](https://github.com/pyg-team/pyg-lib/pull/38))
 - Added `CHANGELOG.md` ([#39](https://github.com/pyg-team/pyg-lib/pull/39))
-- Added `pyg.subgraph()` ([#31](https://github.com/pyg-team/pyg-lib/pull/31))
+- Added `pyg.subgraph()` ([#31](https://github.com/pyg-team/pyg-lib/pull/31), [#42](https://github.com/pyg-team/pyg-lib/pull/42))
 - Added nightly builds ([#28](https://github.com/pyg-team/pyg-lib/pull/28), [#36](https://github.com/pyg-team/pyg-lib/pull/36))
 - Added `rand` CPU engine ([#26](https://github.com/pyg-team/pyg-lib/pull/26), [#29](https://github.com/pyg-team/pyg-lib/pull/29), [#32](https://github.com/pyg-team/pyg-lib/pull/32), [#33](https://github.com/pyg-team/pyg-lib/pull/33))
 - Added `pyg.random_walk()` ([#21](https://github.com/pyg-team/pyg-lib/pull/21), [#24](https://github.com/pyg-team/pyg-lib/pull/24), [#25](https://github.com/pyg-team/pyg-lib/pull/25))
