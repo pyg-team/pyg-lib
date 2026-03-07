@@ -66,7 +66,7 @@ curl -k -L "${CUDA_URL}/${CUDA_FILE}" --output "${CUDA_FILE}"
 echo ""
 echo "Installing from ${CUDA_FILE}..."
 if [ "${1}" = "cu130" ]; then
-  COMPONENTS="cuda_nvcc_${CUDA_SHORT} cuda_cuobjdump_${CUDA_SHORT} cuda_nvprune_${CUDA_SHORT} cuda_cupti_${CUDA_SHORT} cuda_cublas_${CUDA_SHORT} cuda_cudart_${CUDA_SHORT} cuda_cufft_${CUDA_SHORT} cuda_curand_${CUDA_SHORT} cuda_cusolver_${CUDA_SHORT} cuda_cusparse_${CUDA_SHORT} cuda_npp_${CUDA_SHORT} cuda_nvrtc_${CUDA_SHORT} cuda_nvml_dev_${CUDA_SHORT} cuda_profiler_api_${CUDA_SHORT}"
+  COMPONENTS="nvcc_${CUDA_SHORT} cuobjdump_${CUDA_SHORT} nvprune_${CUDA_SHORT} cupti_${CUDA_SHORT} cublas_dev_${CUDA_SHORT} cudart_dev_${CUDA_SHORT} cufft_dev_${CUDA_SHORT} curand_dev_${CUDA_SHORT} cusolver_dev_${CUDA_SHORT} cusparse_dev_${CUDA_SHORT} thrust_${CUDA_SHORT} npp_dev_${CUDA_SHORT} nvrtc_dev_${CUDA_SHORT} nvml_dev_${CUDA_SHORT}"
 else
   COMPONENTS="nvcc_${CUDA_SHORT} cuobjdump_${CUDA_SHORT} nvprune_${CUDA_SHORT} cupti_${CUDA_SHORT} cublas_dev_${CUDA_SHORT} cudart_${CUDA_SHORT} cufft_dev_${CUDA_SHORT} curand_dev_${CUDA_SHORT} cusolver_dev_${CUDA_SHORT} cusparse_dev_${CUDA_SHORT} thrust_${CUDA_SHORT} npp_dev_${CUDA_SHORT} nvrtc_dev_${CUDA_SHORT} nvml_dev_${CUDA_SHORT}"
 fi
