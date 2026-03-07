@@ -73,13 +73,6 @@ else
   PowerShell -Command "Start-Process -FilePath \"${CUDA_FILE}\" -ArgumentList \"-s ${COMPONENTS}\" -Wait -NoNewWindow"
 fi
 echo "Done!"
-echo "Checking CUDA install directory..."
-ls "/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA_SHORT}/" 2>/dev/null
-echo "---"
-ls "/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA_SHORT}/include/" 2>/dev/null | head -20
-echo "---"
-ls "/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v${CUDA_SHORT}/include/crt/" 2>/dev/null | head -10
-echo "End of listing."
 rm -f "${CUDA_FILE}"
 
 # echo Installing NVIDIA drivers...
