@@ -1,4 +1,5 @@
 #include "../fps.h"
+#include "utils.cuh"
 
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
@@ -10,27 +11,6 @@ namespace ops {
 namespace {
 
 #define FPS_THREADS 256
-
-// Explicit non-template comparison/min functions to avoid NVCC ambiguous
-// operator overload errors from c10::SymInt (error #3343).
-__device__ __forceinline__ bool scalar_gt(float a, float b) {
-  return a > b;
-}
-__device__ __forceinline__ bool scalar_gt(double a, double b) {
-  return a > b;
-}
-__device__ __forceinline__ bool scalar_lt(float a, float b) {
-  return a < b;
-}
-__device__ __forceinline__ bool scalar_lt(double a, double b) {
-  return a < b;
-}
-__device__ __forceinline__ float scalar_min(float a, float b) {
-  return fminf(a, b);
-}
-__device__ __forceinline__ double scalar_min(double a, double b) {
-  return fmin(a, b);
-}
 
 template <typename scalar_t>
 __global__ void fps_cuda_kernel(const scalar_t* src,
