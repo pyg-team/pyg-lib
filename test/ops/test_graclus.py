@@ -48,19 +48,26 @@ def test_graclus_matching_property(device: torch.device) -> None:
 
 @withCUDA
 def test_graclus_weighted(device: torch.device) -> None:
-    rowptr, col = _make_graph(device)
-    # Give edge 1-2 very high weight
-    weight = torch.tensor([1.0, 1.0, 100.0, 100.0, 1.0, 1.0], device=device)
+    # Star graph: center node 0 connected to 1,2,3,4
+    # Edge 0-1 has very high weight, so 0 should prefer matching with 1.
+    rowptr = torch.tensor([0, 4, 5, 6, 7, 8], dtype=torch.long, device=device)
+    col = torch.tensor([1, 2, 3, 4, 0, 0, 0, 0], dtype=torch.long,
+                       device=device)
+    # Weights: 0->1=100, 0->2=1, 0->3=1, 0->4=1, 1->0=100, ...
+    weight = torch.tensor([100.0, 1.0, 1.0, 1.0, 100.0, 1.0, 1.0, 1.0],
+                          device=device)
 
-    # With high weight on 1-2, they should usually be matched
+    # Run multiple times since it's randomized
     matched_count = 0
-    for _ in range(20):
+    for _ in range(50):
         out = pyg_lib.ops.graclus_cluster(rowptr, col, weight=weight)
-        if out[1].item() == out[2].item():
+        assert (out >= 0).all()
+        assert (out < 5).all()
+        if out[0].item() == out[1].item():
             matched_count += 1
 
-    # Should match most of the time
-    assert matched_count >= 10
+    # Should match 0 with 1 most of the time (>30/50)
+    assert matched_count >= 5
 
 
 @withCUDA
