@@ -392,6 +392,32 @@ def spline_weighting(
     return torch.ops.pyg.spline_weighting(x, weight, basis, weight_index)
 
 
+def grid_cluster(
+    pos: Tensor,
+    size: Tensor,
+    start: Optional[Tensor] = None,
+    end: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Clusters all points in :obj:`pos` into voxels of size :obj:`size`.
+
+    Each point is assigned a cluster index based on which voxel it falls into.
+    The voxel grid is defined by the :obj:`size` parameter and optionally
+    bounded by :obj:`start` and :obj:`end`.
+
+    Args:
+        pos: Point positions of shape :obj:`[N, D]`.
+        size: Voxel size in each dimension of shape :obj:`[D]`.
+        start: Start of the voxel grid in each dimension of shape :obj:`[D]`.
+            If :obj:`None`, uses the minimum of :obj:`pos`.
+        end: End of the voxel grid in each dimension of shape :obj:`[D]`.
+            If :obj:`None`, uses the maximum of :obj:`pos`.
+
+    Returns:
+        Cluster index for each point of shape :obj:`[N]`.
+    """
+    return torch.ops.pyg.grid_cluster(pos, size, start, end)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -403,4 +429,5 @@ __all__ = [
     'softmax_csr',
     'spline_basis',
     'spline_weighting',
+    'grid_cluster',
 ]
