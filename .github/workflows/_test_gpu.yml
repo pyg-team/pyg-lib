@@ -1,0 +1,57 @@
+name: Test on GPUs
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      modal-token-id:
+        required: true
+      modal-token-secret:
+        required: true
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure matrix
+        id: set-matrix
+        run: |
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] } | select(.["cuda-version"] != "cpu")]' .github/workflows/utils/full_matrix_linux.json)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix=$matrix"
+
+  test:
+    needs: [trigger]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.trigger.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          python-version: '3.14'
+          activate-environment: true
+
+      - name: Install Modal
+        run: uv pip install modal
+
+      - name: Run GPU tests
+        run: |
+          modal run tools/test_wheels.py \
+            --torch-version ${{ matrix.torch-version }} \
+            --cuda-version ${{ matrix.cuda-version }} \
+            --python-version ${{ matrix.python-version }}
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID || secrets.modal-token-id }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET || secrets.modal-token-secret }}
