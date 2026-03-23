@@ -469,6 +469,37 @@ def knn(
     return torch.ops.pyg.knn(x, y, ptr_x, ptr_y, k, cosine, num_workers)
 
 
+def radius(
+    x: Tensor,
+    y: Tensor,
+    r: float = 1.0,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+    max_num_neighbors: int = 32,
+    num_workers: int = 1,
+    ignore_same_index: bool = False,
+) -> Tensor:
+    r"""Finds all points in :obj:`x` within distance :obj:`r` of points in
+    :obj:`y`.
+
+    Args:
+        x: Reference points of shape :obj:`[N, D]`.
+        y: Query points of shape :obj:`[M, D]`.
+        r: Radius.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+        max_num_neighbors: Maximum number of neighbors per query point.
+        num_workers: Number of workers (unused, for API compat).
+        ignore_same_index: If :obj:`True`, ignores pairs with same index.
+
+    Returns:
+        Edge indices of shape :obj:`[2, E]` where row 0 is query indices
+        and row 1 is reference indices.
+    """
+    return torch.ops.pyg.radius(x, y, ptr_x, ptr_y, r, max_num_neighbors,
+                                num_workers, ignore_same_index)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -483,4 +514,5 @@ __all__ = [
     'grid_cluster',
     'fps',
     'knn',
+    'radius',
 ]
