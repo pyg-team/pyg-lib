@@ -83,7 +83,7 @@ jobs:
     secrets: inherit
 
   index:
-    if: always()
+    if: ${{ always() && (inputs.release-type || 'nightly') == 'nightly' }}
     needs: [linux, macos, windows]
     uses: ./.github/workflows/_upload_index.yml
     with:
