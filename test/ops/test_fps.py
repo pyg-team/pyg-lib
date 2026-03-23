@@ -55,3 +55,49 @@ def test_fps_random_start(device: torch.device) -> None:
 
     out_det = pyg_lib.ops.fps(src, ptr, ratio=0.5, random_start=False)
     assert out_det[0] == 0
+
+
+@withCUDA
+def test_fps_ratio_one(device: torch.device) -> None:
+    # ratio=1.0 should return all points.
+    N = 15
+    src = torch.randn(N, 3, device=device)
+    ptr = torch.tensor([0, N], dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.fps(src, ptr, ratio=1.0, random_start=False)
+    assert out.shape == (N, )
+    assert set(out.tolist()) == set(range(N))
+
+
+@withCUDA
+def test_fps_single_point_batch(device: torch.device) -> None:
+    # Edge case: batch with a single point.
+    src = torch.randn(1, 3, device=device)
+    ptr = torch.tensor([0, 1], dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.fps(src, ptr, ratio=1.0, random_start=False)
+    assert out.shape == (1, )
+    assert out[0] == 0
+
+
+@withCUDA
+@pytest.mark.parametrize('dtype', [torch.float, torch.double])
+def test_fps_greedy_property(dtype: torch.dtype, device: torch.device) -> None:
+    # Verify the greedy FPS invariant: each selected point (after the first)
+    # must be the farthest from the already-selected set at the time of its
+    # selection.
+    src = torch.randn(30, 3, dtype=dtype, device=device)
+    ptr = torch.tensor([0, 30], dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.fps(src, ptr, ratio=0.5, random_start=False)
+
+    selected = [out[0].item()]
+    for i in range(1, out.shape[0]):
+        # Minimum distance from each candidate to the selected set so far:
+        sel = src[selected]
+        dists = torch.cdist(src.unsqueeze(0), sel.unsqueeze(0)).squeeze(0)
+        min_dists = dists.min(dim=1).values
+        # The point FPS picked should have the maximum min-distance:
+        expected = min_dists.argmax().item()
+        assert out[i].item() == expected
+        selected.append(out[i].item())
