@@ -20,7 +20,7 @@
 
 ## Installation
 
-We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.10 till 3.13, see [here](https://data.pyg.org/whl).
+We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.10 till 3.14, see [here](https://data.pyg.org/whl).
 
 To install the wheels, simply run
 
@@ -30,10 +30,16 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 where
 
-* `${TORCH}` should be replaced by either `2.8.0`, `2.9.0`, or `2.10.0`
+* `${TORCH}` should be replaced by either `2.8.0`, `2.9.0`, `2.10.0`, or `2.11.0`
 * `${CUDA}` should be replaced by either `cpu`, `cu126`, `cu128`, `cu129`, or `cu130`
 
 The following combinations are supported:
+
+| PyTorch 2.11 | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
+|--------------|-------|---------|---------|---------|---------|
+| **Linux**    | ✅    | ✅      | ✅      |       | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |       | ✅      |
+| **macOS**    | ✅    |         |         |        |        |
 
 | PyTorch 2.10 | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
 |--------------|-------|---------|---------|---------|---------|
@@ -55,7 +61,7 @@ The following combinations are supported:
 
 ### From nightly
 
-Nightly wheels are provided for Linux from Python 3.10 till 3.13:
+Nightly wheels are provided for Linux from Python 3.10 till 3.14:
 
 ```
 pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.html

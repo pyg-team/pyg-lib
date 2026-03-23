@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 ### Added
+- Added PyTorch 2.11 support ([#608](https://github.com/pyg-team/pyg-lib/pull/608))
 - Added Python 3.14 support ([#581](https://github.com/pyg-team/pyg-lib/pull/581), [#582](https://github.com/pyg-team/pyg-lib/pull/582), [#583](https://github.com/pyg-team/pyg-lib/pull/583))
 - Migrated `rusty1s/pytorch_spline_conv` to `pyg-lib` ([#566](https://github.com/pyg-team/pyg-lib/pull/566), [#567](https://github.com/pyg-team/pyg-lib/pull/567), [#568](https://github.com/pyg-team/pyg-lib/pull/568), [#569](https://github.com/pyg-team/pyg-lib/pull/569), [#570](https://github.com/pyg-team/pyg-lib/pull/570), [#572](https://github.com/pyg-team/pyg-lib/pull/572))
 - Added CUDA 13.0 support on Windows ([#580](https://github.com/pyg-team/pyg-lib/pull/580))
