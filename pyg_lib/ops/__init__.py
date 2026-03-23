@@ -543,6 +543,30 @@ def graclus_cluster(
     return torch.ops.pyg.graclus_cluster(rowptr, col, weight)
 
 
+def edge_sample(
+    start: Tensor,
+    rowptr: Tensor,
+    count: int = 0,
+    factor: float = 1.0,
+) -> Tensor:
+    r"""Samples edges incident to the given start nodes.
+
+    For each start node, samples up to :obj:`count` edges. If
+    :obj:`count < 1`, samples :obj:`ceil(factor * degree)` edges instead.
+
+    Args:
+        start: Start node indices of shape :obj:`[S]`.
+        rowptr: CSR row pointer of shape :obj:`[N + 1]`.
+        count: Fixed number of edges to sample per node. If :obj:`< 1`,
+            uses :obj:`factor` instead.
+        factor: Fraction of edges to sample when :obj:`count < 1`.
+
+    Returns:
+        Sampled edge indices (into the edge list).
+    """
+    return torch.ops.pyg.edge_sample(start, rowptr, count, factor)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -560,4 +584,5 @@ __all__ = [
     'radius',
     'nearest',
     'graclus_cluster',
+    'edge_sample',
 ]
