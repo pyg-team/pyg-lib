@@ -418,6 +418,29 @@ def grid_cluster(
     return torch.ops.pyg.grid_cluster(pos, size, start, end)
 
 
+def fps(
+    src: Tensor,
+    ptr: Tensor,
+    ratio: float = 0.5,
+    random_start: bool = True,
+) -> Tensor:
+    r"""Performs greedy farthest point sampling.
+
+    Starting from a random point (or the first point), iteratively selects
+    the point that is farthest from the already selected set.
+
+    Args:
+        src: Point positions of shape :obj:`[N, D]`.
+        ptr: Batch boundaries as a CSR pointer of shape :obj:`[B + 1]`.
+        ratio: Fraction of points to sample from each batch (in :obj:`(0, 1]`).
+        random_start: If :obj:`True`, starts from a random point.
+
+    Returns:
+        Indices of the sampled points of shape :obj:`[M]`.
+    """
+    return torch.ops.pyg.fps(src, ptr, ratio, random_start)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -430,4 +453,5 @@ __all__ = [
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
+    'fps',
 ]
