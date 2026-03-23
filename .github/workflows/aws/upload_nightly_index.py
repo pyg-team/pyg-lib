@@ -2,7 +2,6 @@ from collections import defaultdict
 
 import boto3
 
-ROOT_URL = 'https://data.pyg.org/whl/nightly'
 html = '<!DOCTYPE html>\n<html>\n<body>\n{}\n</body>\n</html>'
 href = '  <a href="{}">{}</a><br/>'
 args = {
@@ -55,7 +54,7 @@ bucket.Object('whl/nightly/index.html').upload_file('index.html', args)
 
 for torch_version, wheel_names in wheels_dict.items():
     torch_version_html = html.format('\n'.join([
-        href.format(f'{ROOT_URL}/{wheel_name}'.replace('+', '%2B'),
+        href.format(f'{wheel_name}'.replace('+', '%2B'),
                     wheel_name.split('/')[-1]) for wheel_name in wheel_names
     ]))
 
