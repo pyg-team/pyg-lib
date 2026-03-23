@@ -521,6 +521,28 @@ def nearest(
     return torch.ops.pyg.nearest(x, y, ptr_x, ptr_y)
 
 
+def graclus_cluster(
+    rowptr: Tensor,
+    col: Tensor,
+    weight: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Computes a greedy graph clustering via the Graclus algorithm.
+
+    Nodes are matched greedily in random order. The cluster ID for a
+    matched pair (u, v) is :obj:`min(u, v)`. Unmatched nodes are assigned
+    their own index as cluster ID.
+
+    Args:
+        rowptr: CSR row pointer of shape :obj:`[N + 1]`.
+        col: Column indices of shape :obj:`[E]`.
+        weight: Optional edge weights of shape :obj:`[E]`.
+
+    Returns:
+        Cluster assignment of shape :obj:`[N]`.
+    """
+    return torch.ops.pyg.graclus_cluster(rowptr, col, weight)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -537,4 +559,5 @@ __all__ = [
     'knn',
     'radius',
     'nearest',
+    'graclus_cluster',
 ]
