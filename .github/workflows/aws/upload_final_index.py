@@ -77,13 +77,10 @@ with open('index.html', 'w') as f:
 
 bucket.Object('whl/index.html').upload_file('index.html', ExtraArgs=args)
 
-root = 'https://data.pyg.org'
-
 for torch_version, wheels in wheels_dict.items():
     torch_version_html = html.format('\n'.join([
-        href.format(
-            f'{root}/whl/{orig_torch_version}/{wheel}'.replace('+', '%2B'),
-            wheel) for orig_torch_version, wheel in wheels
+        href.format(f'{orig_torch_version}/{wheel}'.replace('+', '%2B'), wheel)
+        for orig_torch_version, wheel in wheels
     ]))
 
     with open(f'{torch_version}.html', 'w') as f:
