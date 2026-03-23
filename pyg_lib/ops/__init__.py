@@ -500,6 +500,27 @@ def radius(
                                 num_workers, ignore_same_index)
 
 
+def nearest(
+    x: Tensor,
+    y: Tensor,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Finds the nearest point in :obj:`y` for each point in :obj:`x`.
+
+    Args:
+        x: Query points of shape :obj:`[N, D]`.
+        y: Reference points of shape :obj:`[M, D]`.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+
+    Returns:
+        Index tensor of shape :obj:`[N]` with the index of the nearest
+        point in :obj:`y` for each point in :obj:`x`.
+    """
+    return torch.ops.pyg.nearest(x, y, ptr_x, ptr_y)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -515,4 +536,5 @@ __all__ = [
     'fps',
     'knn',
     'radius',
+    'nearest',
 ]
