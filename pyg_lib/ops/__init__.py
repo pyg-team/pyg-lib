@@ -441,6 +441,34 @@ def fps(
     return torch.ops.pyg.fps(src, ptr, ratio, random_start)
 
 
+def knn(
+    x: Tensor,
+    y: Tensor,
+    k: int = 1,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+    cosine: bool = False,
+    num_workers: int = 1,
+) -> Tensor:
+    r"""Finds for each element in :obj:`y` the :obj:`k` nearest points in
+    :obj:`x`.
+
+    Args:
+        x: Reference points of shape :obj:`[N, D]`.
+        y: Query points of shape :obj:`[M, D]`.
+        k: Number of nearest neighbors.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+        cosine: If :obj:`True`, uses cosine distance (CUDA only).
+        num_workers: Number of workers (unused, for API compat).
+
+    Returns:
+        Edge indices of shape :obj:`[2, M*k]` where row 0 is query indices
+        and row 1 is reference indices.
+    """
+    return torch.ops.pyg.knn(x, y, ptr_x, ptr_y, k, cosine, num_workers)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -454,4 +482,5 @@ __all__ = [
     'spline_weighting',
     'grid_cluster',
     'fps',
+    'knn',
 ]
