@@ -6,7 +6,7 @@ from pyg_lib.testing import withCUDA
 
 
 @withCUDA
-@pytest.mark.parametrize('dtype', [torch.float, torch.double])
+@pytest.mark.parametrize('dtype', [torch.float, torch.double, torch.bfloat16])
 def test_grid_cluster_2d(dtype: torch.dtype, device: torch.device) -> None:
     pos = torch.tensor(
         [[0.0, 0.0], [0.1, 0.1], [0.5, 0.5], [1.0, 1.0], [1.1, 1.1]],
@@ -50,6 +50,22 @@ def test_grid_cluster_with_start_end(dtype: torch.dtype,
 
     assert out.shape == (3, )
     assert out.dtype == torch.long
+
+
+@withCUDA
+def test_grid_cluster_defaults_match_explicit(device: torch.device) -> None:
+    pos = torch.tensor([[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]], device=device)
+    size = torch.tensor([0.5, 0.5], device=device)
+
+    out_default = pyg_lib.ops.grid_cluster(pos, size)
+    out_explicit = pyg_lib.ops.grid_cluster(
+        pos,
+        size,
+        start=pos.min(0).values,
+        end=pos.max(0).values,
+    )
+
+    assert torch.equal(out_default, out_explicit)
 
 
 @withCUDA
