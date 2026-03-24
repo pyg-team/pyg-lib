@@ -1,0 +1,33 @@
+changelog:
+  exclude:
+    authors:
+      - pre-commit-ci[bot]
+      - dependabot[bot]
+  categories:
+    - title: Features
+      labels:
+        - feature
+    - title: Bug Fixes
+      labels:
+        - bug
+    - title: Ops
+      labels:
+        - ops
+    - title: Sampler
+      labels:
+        - sampler
+    - title: Documentation
+      labels:
+        - documentation
+    - title: CI
+      labels:
+        - ci
+    - title: Benchmark
+      labels:
+        - benchmark
+    - title: Skipped Changelog
+      labels:
+        - skip-changelog
+    - title: Other Changes
+      labels:
+        - "*"
