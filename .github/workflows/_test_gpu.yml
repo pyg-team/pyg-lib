@@ -10,29 +10,8 @@ on:  # yamllint disable-line rule:truthy
         required: true
 
 jobs:
-  trigger:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Configure matrix
-        id: set-matrix
-        run: |
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] } | select(.["cuda-version"] != "cpu")]' .github/workflows/utils/full_matrix_linux.json)
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
-          echo "matrix=$matrix"
-
   test:
-    needs: [trigger]
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.trigger.outputs.matrix) }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -47,11 +26,7 @@ jobs:
         run: uv pip install modal
 
       - name: Run GPU tests
-        run: |
-          modal run tools/test_wheels.py \
-            --torch-version ${{ matrix.torch-version }} \
-            --cuda-version ${{ matrix.cuda-version }} \
-            --python-version ${{ matrix.python-version }}
+        run: modal run tools/test_wheels.py
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID || secrets.modal-token-id }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET || secrets.modal-token-secret }}

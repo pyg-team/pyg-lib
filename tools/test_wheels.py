@@ -27,7 +27,7 @@ app = modal.App("pyg-lib-wheel-tests")
 # https://modal.com/pricing
 GPU_TYPES = [
     # Blackwell (sm_100)
-    "B200",
+    # "B200",  # TODO: Enable when we have enough credits.
     # Hopper (sm_90)
     "H100",
     # "H200",
@@ -194,9 +194,9 @@ def _print_results(results: list[tuple[str, int, str, str]]) -> int:
 
 @app.local_entrypoint()
 def main(
-    torch_version: str,
-    cuda_version: str,
-    python_version: str,
+    torch_version: str = "",
+    cuda_version: str = "",
+    python_version: str = "",
     gpu: str = "",
     force_build: bool = False,
 ):
