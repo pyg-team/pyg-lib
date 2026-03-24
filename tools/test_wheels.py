@@ -102,7 +102,6 @@ def _make_image(
     base = "https://data.pyg.org/whl"
     suffix = f"torch-{torch_version}+{cuda_short}.html"
     nightly_url = f"{base}/nightly/{suffix}"
-    stable_url = f"{base}/{suffix}"
     return (modal.Image.debian_slim(python_version=python_version).pip_install(
         f"torch=={torch_version}",
         index_url=torch_index,
@@ -113,9 +112,6 @@ def _make_image(
         "pyg-lib",
         find_links=nightly_url,
         force_build=force_build,
-    ).pip_install(
-        "torch-spline-conv",
-        find_links=stable_url,
     ).run_commands(
         "python -c \"import pyg_lib; print('pyg-lib:', pyg_lib.__version__)\"",
     ).add_local_file(
