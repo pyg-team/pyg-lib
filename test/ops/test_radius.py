@@ -8,8 +8,11 @@ from pyg_lib.testing import withCUDA
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_radius_basic(dtype: torch.dtype, device: torch.device) -> None:
-    x = torch.tensor([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [10.0, 0.0]],
-                     dtype=dtype, device=device)
+    x = torch.tensor(
+        [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [10.0, 0.0]],
+        dtype=dtype,
+        device=device,
+    )
     y = torch.tensor([[0.5, 0.0]], dtype=dtype, device=device)
 
     out = pyg_lib.ops.radius(x, y, r=1.5)
@@ -70,7 +73,12 @@ def test_radius_batched(device: torch.device) -> None:
 def test_radius_ignore_same_index(device: torch.device) -> None:
     x = torch.randn(10, 3, device=device)
 
-    out = pyg_lib.ops.radius(x, x, r=100.0, max_num_neighbors=100,
-                             ignore_same_index=True)
+    out = pyg_lib.ops.radius(
+        x,
+        x,
+        r=100.0,
+        max_num_neighbors=100,
+        ignore_same_index=True,
+    )
     # No self-loops
     assert (out[0] != out[1]).all()

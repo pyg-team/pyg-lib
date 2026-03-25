@@ -13,7 +13,7 @@ def test_fps_output_size(dtype: torch.dtype, device: torch.device) -> None:
     ptr = torch.tensor([0, N], dtype=torch.long, device=device)
 
     out = pyg_lib.ops.fps(src, ptr, ratio=0.5, random_start=False)
-    assert out.shape == (10, )
+    assert out.shape == (10,)
     assert out.dtype == torch.long
     assert out.min() >= 0
     assert out.max() < N
@@ -21,8 +21,10 @@ def test_fps_output_size(dtype: torch.dtype, device: torch.device) -> None:
 
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_fps_farthest_property(dtype: torch.dtype,
-                               device: torch.device) -> None:
+def test_fps_farthest_property(
+    dtype: torch.dtype,
+    device: torch.device,
+) -> None:
     src = torch.randn(50, 3, dtype=dtype, device=device)
     ptr = torch.tensor([0, 50], dtype=torch.long, device=device)
 
@@ -41,7 +43,7 @@ def test_fps_multi_batch(device: torch.device) -> None:
 
     out = pyg_lib.ops.fps(src, ptr, ratio=0.5, random_start=False)
     # Batch 0: ceil(10 * 0.5) = 5, Batch 1: ceil(20 * 0.5) = 10
-    assert out.shape == (15, )
+    assert out.shape == (15,)
     assert (out[:5] < 10).all()
     assert (out[:5] >= 0).all()
     assert (out[5:] >= 10).all()
@@ -65,7 +67,7 @@ def test_fps_ratio_one(device: torch.device) -> None:
     ptr = torch.tensor([0, N], dtype=torch.long, device=device)
 
     out = pyg_lib.ops.fps(src, ptr, ratio=1.0, random_start=False)
-    assert out.shape == (N, )
+    assert out.shape == (N,)
     assert set(out.tolist()) == set(range(N))
 
 
@@ -76,7 +78,7 @@ def test_fps_single_point_batch(device: torch.device) -> None:
     ptr = torch.tensor([0, 1], dtype=torch.long, device=device)
 
     out = pyg_lib.ops.fps(src, ptr, ratio=1.0, random_start=False)
-    assert out.shape == (1, )
+    assert out.shape == (1,)
     assert out[0] == 0
 
 

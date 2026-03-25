@@ -43,22 +43,35 @@ for obj in bucket.objects.filter(Prefix='whl/nightly'):
     if '2.9.0' in torch_version:
         wheels_dict[torch_version.replace('2.9.0', '2.9.1')].append(wheel)
 
-index_html = html.format('\n'.join([
-    href.format(f'{version}.html'.replace('+', '%2B'), version)
-    for version in wheels_dict
-]))
+index_html = html.format(
+    '\n'.join(
+        [
+            href.format(f'{version}.html'.replace('+', '%2B'), version)
+            for version in wheels_dict
+        ],
+    ),
+)
 
 with open('index.html', 'w') as f:
     f.write(index_html)
 bucket.Object('whl/nightly/index.html').upload_file('index.html', args)
 
 for torch_version, wheel_names in wheels_dict.items():
-    torch_version_html = html.format('\n'.join([
-        href.format(f'{wheel_name}'.replace('+', '%2B'),
-                    wheel_name.split('/')[-1]) for wheel_name in wheel_names
-    ]))
+    torch_version_html = html.format(
+        '\n'.join(
+            [
+                href.format(
+                    f'{wheel_name}'.replace('+', '%2B'),
+                    wheel_name.split('/')[-1],
+                )
+                for wheel_name in wheel_names
+            ],
+        ),
+    )
 
     with open(f'{torch_version}.html', 'w') as f:
         f.write(torch_version_html)
     bucket.Object(f'whl/nightly/{torch_version}.html').upload_file(
-        f'{torch_version}.html', args)
+        f'{torch_version}.html',
+        args,
+    )

@@ -69,10 +69,17 @@ with open('index.html', 'w') as f:
 
 bucket.Object('index.html').upload_file('index.html', ExtraArgs=args)
 
-index_html = html.format('\n'.join([
-    href.format(f'{torch_version}.html'.replace('+', '%2B'), torch_version)
-    for torch_version in wheels_dict
-]))
+index_html = html.format(
+    '\n'.join(
+        [
+            href.format(
+                f'{torch_version}.html'.replace('+', '%2B'),
+                torch_version,
+            )
+            for torch_version in wheels_dict
+        ],
+    ),
+)
 
 with open('index.html', 'w') as f:
     f.write(index_html)
@@ -80,13 +87,22 @@ with open('index.html', 'w') as f:
 bucket.Object('whl/index.html').upload_file('index.html', ExtraArgs=args)
 
 for torch_version, wheels in wheels_dict.items():
-    torch_version_html = html.format('\n'.join([
-        href.format(f'{orig_torch_version}/{wheel}'.replace('+', '%2B'), wheel)
-        for orig_torch_version, wheel in wheels
-    ]))
+    torch_version_html = html.format(
+        '\n'.join(
+            [
+                href.format(
+                    f'{orig_torch_version}/{wheel}'.replace('+', '%2B'),
+                    wheel,
+                )
+                for orig_torch_version, wheel in wheels
+            ],
+        ),
+    )
 
     with open(f'{torch_version}.html', 'w') as f:
         f.write(torch_version_html)
 
     bucket.Object(f'whl/{torch_version}.html').upload_file(
-        f'{torch_version}.html', ExtraArgs=args)
+        f'{torch_version}.html',
+        ExtraArgs=args,
+    )

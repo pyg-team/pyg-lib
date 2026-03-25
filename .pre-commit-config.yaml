@@ -48,30 +48,23 @@ repos:
           --in-place,
         ]
 
-  - repo: https://github.com/google/yapf
-    rev: v0.43.0
-    hooks:
-      - id: yapf
-        name: Format code
-
-  - repo: https://github.com/pycqa/isort
-    rev: 8.0.1
-    hooks:
-      - id: isort
-        name: Sort imports
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.7
     hooks:
-      - id: ruff
-        name: Ruff formatting
+      - id: ruff-check
+        name: ruff check
+        types_or: [python, pyi, pyproject]
         args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        name: ruff format
+        types_or: [python, pyi]
 
   - repo: https://github.com/PyCQA/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
         name: Check PEP8
+        args: [--extend-ignore=E203]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v22.1.1

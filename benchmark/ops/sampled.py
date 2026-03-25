@@ -17,8 +17,8 @@ if __name__ == '__main__':
     if args.device == 'cpu':
         num_warmups, num_steps = num_warmups // 10, num_steps // 10
 
-    a_index = torch.randint(0, num_nodes, (num_edges, ), device=args.device)
-    b_index = torch.randint(0, num_nodes, (num_edges, ), device=args.device)
+    a_index = torch.randint(0, num_nodes, (num_edges,), device=args.device)
+    b_index = torch.randint(0, num_nodes, (num_edges,), device=args.device)
     out_grad = torch.randn(num_edges, num_feats, device=args.device)
 
     for fn in ['add', 'sub', 'mul', 'div']:

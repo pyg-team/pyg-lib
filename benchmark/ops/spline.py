@@ -7,6 +7,7 @@ import pyg_lib
 
 try:
     import torch_spline_conv
+
     HAS_TORCH_SPLINE_CONV = True
 except ImportError:
     HAS_TORCH_SPLINE_CONV = False
@@ -33,10 +34,16 @@ if __name__ == '__main__':
     for degree in [1, 2, 3]:
         E, D = 10000, 3
         pseudo = torch.rand(E, D, dtype=torch.float, device=args.device)
-        kernel_size = torch.tensor([5] * D, dtype=torch.long,
-                                   device=args.device)
-        is_open_spline = torch.tensor([1] * D, dtype=torch.uint8,
-                                      device=args.device)
+        kernel_size = torch.tensor(
+            [5] * D,
+            dtype=torch.long,
+            device=args.device,
+        )
+        is_open_spline = torch.tensor(
+            [1] * D,
+            dtype=torch.uint8,
+            device=args.device,
+        )
         label = f'spline_basis (degree={degree}, E={E}, D={D})'
 
         if bench_original:
@@ -114,8 +121,13 @@ if __name__ == '__main__':
     x = torch.randn(E, M_in, dtype=torch.float, device=args.device)
     weight = torch.randn(K, M_in, M_out, dtype=torch.float, device=args.device)
     basis = torch.rand(E, S, dtype=torch.float, device=args.device)
-    weight_index = torch.randint(0, K, (E, S), dtype=torch.long,
-                                 device=args.device)
+    weight_index = torch.randint(
+        0,
+        K,
+        (E, S),
+        dtype=torch.long,
+        device=args.device,
+    )
     label = f'spline_weighting (E={E}, M_in={M_in}, M_out={M_out}, K={K})'
 
     if bench_original:

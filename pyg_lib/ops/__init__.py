@@ -42,7 +42,7 @@ def _pytreeify(cls):
     def new_backward(ctx, *flat_grad_outputs):
         outs_grad = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
         if not isinstance(outs_grad, tuple):
-            outs_grad = (outs_grad, )
+            outs_grad = (outs_grad,)
 
         grad_inputs = orig_bw(ctx, *outs_grad)
 
@@ -62,8 +62,8 @@ class GroupedMatmul(torch.autograd.Function):
     def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
         ctx.save_for_backward(*args)
 
-        inputs: List[Tensor] = [x for x in args[:int(len(args) / 2)]]
-        others: List[Tensor] = [other for other in args[int(len(args) / 2):]]
+        inputs: List[Tensor] = [x for x in args[: int(len(args) / 2)]]
+        others: List[Tensor] = [other for other in args[int(len(args) / 2) :]]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # NOTE Autograd doesnt set `out[i].requires_grad = True` automatically
@@ -76,8 +76,8 @@ class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
         args = ctx.saved_tensors
-        inputs: List[Tensor] = [x for x in args[:int(len(outs_grad))]]
-        others: List[Tensor] = [other for other in args[int(len(outs_grad)):]]
+        inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
+        others: List[Tensor] = [other for other in args[int(len(outs_grad)) :]]
 
         inputs_grad = []
         if any([x.requires_grad for x in inputs]):
@@ -168,7 +168,7 @@ def segment_matmul(
     out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
     if bias is not None:
         for i in range(ptr.numel() - 1):
-            out[ptr[i]:ptr[i + 1]] += bias[i]
+            out[ptr[i] : ptr[i + 1]] += bias[i]
     return out
 
 
@@ -198,7 +198,7 @@ def sampled_add(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "add")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'add')
     return out
 
 
@@ -228,7 +228,7 @@ def sampled_sub(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "sub")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'sub')
     return out
 
 
@@ -258,7 +258,7 @@ def sampled_mul(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "mul")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'mul')
     return out
 
 
@@ -288,7 +288,7 @@ def sampled_div(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "div")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'div')
     return out
 
 
@@ -368,8 +368,12 @@ def spline_basis(
         Basis values of shape :obj:`[E, S]` and weight indices of shape
         :obj:`[E, S]`.
     """
-    return torch.ops.pyg.spline_basis(pseudo, kernel_size, is_open_spline,
-                                      degree)
+    return torch.ops.pyg.spline_basis(
+        pseudo,
+        kernel_size,
+        is_open_spline,
+        degree,
+    )
 
 
 def spline_weighting(
@@ -496,8 +500,16 @@ def radius(
         Edge indices of shape :obj:`[2, E]` where row 0 is query indices
         and row 1 is reference indices.
     """
-    return torch.ops.pyg.radius(x, y, ptr_x, ptr_y, r, max_num_neighbors,
-                                num_workers, ignore_same_index)
+    return torch.ops.pyg.radius(
+        x,
+        y,
+        ptr_x,
+        ptr_y,
+        r,
+        max_num_neighbors,
+        num_workers,
+        ignore_same_index,
+    )
 
 
 def nearest(

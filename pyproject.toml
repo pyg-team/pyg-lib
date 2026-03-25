@@ -74,28 +74,27 @@ addopts=[
     "-vv",
 ]
 
-[tool.yapf]
-based_on_style="pep8"
-split_before_named_assigns=false
-blank_line_before_nested_class_or_def=false
-
 [tool.flake8]
 exclude=["third_party", "build"]
+extend-ignore = ["E203"]
 
 [tool.isort]
 multi_line_output=3
 include_trailing_comma=true
 skip=[".gitignore", "__init__.py"]
 
-[tool.ruff]  # https://docs.astral.sh/ruff/rules
+[tool.ruff]
 src=["pyg_lib"]
-line-length=80
+line-length=79
 indent-width=4
 target-version="py310"
 
 [tool.ruff.lint]
+# https://docs.astral.sh/ruff/rules
 select=[
     "D",  # pydocstyle
+    "I",  # isort
+    "COM812",  # missing-trailing-comma
 ]
 ignore=[
     "D100",  # TODO Don't ignore "Missing docstring in public module"
@@ -113,3 +112,6 @@ quote-style="single"
 
 [tool.ruff.lint.pydocstyle]
 convention="google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyg_lib"]

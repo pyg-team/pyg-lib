@@ -12,7 +12,7 @@ def test_nearest_basic(dtype: torch.dtype, device: torch.device) -> None:
     y = torch.tensor([[1.0, 0.0], [2.0, 0.0]], dtype=dtype, device=device)
 
     out = pyg_lib.ops.nearest(x, y)
-    assert out.shape == (2, )
+    assert out.shape == (2,)
     assert out[0].item() == 0  # x[0]=(0,0) nearest to y[0]=(1,0)
     assert out[1].item() == 1  # x[1]=(3,0) nearest to y[1]=(2,0)
 
@@ -39,7 +39,7 @@ def test_nearest_batched(device: torch.device) -> None:
     ptr_y = torch.tensor([0, 8, 15], dtype=torch.long, device=device)
 
     out = pyg_lib.ops.nearest(x, y, ptr_x=ptr_x, ptr_y=ptr_y)
-    assert out.shape == (20, )
+    assert out.shape == (20,)
 
     # Batch 0 results should be in [0, 8)
     assert (out[:10] >= 0).all()

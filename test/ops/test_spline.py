@@ -8,6 +8,7 @@ from pyg_lib.testing import withCUDA
 
 try:
     import torch_spline_conv
+
     HAS_TORCH_SPLINE_CONV = True
 except ImportError:
     HAS_TORCH_SPLINE_CONV = False
@@ -26,7 +27,7 @@ def _basis_value(v: float, k_mod: int, degree: int) -> float:
             return 0.5 * v * v
     elif degree == 3:
         if k_mod == 0:
-            return (1.0 - v)**3 / 6.0
+            return (1.0 - v) ** 3 / 6.0
         elif k_mod == 1:
             return (3.0 * v**3 - 6.0 * v**2 + 4.0) / 6.0
         elif k_mod == 2:
@@ -45,7 +46,7 @@ def _spline_basis_ref(
     device = pseudo.device
 
     E, D = pseudo.shape
-    S = (degree + 1)**D
+    S = (degree + 1) ** D
 
     basis = torch.empty(E, S, dtype=pseudo.dtype, device=device)
     weight_index = torch.empty(E, S, dtype=torch.long, device=device)
@@ -58,13 +59,12 @@ def _spline_basis_ref(
             b = 1.0
             for d in range(D):
                 k_mod = k % (degree + 1)
-                k //= (degree + 1)
+                k //= degree + 1
 
                 v = pseudo[e, d].item()
-                v *= (kernel_size[d].item() -
-                      degree * is_open_spline[d].item())
+                v *= kernel_size[d].item() - degree * is_open_spline[d].item()
 
-                wi += ((int(v) + k_mod) % kernel_size[d].item() * wi_offset)
+                wi += (int(v) + k_mod) % kernel_size[d].item() * wi_offset
                 wi_offset *= kernel_size[d].item()
 
                 v -= math.floor(v)
@@ -313,7 +313,8 @@ def test_spline_weighting_non_contiguous_basis(device: torch.device) -> None:
 
 @withCUDA
 def test_spline_weighting_non_contiguous_weight_index(
-        device: torch.device) -> None:
+    device: torch.device,
+) -> None:
     E, M_in, M_out, K, S = 10, 4, 8, 25, 4
 
     x = torch.randn(E, M_in, dtype=torch.float, device=device)

@@ -29,8 +29,14 @@ def metis(
     Returns:
         A vector that assings each node to a partition.
     """
-    return torch.ops.pyg.metis(rowptr, col, num_partitions, node_weight,
-                               edge_weight, recursive)
+    return torch.ops.pyg.metis(
+        rowptr,
+        col,
+        num_partitions,
+        node_weight,
+        edge_weight,
+        recursive,
+    )
 
 
 __all__ = [
