@@ -36,13 +36,13 @@ jobs:
 
     steps:
       - name: Login to Docker Hub
-        uses: docker/login-action@v4
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2  # v4.0.0
         with:
           username: ${{ inputs.docker-hub-username }}
           password: ${{ secrets.docker-hub-token }}
 
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
@@ -57,7 +57,7 @@ jobs:
         # Disk space required for CPU builds is usually small enough, so we
         # save a few minutes by skipping this step.
         if: ${{ matrix.cuda-version != 'cpu' }}
-        uses: jlumbroso/free-disk-space@v1.3.1
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
         with:
           android: true
           dotnet: true
@@ -71,7 +71,7 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
-          python-version: '3.11'
+          python-version: '3.14'
           activate-environment: true
 
       - name: Install dependencies
