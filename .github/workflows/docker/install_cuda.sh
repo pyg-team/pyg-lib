@@ -4,7 +4,10 @@ set -ex
 CUDA_VERSION="${1:?Specify cuda version, e.g. 12.9}"
 
 # See https://developer.nvidia.com/cuda-toolkit-archive
-if [ "$CUDA_VERSION" == "13.0" ]; then
+if [ "$CUDA_VERSION" == "13.2" ]; then
+    URL=https://developer.download.nvidia.com/compute/cuda/13.2.0/local_installers/cuda-repo-rhel8-13-2-local-13.2.0_595.45.04-1.x86_64.rpm
+    PACKAGE_NAME=cuda-toolkit-13-2
+elif [ "$CUDA_VERSION" == "13.0" ]; then
     URL=https://developer.download.nvidia.com/compute/cuda/13.0.0/local_installers/cuda-repo-rhel8-13-0-local-13.0.0_580.65.06-1.x86_64.rpm
     PACKAGE_NAME=cuda-toolkit-13-0
 elif [ "$CUDA_VERSION" == "12.9" ]; then
@@ -33,7 +36,6 @@ else
 fi
 
 echo "Installing CUDA version: $CUDA_VERSION"
-# aria2c $URL -o /tmp/cuda.rpm
 aria2c -x 16 -s 16 -k 1M --file-allocation=none "$URL" -o /tmp/cuda.rpm
 rpm -i /tmp/cuda.rpm
 dnf clean all
