@@ -1,24 +1,31 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [0.6.0] - 2026-03-24
 ### Added
 - Added PyTorch 2.11 support ([#608](https://github.com/pyg-team/pyg-lib/pull/608))
 - Added Python 3.14 support ([#581](https://github.com/pyg-team/pyg-lib/pull/581), [#582](https://github.com/pyg-team/pyg-lib/pull/582), [#583](https://github.com/pyg-team/pyg-lib/pull/583))
 - Migrated `rusty1s/pytorch_spline_conv` to `pyg-lib` ([#566](https://github.com/pyg-team/pyg-lib/pull/566), [#567](https://github.com/pyg-team/pyg-lib/pull/567), [#568](https://github.com/pyg-team/pyg-lib/pull/568), [#569](https://github.com/pyg-team/pyg-lib/pull/569), [#570](https://github.com/pyg-team/pyg-lib/pull/570), [#572](https://github.com/pyg-team/pyg-lib/pull/572))
+- Migrated `rusty1s/pytorch_cluster` to `pyg-lib` ([#585](https://github.com/pyg-team/pyg-lib/pull/585), [#586](https://github.com/pyg-team/pyg-lib/pull/586), [#587](https://github.com/pyg-team/pyg-lib/pull/587), [#588](https://github.com/pyg-team/pyg-lib/pull/588), [#589](https://github.com/pyg-team/pyg-lib/pull/589), [#590](https://github.com/pyg-team/pyg-lib/pull/590), [#591](https://github.com/pyg-team/pyg-lib/pull/591), [#592](https://github.com/pyg-team/pyg-lib/pull/592), [#593](https://github.com/pyg-team/pyg-lib/pull/593), [#594](https://github.com/pyg-team/pyg-lib/pull/594), [#595](https://github.com/pyg-team/pyg-lib/pull/595))
 - Added CUDA 13.0 support on Windows ([#580](https://github.com/pyg-team/pyg-lib/pull/580))
 - Added PyTorch 2.10 support ([#561](https://github.com/pyg-team/pyg-lib/pull/561))
 - Added PyTorch 2.9 support ([#536](https://github.com/pyg-team/pyg-lib/pull/536))
 - Added macOS 11 support ([#558](https://github.com/pyg-team/pyg-lib/pull/558))
-### Changed
-### Deprecated
 ### Removed
 - Removed CUDA 11.8 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
 - Removed PyTorch 2.6 and 2.7 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
-### Fixed
-### Security
 
 ## [0.5.0] - 2025-10-14
 ### Added
