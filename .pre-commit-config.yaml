@@ -86,13 +86,3 @@ repos:
     hooks:
       - id: sphinx-lint
         name: Check Sphinx
-
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 1.0.0
-    hooks:
-      - id: mdformat
-        name: Format Markdown
-        additional_dependencies:
-          - mdformat-gfm
-          - mdformat-front-matters
-          - mdformat-footnote
