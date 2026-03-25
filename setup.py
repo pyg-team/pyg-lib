@@ -25,9 +25,9 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     @staticmethod
-    def check_env_flag(name: str, default: str = "") -> bool:
+    def check_env_flag(name: str, default: str = '') -> bool:
         value = os.getenv(name, default).upper()
-        return value in ["1", "ON", "YES", "TRUE", "Y"]
+        return value in ['1', 'ON', 'YES', 'TRUE', 'Y']
 
     def get_ext_filename(self, ext_name):
         # Remove Python ABI suffix:
@@ -42,12 +42,12 @@ class CMakeBuild(build_ext):
         import torch
 
         extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
-        self.build_type = "DEBUG" if self.debug else "RELEASE"
+        self.build_type = 'DEBUG' if self.debug else 'RELEASE'
         if self.debug is None:
-            if CMakeBuild.check_env_flag("DEBUG"):
-                self.build_type = "DEBUG"
-            elif CMakeBuild.check_env_flag("REL_WITH_DEB_INFO"):
-                self.build_type = "RELWITHDEBINFO"
+            if CMakeBuild.check_env_flag('DEBUG'):
+                self.build_type = 'DEBUG'
+            elif CMakeBuild.check_env_flag('REL_WITH_DEB_INFO'):
+                self.build_type = 'RELWITHDEBINFO'
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -66,7 +66,7 @@ class CMakeBuild(build_ext):
         ]
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
-            include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
+            include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
             cmake_args.append('-DUSE_MKL_BLAS=ON')
 
@@ -75,15 +75,21 @@ class CMakeBuild(build_ext):
         if with_ninja:
             cmake_args += ['-GNinja']
         else:
-            warnings.warn("Building times of 'pyg-lib' can be heavily improved"
-                          " by installing 'ninja': `pip install ninja`")
+            warnings.warn(
+                "Building times of 'pyg-lib' can be heavily improved"
+                " by installing 'ninja': `pip install ninja`",
+            )
 
         build_args = []
 
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
-                              cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args,
-                              cwd=self.build_temp)
+        subprocess.check_call(
+            ['cmake', ext.sourcedir] + cmake_args,
+            cwd=self.build_temp,
+        )
+        subprocess.check_call(
+            ['cmake', '--build', '.'] + build_args,
+            cwd=self.build_temp,
+        )
 
 
 def mkl_dependencies():

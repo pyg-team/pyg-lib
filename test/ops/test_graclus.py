@@ -16,7 +16,7 @@ def test_graclus_valid_assignment(device: torch.device) -> None:
     rowptr, col = _make_graph(device)
     out = pyg_lib.ops.graclus_cluster(rowptr, col)
 
-    assert out.shape == (4, )
+    assert out.shape == (4,)
     # All cluster IDs should be valid node indices
     assert (out >= 0).all()
     assert (out < 4).all()
@@ -51,11 +51,16 @@ def test_graclus_weighted(device: torch.device) -> None:
     # Star graph: center node 0 connected to 1,2,3,4
     # Edge 0-1 has very high weight, so 0 should prefer matching with 1.
     rowptr = torch.tensor([0, 4, 5, 6, 7, 8], dtype=torch.long, device=device)
-    col = torch.tensor([1, 2, 3, 4, 0, 0, 0, 0], dtype=torch.long,
-                       device=device)
+    col = torch.tensor(
+        [1, 2, 3, 4, 0, 0, 0, 0],
+        dtype=torch.long,
+        device=device,
+    )
     # Weights: 0->1=100, 0->2=1, 0->3=1, 0->4=1, 1->0=100, ...
-    weight = torch.tensor([100.0, 1.0, 1.0, 1.0, 100.0, 1.0, 1.0, 1.0],
-                          device=device)
+    weight = torch.tensor(
+        [100.0, 1.0, 1.0, 1.0, 100.0, 1.0, 1.0, 1.0],
+        device=device,
+    )
 
     # Run multiple times since it's randomized
     matched_count = 0
@@ -77,7 +82,7 @@ def test_graclus_disconnected(device: torch.device) -> None:
     col = torch.tensor([1, 0, 3, 2], dtype=torch.long, device=device)
 
     out = pyg_lib.ops.graclus_cluster(rowptr, col)
-    assert out.shape == (4, )
+    assert out.shape == (4,)
     # Pairs (0,1) and (2,3) should be matched
     assert out[0].item() == out[1].item()
     assert out[2].item() == out[3].item()

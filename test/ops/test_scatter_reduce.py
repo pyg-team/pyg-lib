@@ -10,8 +10,12 @@ def test_fused_scatter_reduce():
     x = torch.randn(5, 4, device='cuda')
     index = torch.tensor([0, 1, 0, 1, 0], device='cuda')
 
-    out = fused_scatter_reduce(x, index, dim_size=2,
-                               reduce_list=['sum', 'mean', 'max'])
+    out = fused_scatter_reduce(
+        x,
+        index,
+        dim_size=2,
+        reduce_list=['sum', 'mean', 'max'],
+    )
 
     assert out.size() == (2, 12)
     assert torch.allclose(out[0, 0:4], x[index == 0].sum(dim=0))
@@ -26,7 +30,7 @@ if __name__ == '__main__':
     import torch_scatter
 
     x = torch.randn(50_000, 64, device='cuda')
-    index = torch.randint(1_000, (x.size(0), ), device='cuda')
+    index = torch.randint(1_000, (x.size(0),), device='cuda')
 
     num_warmups = 1_000
     num_steps = 10_000
@@ -47,8 +51,12 @@ if __name__ == '__main__':
             if i == num_warmups:
                 start_event.record()
 
-            out_fused = fused_scatter_reduce(x, index, dim_size=1_000,
-                                             reduce_list=aggr)
+            out_fused = fused_scatter_reduce(
+                x,
+                index,
+                dim_size=1_000,
+                reduce_list=aggr,
+            )
 
         end_event.record()
         torch.cuda.synchronize()
@@ -60,8 +68,14 @@ if __name__ == '__main__':
                 start_event.record()
 
             outs = [
-                torch_scatter.scatter(x, index, dim_size=1_000, dim=0,
-                                      reduce=reduce) for reduce in aggr
+                torch_scatter.scatter(
+                    x,
+                    index,
+                    dim_size=1_000,
+                    dim=0,
+                    reduce=reduce,
+                )
+                for reduce in aggr
             ]
             out_vanilla = torch.cat(outs, dim=-1)
 

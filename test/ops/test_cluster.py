@@ -10,7 +10,9 @@ from pyg_lib.testing import withCUDA
 def test_grid_cluster_2d(dtype: torch.dtype, device: torch.device) -> None:
     pos = torch.tensor(
         [[0.0, 0.0], [0.1, 0.1], [0.5, 0.5], [1.0, 1.0], [1.1, 1.1]],
-        dtype=dtype, device=device)
+        dtype=dtype,
+        device=device,
+    )
     size = torch.tensor([0.5, 0.5], dtype=dtype, device=device)
 
     out = pyg_lib.ops.grid_cluster(pos, size)
@@ -26,8 +28,11 @@ def test_grid_cluster_2d(dtype: torch.dtype, device: torch.device) -> None:
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_grid_cluster_3d(dtype: torch.dtype, device: torch.device) -> None:
-    pos = torch.tensor([[0.0, 0.0, 0.0], [0.1, 0.1, 0.1], [1.0, 1.0, 1.0]],
-                       dtype=dtype, device=device)
+    pos = torch.tensor(
+        [[0.0, 0.0, 0.0], [0.1, 0.1, 0.1], [1.0, 1.0, 1.0]],
+        dtype=dtype,
+        device=device,
+    )
     size = torch.tensor([0.5, 0.5, 0.5], dtype=dtype, device=device)
 
     out = pyg_lib.ops.grid_cluster(pos, size)
@@ -38,17 +43,22 @@ def test_grid_cluster_3d(dtype: torch.dtype, device: torch.device) -> None:
 
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
-def test_grid_cluster_with_start_end(dtype: torch.dtype,
-                                     device: torch.device) -> None:
-    pos = torch.tensor([[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]], dtype=dtype,
-                       device=device)
+def test_grid_cluster_with_start_end(
+    dtype: torch.dtype,
+    device: torch.device,
+) -> None:
+    pos = torch.tensor(
+        [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]],
+        dtype=dtype,
+        device=device,
+    )
     size = torch.tensor([0.5, 0.5], dtype=dtype, device=device)
     start = torch.tensor([0.0, 0.0], dtype=dtype, device=device)
     end = torch.tensor([1.0, 1.0], dtype=dtype, device=device)
 
     out = pyg_lib.ops.grid_cluster(pos, size, start, end)
 
-    assert out.shape == (3, )
+    assert out.shape == (3,)
     assert out.dtype == torch.long
 
 

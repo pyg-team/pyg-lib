@@ -8,8 +8,11 @@ from pyg_lib.testing import withCUDA
 @withCUDA
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_knn_basic(dtype: torch.dtype, device: torch.device) -> None:
-    x = torch.tensor([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0]],
-                     dtype=dtype, device=device)
+    x = torch.tensor(
+        [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [3.0, 0.0]],
+        dtype=dtype,
+        device=device,
+    )
     y = torch.tensor([[0.5, 0.0], [2.5, 0.0]], dtype=dtype, device=device)
 
     out = pyg_lib.ops.knn(x, y, k=2)

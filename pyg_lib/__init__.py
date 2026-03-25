@@ -18,8 +18,10 @@ def load_library(lib_name: str) -> None:
     if bool(os.getenv('BUILD_DOCS', 0)):
         return
 
-    loader_details = (importlib.machinery.ExtensionFileLoader,
-                      importlib.machinery.EXTENSION_SUFFIXES)
+    loader_details = (
+        importlib.machinery.ExtensionFileLoader,
+        importlib.machinery.EXTENSION_SUFFIXES,
+    )
 
     path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
     ext_finder = importlib.machinery.FileFinder(path, loader_details)

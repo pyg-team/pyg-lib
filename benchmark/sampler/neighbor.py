@@ -13,29 +13,45 @@ import pyg_lib
 from pyg_lib.testing import withDataset, withSeed
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
-    512,
-    1024,
-    2048,
-    4096,
-    8192,
-])
+argparser.add_argument(
+    '--batch-sizes',
+    nargs='+',
+    type=int,
+    default=[
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+    ],
+)
 argparser.add_argument('--directed', action='store_true')
 argparser.add_argument('--disjoint', action='store_true')
-argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
-    [-1],
-    [15, 10, 5],
-    [20, 15, 10],
-])
+argparser.add_argument(
+    '--num_neighbors',
+    type=ast.literal_eval,
+    default=[
+        [-1],
+        [15, 10, 5],
+        [20, 15, 10],
+    ],
+)
 argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--biased', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
-argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
-                       default='uniform')
+argparser.add_argument(
+    '--temporal-strategy',
+    choices=['uniform', 'last'],
+    default='uniform',
+)
 argparser.add_argument('--write-csv', action='store_true')
-argparser.add_argument('--libraries', nargs="*", type=str,
-                       default=['pyg-lib', 'torch-sparse', 'dgl'])
+argparser.add_argument(
+    '--libraries',
+    nargs='*',
+    type=str,
+    default=['pyg-lib', 'torch-sparse', 'dgl'],
+)
 args = argparser.parse_args()
 
 
@@ -44,7 +60,8 @@ args = argparser.parse_args()
 def test_neighbor(dataset, **kwargs):
     if args.temporal and not args.disjoint:
         raise ValueError(
-            "Temporal sampling needs to create disjoint subgraphs")
+            'Temporal sampling needs to create disjoint subgraphs',
+        )
 
     rowptr, col = dataset
     num_nodes = rowptr.numel() - 1
@@ -52,12 +69,14 @@ def test_neighbor(dataset, **kwargs):
 
     if 'dgl' in args.libraries:
         import dgl
+
         dgl_graph = dgl.graph(
-            ('csc', (rowptr, col, torch.arange(col.size(0)))))
+            ('csc', (rowptr, col, torch.arange(col.size(0)))),
+        )
 
     if args.temporal:
         # generate random timestamps
-        node_time, _ = torch.sort(torch.randint(0, 100000, (num_nodes, )))
+        node_time, _ = torch.sort(torch.randint(0, 100000, (num_nodes,)))
     else:
         node_time = None
 
@@ -71,9 +90,10 @@ def test_neighbor(dataset, **kwargs):
         node_perm = torch.arange(num_nodes)
 
     data = defaultdict(list)
-    for num_neighbors, batch_size in product(args.num_neighbors,
-                                             args.batch_sizes):
-
+    for num_neighbors, batch_size in product(
+        args.num_neighbors,
+        args.batch_sizes,
+    ):
         print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
         data['num_neighbors'].append(num_neighbors)
         data['batch-size'].append(batch_size)
@@ -103,6 +123,7 @@ def test_neighbor(dataset, **kwargs):
         if not args.disjoint:
             if 'torch-sparse' in args.libraries:
                 import torch_sparse  # noqa
+
                 t = time.perf_counter()
                 for seed in tqdm(node_perm.split(batch_size)):
                     torch.ops.torch_sparse.neighbor_sample(
@@ -119,6 +140,7 @@ def test_neighbor(dataset, **kwargs):
 
             if 'dgl' in args.libraries:
                 import dgl
+
                 dgl_sampler = dgl.dataloading.NeighborSampler(
                     num_neighbors,
                     replace=args.replace,
