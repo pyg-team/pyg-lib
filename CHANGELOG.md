@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added CUDA 13.2 support to `manylinux` Dockerfile ([#614](https://github.com/pyg-team/pyg-lib/pull/614))
 ### Changed
 ### Deprecated
 ### Removed
