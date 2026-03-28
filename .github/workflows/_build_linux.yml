@@ -104,6 +104,11 @@ jobs:
         run: |
           bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
 
+      - name: Show CUDA architectures in wheel
+        if: ${{ matrix.cuda-version != 'cpu' }}
+        run: |
+          cuobjdump -lelf debug/libpyg.so | grep "sm_" | sed 's/.*sm_/sm_/' | sort -u
+
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
         run: |
