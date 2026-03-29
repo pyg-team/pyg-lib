@@ -51,31 +51,7 @@ if(WITH_CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
 
-  if(NOT "$ENV{TORCH_CUDA_ARCH_LIST}" STREQUAL "")
-    # Convert TORCH_CUDA_ARCH_LIST (e.g. "7.5 8.0 9.0") to CMake format (e.g. "75;80;90")
-    string(REPLACE " " ";" _ARCH_LIST "$ENV{TORCH_CUDA_ARCH_LIST}")
-    set(CMAKE_CUDA_ARCHITECTURES "")
-    foreach(_ARCH IN LISTS _ARCH_LIST)
-      string(REPLACE "." "" _ARCH "${_ARCH}")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES "${_ARCH}")
-    endforeach()
-    message(STATUS "Using CUDA architectures from TORCH_CUDA_ARCH_LIST: ${CMAKE_CUDA_ARCHITECTURES}")
-  else()
-    if(NOT Python3_EXECUTABLE)
-      find_package(Python3 COMPONENTS Interpreter REQUIRED)
-    endif()
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE} "-c"
-                "import torch; print(';'.join(x.replace('sm_','') for x in torch.cuda.get_arch_list() if x.startswith('sm_')),end='');"
-        RESULT_VARIABLE _PYTHON_SUCCESS
-        OUTPUT_VARIABLE TORCH_CUDA_ARCHS)
-    if(_PYTHON_SUCCESS EQUAL 0 AND NOT TORCH_CUDA_ARCHS STREQUAL "")
-      set(CMAKE_CUDA_ARCHITECTURES "${TORCH_CUDA_ARCHS}")
-      message(STATUS "Using CUDA architectures from PyTorch: ${CMAKE_CUDA_ARCHITECTURES}")
-    else()
-      message(FATAL_ERROR "Failed to query CUDA architectures from PyTorch. Is PyTorch installed?")
-    endif()
-  endif()
+  message(STATUS "Using CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})

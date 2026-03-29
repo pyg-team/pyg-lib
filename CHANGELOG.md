@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Auto-detect CUDA architectures from PyTorch via `torch.cuda.get_arch_list()` at build time instead of hardcoding them in CMake, overridable via `TORCH_CUDA_ARCH_LIST` env var ([#616](https://github.com/pyg-team/pyg-lib/pull/616))
+
 ### Deprecated
 
 ### Removed
