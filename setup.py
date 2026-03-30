@@ -59,6 +59,9 @@ class CMakeBuild(build_ext):
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            # Disable cmake's default CUDA architectures; torch's cmake
+            # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
+            *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
