@@ -68,14 +68,18 @@ class CMakeBuild(build_ext):
         if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
             # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
             # so that torch's cmake uses the correct gencode flags.
-            arch_list = [
-                x for x in torch.cuda.get_arch_list() if x.startswith('sm_')
-            ]
-            if arch_list:
-                # Convert ['sm_75', 'sm_100'] to "7.5;10.0"
-                os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(
-                    f'{d[:-1]}.{d[-1]}' for x in arch_list for d in [x[3:]]
-                )
+            # Note: torch.cuda.get_arch_list() returns [] without a GPU,
+            # so we call the underlying C function directly.
+            arch_flags = torch._C._cuda_getArchFlags()
+            if arch_flags:
+                arch_list = [
+                    x for x in arch_flags.split() if x.startswith('sm_')
+                ]
+                if arch_list:
+                    # Convert ['sm_75', 'sm_100'] to "7.5;10.0"
+                    os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(
+                        f'{d[:-1]}.{d[-1]}' for x in arch_list for d in [x[3:]]
+                    )
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
