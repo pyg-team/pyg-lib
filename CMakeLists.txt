@@ -51,8 +51,6 @@ if(WITH_CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler")
 
-  message(STATUS "Using CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
-
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})
   else()

@@ -65,23 +65,17 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
-        if WITH_CUDA:
-            arch_list_env = os.getenv('TORCH_CUDA_ARCH_LIST')
-            if arch_list_env:
-                # Convert "7.5 8.0 9.0" or "7.5;8.0;9.0" to "75;80;90"
-                archs = ';'.join(
-                    a.replace('.', '')
-                    for a in arch_list_env.replace(' ', ';').split(';')
-                    if a
+        if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
+            # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
+            # so that torch's cmake uses the correct gencode flags.
+            arch_list = [
+                x for x in torch.cuda.get_arch_list() if x.startswith('sm_')
+            ]
+            if arch_list:
+                # Convert ['sm_75', 'sm_100'] to "7.5;10.0"
+                os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(
+                    f'{d[:-1]}.{d[-1]}' for x in arch_list for d in [x[3:]]
                 )
-            else:
-                archs = ';'.join(
-                    x.replace('sm_', '')
-                    for x in torch.cuda.get_arch_list()
-                    if x.startswith('sm_')
-                )
-            if archs:
-                cmake_args.append(f'-DCMAKE_CUDA_ARCHITECTURES={archs}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
