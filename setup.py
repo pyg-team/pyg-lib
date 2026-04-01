@@ -76,13 +76,22 @@ class CMakeBuild(build_ext):
             arch_flags = torch._C._cuda_getArchFlags()
             if arch_flags:
                 arch_list = [
-                    x for x in arch_flags.split() if x.startswith('sm_')
+                    x
+                    for x in arch_flags.split()
+                    if x.startswith('sm_') or x.startswith('compute_')
                 ]
-                if arch_list:
-                    # Convert ['sm_75', 'sm_100'] to "7.5;10.0"
-                    os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(
-                        f'{d[:-1]}.{d[-1]}' for x in arch_list for d in [x[3:]]
-                    )
+                # Convert 'sm_75' to '7.5', 'compute_120' to '12.0+PTX'
+                parts = []
+                for x in arch_list:
+                    prefix, d = x.split('_', 1)
+                    ver = f'{d[:-1]}.{d[-1]}'
+                    ver += '+PTX' if prefix == 'compute_' else ''
+                    parts.append(ver)
+
+                os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(parts)
+
+            assert os.environ['TORCH_CUDA_ARCH_LIST'] is not None
+            print(f'TORCH_CUDA_ARCH_LIST={os.environ["TORCH_CUDA_ARCH_LIST"]}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
