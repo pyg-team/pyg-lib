@@ -143,15 +143,6 @@ def mkl_dependencies():
 
 install_requires = [] + mkl_dependencies()
 
-test_requires = [
-    'pytest',
-    'pytest-cov',
-]
-
-dev_requires = [
-    'pre-commit',
-]
-
 if not bool(os.getenv('BUILD_DOCS', 0)):
     ext_modules = [CMakeExtension('libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
@@ -163,10 +154,6 @@ setup(
     name='pyg_lib',
     version=__version__,
     install_requires=install_requires,
-    extras_require={
-        'test': test_requires,
-        'dev': dev_requires,
-    },
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,
