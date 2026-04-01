@@ -115,10 +115,6 @@ def mkl_dependencies():
 
 install_requires = [] + mkl_dependencies()
 
-triton_requires = [
-    'triton',
-]
-
 test_requires = [
     'pytest',
     'pytest-cov',
@@ -140,7 +136,6 @@ setup(
     version=__version__,
     install_requires=install_requires,
     extras_require={
-        'triton': triton_requires,
         'test': test_requires,
         'dev': dev_requires,
     },
