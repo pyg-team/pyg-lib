@@ -396,6 +396,71 @@ def spline_weighting(
     return torch.ops.pyg.spline_weighting(x, weight, basis, weight_index)
 
 
+def spline_conv(
+    x: Tensor,
+    edge_index: Tensor,
+    pseudo: Tensor,
+    weight: Tensor,
+    kernel_size: Tensor,
+    is_open_spline: Tensor,
+    degree: int = 1,
+    norm: bool = True,
+    root_weight: Optional[Tensor] = None,
+    bias: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Performs the spline-based convolution operator, combining
+    :func:`spline_basis` and :func:`spline_weighting` with message
+    aggregation, as described in the `"SplineCNN: Fast Geometric Deep Learning
+    with Continuous B-Spline Kernels"
+    <https://arxiv.org/abs/1711.08920>`_ paper.
+
+    Args:
+        x: Node feature matrix of shape :obj:`[N, M_in]`.
+        edge_index: Edge indices of shape :obj:`[2, E]`.
+        pseudo: Edge pseudo-coordinates of shape :obj:`[E, D]` with values
+            in :obj:`[0, 1]`.
+        weight: Trainable weight tensor of shape :obj:`[K, M_in, M_out]`.
+        kernel_size: Kernel size in each dimension of shape :obj:`[D]`.
+        is_open_spline: Whether to use open B-splines of shape :obj:`[D]`.
+        degree: B-spline degree (1, 2, or 3).
+        norm: If :obj:`True`, normalizes the output by the node degree.
+        root_weight: Optional root weight matrix of shape
+            :obj:`[M_in, M_out]` for self-loop features.
+        bias: Optional bias vector of shape :obj:`[M_out]`.
+
+    Returns:
+        Node output features of shape :obj:`[N, M_out]`.
+    """
+    N = x.size(0)
+    row, col = edge_index[0], edge_index[1]
+
+    basis, weight_index = spline_basis(
+        pseudo,
+        kernel_size,
+        is_open_spline,
+        degree,
+    )
+    out = spline_weighting(x[col], weight, basis, weight_index)
+
+    # Aggregate by target node via scatter_add:
+    result = x.new_zeros(N, out.size(1))
+    result.scatter_add_(0, row.unsqueeze(1).expand_as(out), out)
+
+    if norm:
+        deg = x.new_zeros(N)
+        deg.scatter_add_(0, row, x.new_ones(row.size(0)))
+        deg = deg.clamp(min=1).unsqueeze(1)
+        result = result / deg
+
+    if root_weight is not None:
+        result = result + x @ root_weight
+
+    if bias is not None:
+        result = result + bias
+
+    return result
+
+
 def grid_cluster(
     pos: Tensor,
     size: Tensor,
@@ -473,6 +538,51 @@ def knn(
     return torch.ops.pyg.knn(x, y, ptr_x, ptr_y, k, cosine, num_workers)
 
 
+def knn_graph(
+    x: Tensor,
+    k: int,
+    ptr: Optional[Tensor] = None,
+    loop: bool = False,
+    flow: str = 'source_to_target',
+    cosine: bool = False,
+    num_workers: int = 1,
+) -> Tensor:
+    r"""Constructs a k-nearest neighbor graph for the given node features.
+
+    Args:
+        x: Node feature matrix of shape :obj:`[N, D]`.
+        k: Number of nearest neighbors.
+        ptr: Batch boundaries as a CSR pointer of shape :obj:`[B + 1]`.
+        loop: If :obj:`True`, includes self-loops in the output.
+        flow: The direction of edges, either :obj:`"source_to_target"` or
+            :obj:`"target_to_source"`.
+        cosine: If :obj:`True`, uses cosine distance (CUDA only).
+        num_workers: Number of workers (unused, for API compat).
+
+    Returns:
+        Edge indices of shape :obj:`[2, E]`.
+    """
+    actual_k = k if loop else k + 1
+    edge_index = knn(
+        x,
+        x,
+        actual_k,
+        ptr_x=ptr,
+        ptr_y=ptr,
+        cosine=cosine,
+        num_workers=num_workers,
+    )
+
+    if not loop:
+        mask = edge_index[0] != edge_index[1]
+        edge_index = edge_index[:, mask]
+
+    if flow == 'target_to_source':
+        edge_index = edge_index.flip(0)
+
+    return edge_index
+
+
 def radius(
     x: Tensor,
     y: Tensor,
@@ -510,6 +620,50 @@ def radius(
         num_workers,
         ignore_same_index,
     )
+
+
+def radius_graph(
+    x: Tensor,
+    r: float,
+    ptr: Optional[Tensor] = None,
+    loop: bool = False,
+    max_num_neighbors: int = 32,
+    flow: str = 'source_to_target',
+    num_workers: int = 1,
+) -> Tensor:
+    r"""Constructs a radius graph for the given node features.
+
+    Finds all pairs of nodes within distance :obj:`r` and returns their
+    edge indices.
+
+    Args:
+        x: Node feature matrix of shape :obj:`[N, D]`.
+        r: Radius.
+        ptr: Batch boundaries as a CSR pointer of shape :obj:`[B + 1]`.
+        loop: If :obj:`True`, includes self-loops in the output.
+        max_num_neighbors: Maximum number of neighbors per node.
+        flow: The direction of edges, either :obj:`"source_to_target"` or
+            :obj:`"target_to_source"`.
+        num_workers: Number of workers (unused, for API compat).
+
+    Returns:
+        Edge indices of shape :obj:`[2, E]`.
+    """
+    edge_index = radius(
+        x,
+        x,
+        r,
+        ptr_x=ptr,
+        ptr_y=ptr,
+        max_num_neighbors=max_num_neighbors,
+        num_workers=num_workers,
+        ignore_same_index=not loop,
+    )
+
+    if flow == 'target_to_source':
+        edge_index = edge_index.flip(0)
+
+    return edge_index
 
 
 def nearest(
@@ -590,10 +744,13 @@ __all__ = [
     'softmax_csr',
     'spline_basis',
     'spline_weighting',
+    'spline_conv',
     'grid_cluster',
     'fps',
     'knn',
+    'knn_graph',
     'radius',
+    'radius_graph',
     'nearest',
     'graclus_cluster',
     'edge_sample',
