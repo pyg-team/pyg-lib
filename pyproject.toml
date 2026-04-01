@@ -18,8 +18,7 @@ keywords=[
     "graph-neural-networks",
     "graph-convolutional-networks",
 ]
-license="MIT"
-license-files=["LICENSE*"]
+license={file="LICENSE"}
 classifiers=[
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
