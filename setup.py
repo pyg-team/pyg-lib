@@ -59,11 +59,39 @@ class CMakeBuild(build_ext):
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            # Disable cmake's default CUDA architectures; torch's cmake
+            # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
+            *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
             f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
+
+        if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
+            # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
+            # so that torch's cmake uses the correct gencode flags.
+            # Note: torch.cuda.get_arch_list() returns [] without a GPU,
+            # so we call the underlying C function directly.
+            arch_flags = torch._C._cuda_getArchFlags()
+            if arch_flags:
+                arch_list = [
+                    x
+                    for x in arch_flags.split()
+                    if x.startswith('sm_') or x.startswith('compute_')
+                ]
+                # Convert 'sm_75' to '7.5', 'compute_120' to '12.0+PTX'
+                parts = []
+                for x in arch_list:
+                    prefix, d = x.split('_', 1)
+                    ver = f'{d[:-1]}.{d[-1]}'
+                    ver += '+PTX' if prefix == 'compute_' else ''
+                    parts.append(ver)
+
+                os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(parts)
+
+            assert os.environ['TORCH_CUDA_ARCH_LIST'] is not None
+            print(f'TORCH_CUDA_ARCH_LIST={os.environ["TORCH_CUDA_ARCH_LIST"]}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
