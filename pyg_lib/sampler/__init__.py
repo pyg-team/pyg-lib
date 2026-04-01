@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -232,8 +232,7 @@ def random_walk(
     walk_length: int,
     p: float = 1.0,
     q: float = 1.0,
-    return_edge_indices: bool = False,
-) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+) -> Tensor:
     r"""Samples random walks of length :obj:`walk_length` from all node
     indices in :obj:`seed` in the graph given by :obj:`(rowptr, col)`, as
     described in the `"node2vec: Scalable Feature Learning for Networks"
@@ -247,27 +246,12 @@ def random_walk(
         p: Likelihood of immediately revisiting a node in the walk.
         q: Control parameter to interpolate between breadth-first strategy and
             depth-first strategy.
-        return_edge_indices: If :obj:`True`, also returns the edge indices
-            traversed during the walk.
 
     Returns:
-        If :obj:`return_edge_indices` is :obj:`False`, returns a tensor of
-        shape :obj:`[seed.size(0), walk_length + 1]` holding the node indices
-        of each walk. If :obj:`True`, additionally returns a tensor of shape
-        :obj:`[seed.size(0), walk_length]` holding the edge indices traversed
-        (with :obj:`-1` for isolated nodes).
+        A tensor of shape :obj:`[seed.size(0), walk_length + 1]`, holding the
+        nodes indices of each walk for each seed node.
     """
-    node_seq, edge_seq = torch.ops.pyg.random_walk(
-        rowptr,
-        col,
-        seed,
-        walk_length,
-        p,
-        q,
-    )
-    if return_edge_indices:
-        return node_seq, edge_seq
-    return node_seq
+    return torch.ops.pyg.random_walk(rowptr, col, seed, walk_length, p, q)
 
 
 __all__ = [

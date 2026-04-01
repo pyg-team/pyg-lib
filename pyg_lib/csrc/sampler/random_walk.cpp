@@ -6,12 +6,12 @@
 namespace pyg {
 namespace sampler {
 
-std::tuple<at::Tensor, at::Tensor> random_walk(const at::Tensor& rowptr,
-                                               const at::Tensor& col,
-                                               const at::Tensor& seed,
-                                               int64_t walk_length,
-                                               double p,
-                                               double q) {
+at::Tensor random_walk(const at::Tensor& rowptr,
+                       const at::Tensor& col,
+                       const at::Tensor& seed,
+                       int64_t walk_length,
+                       double p,
+                       double q) {
   at::TensorArg rowptr_t{rowptr, "rowtpr", 1};
   at::TensorArg col_t{col, "col", 1};
   at::TensorArg seed_t{seed, "seed", 1};
@@ -29,7 +29,7 @@ std::tuple<at::Tensor, at::Tensor> random_walk(const at::Tensor& rowptr,
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::random_walk(Tensor rowptr, Tensor col, Tensor seed, int "
-      "walk_length, float p, float q) -> (Tensor, Tensor)"));
+      "walk_length, float p, float q) -> Tensor"));
 }
 
 }  // namespace sampler
