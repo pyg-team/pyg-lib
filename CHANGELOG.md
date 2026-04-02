@@ -16,11 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Auto-detect CUDA architectures from PyTorch via `torch.cuda.get_arch_list()` at build time instead of hardcoding them in CMake, overridable via `TORCH_CUDA_ARCH_LIST` env var ([#616](https://github.com/pyg-team/pyg-lib/pull/616))
 - Added `--compress-mode=size` to CUDA compiler flags to reduce binary size
-- Filtered out CUDA architectures below `sm_60` (cuCollections requires `sm_60`+)
 
 ### Deprecated
 
 ### Removed
+
+- Dropped support for CUDA architectures below `sm_60` (required by cuCollections)
 
 ### Fixed
 
