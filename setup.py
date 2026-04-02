@@ -81,9 +81,13 @@ class CMakeBuild(build_ext):
                     if x.startswith('sm_') or x.startswith('compute_')
                 ]
                 # Convert 'sm_75' to '7.5', 'compute_120' to '12.0+PTX'
+                # Filter out archs < 6.0 (cuCollections requires sm_60+).
                 parts = []
                 for x in arch_list:
                     prefix, d = x.split('_', 1)
+                    major = int(d[:-1])
+                    if major < 6:
+                        continue
                     ver = f'{d[:-1]}.{d[-1]}'
                     ver += '+PTX' if prefix == 'compute_' else ''
                     parts.append(ver)
