@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added CUDA 13.2 support to `manylinux` Dockerfile ([#614](https://github.com/pyg-team/pyg-lib/pull/614))
-- Added support for PyTorch `2.12.0+cu132` wheels in nightly releases ([#615](https://github.com/pyg-team/pyg-lib/pull/615))
+- Added support for PyTorch `2.12.0` wheels in nightly releases ([#615](https://github.com/pyg-team/pyg-lib/pull/615), [#629](https://github.com/pyg-team/pyg-lib/pull/629))
 
 ### Changed
 
