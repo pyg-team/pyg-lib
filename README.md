@@ -28,8 +28,8 @@ The following combinations are supported:
 
 | PyTorch Nightly | `cpu` | `cu126` | `cu128` | `cu130` | `cu132` |
 | --------------- | ----- | ------- | ------- | ------- | ------- |
-| **Linux**       |       | ✅      |         | ✅      | ✅      |
-| **Windows**     |       |         |         |         |         |
+| **Linux**       | ✅    | ✅      |         | ✅      | ✅      |
+| **Windows**     | ✅    | ✅      |         | ✅      | ✅      |
 | **macOS**       |       |         |         |         |         |
 
 | PyTorch 2.11 | `cpu` | `cu126` | `cu128` | `cu130` |
