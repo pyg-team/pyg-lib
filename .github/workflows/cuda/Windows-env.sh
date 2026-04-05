@@ -1,6 +1,14 @@
 #!/bin/bash
 
 case ${1} in
+  cu132)
+    export FORCE_CUDA=1
+    export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v13.2/bin:${PATH}
+    # CUDA 13.0 dropped sm_50 support. Without this, PyTorch's auto-detection
+    # fails on CI (no GPU) and falls back to a default list that includes
+    # compute_50, causing nvcc to error out.
+    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    ;;
   cu130)
     export FORCE_CUDA=1
     export PATH=/c/Program\ Files/NVIDIA\ GPU\ Computing\ Toolkit/CUDA/v13.0/bin:${PATH}
