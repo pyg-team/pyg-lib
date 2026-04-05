@@ -71,7 +71,7 @@ curl -k -L "${CUDA_URL}/${CUDA_FILE}" --output "${CUDA_FILE}"
 echo ""
 echo "Installing from ${CUDA_FILE}..."
 if [ "${1}" = "cu132" ] || [ "${1}" = "cu130" ]; then
-  # CUDA 13.0 uses different component naming; install all toolkit components
+  # CUDA 13.* uses different component naming; install all toolkit components
   PowerShell -Command "Start-Process -FilePath \"${CUDA_FILE}\" -ArgumentList \"-s\" -Wait -NoNewWindow"
 else
   COMPONENTS="nvcc_${CUDA_SHORT} cuobjdump_${CUDA_SHORT} nvprune_${CUDA_SHORT} cupti_${CUDA_SHORT} cublas_dev_${CUDA_SHORT} cudart_${CUDA_SHORT} cufft_dev_${CUDA_SHORT} curand_dev_${CUDA_SHORT} cusolver_dev_${CUDA_SHORT} cusparse_dev_${CUDA_SHORT} thrust_${CUDA_SHORT} npp_dev_${CUDA_SHORT} nvrtc_dev_${CUDA_SHORT} nvml_dev_${CUDA_SHORT}"
