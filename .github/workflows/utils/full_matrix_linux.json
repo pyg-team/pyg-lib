@@ -2,7 +2,7 @@
   {
     "torch-version": "2.12.0",
     "python-version": ["3.14"],
-    "cuda-version": ["cu132"]
+    "cuda-version": ["cu126", "cu130", "cu132"]
   },
   {
     "torch-version": "2.11.0",
