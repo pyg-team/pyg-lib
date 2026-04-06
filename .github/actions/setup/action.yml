@@ -61,5 +61,6 @@ runs:
 
     - name: Install additional dependencies
       run: |
-        uv pip install setuptools ninja wheel
+        # packaging is required by PyTorch (torch._native.cutedsl_utils)
+        uv pip install packaging setuptools ninja wheel
       shell: bash
