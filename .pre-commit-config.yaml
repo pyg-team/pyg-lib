@@ -49,7 +49,7 @@ repos:
         ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.9
+    rev: v0.15.10
     hooks:
       - id: ruff-check
         name: ruff check
@@ -65,7 +65,7 @@ repos:
         args: [--extend-ignore=E203]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.2
+    rev: v22.1.3
     hooks:
       - id: clang-format
         name: Format C++ code
