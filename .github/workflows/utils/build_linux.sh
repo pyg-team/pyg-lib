@@ -29,11 +29,11 @@ else
   export CIBW_MANYLINUX_X86_64_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 fi
 
-rm -rf Testing libpyg.so build dist outputs  # for local testing
+rm -rf Testing pyg_lib/libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist
 ls -ahl dist/
 python -m auditwheel show dist/*.whl
 
 unzip dist/*.whl -d debug/
-ldd debug/libpyg.so
-readelf -d debug/libpyg.so
+ldd debug/pyg_lib/libpyg.so
+readelf -d debug/pyg_lib/libpyg.so
