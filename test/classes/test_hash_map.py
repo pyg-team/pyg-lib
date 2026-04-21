@@ -57,10 +57,7 @@ class Foo(torch.nn.Module):
             self.map = HashMap(key, 0.5)
 
 
-@pytest.mark.skipif(
-    sys.version_info >= (3, 14),
-    reason='torch.jit unmaintained on Python 3.14+',
-)
+@pytest.mark.skipif(sys.version_info >= (3, 14))
 @withCUDA
 def test_serialization(device, tmp_path):
     key = torch.tensor([0, 10, 30, 20], device=device)
