@@ -85,6 +85,13 @@ endif()
 if (MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32")
+  if (WITH_CUDA)
+    # CUTLASS 3.7 bug: memsetDevice is __host__ __device__ but calls __host__-only virtual; hits PyTorch's MSVC-only --Werror cross-execution-space-call.
+    set_source_files_properties(
+      pyg_lib/csrc/ops/cuda/matmul_kernel.cu
+      PROPERTIES COMPILE_FLAGS "-Xcudafe --diag_suppress=20011"
+    )
+  endif()
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
