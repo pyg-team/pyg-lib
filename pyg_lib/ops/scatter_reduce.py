@@ -19,7 +19,7 @@ def _fused_scatter_reduce_forward_kernel(
     out_ptr,
     num_feats,
     num_reductions,
-    numel,
+    numel, 
     REDUCE0,
     REDUCE1,
     REDUCE2,

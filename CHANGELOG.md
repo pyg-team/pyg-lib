@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropped support for CUDA architectures below `sm_60` (required by cuCollections)
 
 ### Fixed
+- Fixed incorrect reduction condition in `fused_scatter_reduce` Triton kernel
 
 ### Security
 
