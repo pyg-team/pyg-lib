@@ -105,10 +105,6 @@ endif()
 
 find_package(Torch REQUIRED)
 message("-- TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
-# PyTorch adds --Werror cross-execution-space-call, which causes false-positive
-# errors in CUTLASS headers (CUTLASS_HOST_DEVICE virtual functions are host-only
-# despite the annotation). Remove it so CUDA compilation succeeds.
-string(REPLACE "--Werror cross-execution-space-call" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
 find_package(OpenMP)
