@@ -27,8 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed Windows build with PyTorch nightly by upgrading C++ standard from 17 to 20 ([#635](https://github.com/pyg-team/pyg-lib/pull/635))
-
 ### Security
 
 ## [0.6.0] - 2026-03-24
