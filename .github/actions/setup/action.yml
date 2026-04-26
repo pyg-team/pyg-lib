@@ -40,12 +40,15 @@ runs:
 
     - name: Install PyTorch ${{ inputs.torch-version }}+${{ inputs.cuda-version }}
       run: |
-        if [ ${{ inputs.torch-version }} == '2.12.0' ]; then
+        if [ ${{ inputs.torch-version }} == '2.13.0' ]; then
           # packaging is required at torch import time (torch._native.cutedsl_utils)
           uv pip install packaging
           # Use --index-url instead of --torch-backend since uv may not yet
           # support the latest CUDA versions (e.g. cu132).
           uv pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${{ inputs.cuda-version }}
+        elif [ ${{ inputs.torch-version }} == '2.12.0' ]; then
+          # 2.12.0 is currently a release candidate; install from the test index.
+          uv pip install torch==${{ inputs.torch-version }} --index-url https://download.pytorch.org/whl/test/${{ inputs.cuda-version }}
         else
           uv pip install torch==${{ inputs.torch-version }} --torch-backend ${{ inputs.cuda-version }}
         fi
