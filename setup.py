@@ -148,7 +148,7 @@ def mkl_dependencies():
 install_requires = [] + mkl_dependencies()
 
 if not bool(os.getenv('BUILD_DOCS', 0)):
-    ext_modules = [CMakeExtension('libpyg')]
+    ext_modules = [CMakeExtension('pyg_lib.libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
 else:
     ext_modules = None
