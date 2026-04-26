@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded C++ standard from C++17 to C++20 required by PyTorch ([#639](https://github.com/pyg-team/pyg-lib/pull/639))
 - Auto-detect CUDA architectures from PyTorch via `torch.cuda.get_arch_list()` at build time instead of hardcoding them in CMake, overridable via `TORCH_CUDA_ARCH_LIST` env var ([#616](https://github.com/pyg-team/pyg-lib/pull/616))
 - Added `--compress-mode=size` to CUDA compiler flags to reduce binary size
+- Moved `libpyg.so` from `site-packages/` to `site-packages/pyg_lib/` ([#635](https://github.com/pyg-team/pyg-lib/pull/635))
 
 ### Deprecated
 
