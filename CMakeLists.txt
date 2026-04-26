@@ -120,6 +120,18 @@ if (NOT MSVC)
 endif()
 
 find_package(Torch REQUIRED)
+if (MSVC)
+  # PyTorch's caffe2/public/cuda.cmake (gated on MSVC only) injects
+  # `--Werror cross-execution-space-call` into CMAKE_CUDA_FLAGS. CUTLASS 3.9
+  # has a longstanding pattern where CUTLASS_HOST_DEVICE templates call
+  # __host__-only virtuals — e.g. cutlass::CudaHostAdapter::memsetDevice in
+  # cuda_host_adapter.hpp:408 calls the pure-virtual __host__ memsetDeviceImpl.
+  # nvcc treats that as a warning by default, but with --Werror it becomes a
+  # hard error, breaking matmul_kernel.cu on Windows. Linux builds are unaffected
+  # because PyTorch only adds the flag on MSVC. Strip it so we keep nvcc's
+  # check as a warning instead of fatal.
+  string(REPLACE "--Werror cross-execution-space-call" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+endif()
 message("-- TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
