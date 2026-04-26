@@ -49,8 +49,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pyg_lib/csrc/config.h.in "${CMAKE_CUR
 if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
-  set(CMAKE_CUDA_STANDARD 20)
-  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler --compress-mode=size")
   if (MSVC)
     # Forward /Zc:__cplusplus to the host compiler (cl.exe) when nvcc compiles
@@ -63,21 +61,6 @@ if(WITH_CUDA)
     # compile on Windows.
     # https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:__cplusplus")
-  endif()
-
-  # CUTLASS 3.7.0 bug: memsetDevice is annotated CUTLASS_HOST_DEVICE but calls
-  # a __host__-only virtual; nvcc with --Werror cross-execution-space-call makes
-  # this a fatal error. Patch the annotation to CUTLASS_HOST before compilation.
-  if(MSVC)
-    set(_cutlass_h "${CMAKE_CURRENT_SOURCE_DIR}/third_party/cutlass/include/cutlass/cuda_host_adapter.hpp")
-    if(EXISTS "${_cutlass_h}")
-      file(READ "${_cutlass_h}" _content)
-      string(REGEX REPLACE "CUTLASS_HOST_DEVICE(\r?\n  Status memsetDevice)" "CUTLASS_HOST\\1" _patched "${_content}")
-      if(NOT _content STREQUAL _patched)
-        file(WRITE "${_cutlass_h}" "${_patched}")
-        message(STATUS "Patched CUTLASS memsetDevice annotation for MSVC")
-      endif()
-    endif()
   endif()
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
@@ -151,16 +134,6 @@ if (MSVC)
 endif()
 message("-- TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
-
-# On Windows, PyTorch's INTERFACE_COMPILE_OPTIONS propagates -std:c++17 which
-# overrides CMAKE_CXX_STANDARD 20 for MSVC. Strip it so C++20 is used.
-if(MSVC)
-  get_target_property(_torch_iface_opts torch INTERFACE_COMPILE_OPTIONS)
-  if(_torch_iface_opts)
-    list(FILTER _torch_iface_opts EXCLUDE REGEX "std:c\\+\\+1[47]")
-    set_target_properties(torch PROPERTIES INTERFACE_COMPILE_OPTIONS "${_torch_iface_opts}")
-  endif()
-endif()
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
