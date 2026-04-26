@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(pyg)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
 set(PYG_VERSION 0.7.0)
@@ -50,6 +50,18 @@ if(WITH_CUDA)
   enable_language(CUDA)
   add_definitions(-DWITH_CUDA)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -allow-unsupported-compiler --compress-mode=size")
+  if (MSVC)
+    # Forward /Zc:__cplusplus to the host compiler (cl.exe) when nvcc compiles
+    # .cu files. Without this, MSVC reports __cplusplus=199711L regardless of
+    # /std:c++NN, which trips guards inside CUTLASS 3.9 headers (e.g.
+    # cutlass::platform::is_unsigned_v in platform.h is gated on raw __cplusplus)
+    # and skips the constexpr ctors of `dim3` in CUDA <13's vector_types.h
+    # (CUDA 13 added an `_MSC_VER` fallback; CUDA 12.6 still relies on
+    # __cplusplus alone). Both make CUTLASS 3.9 sm100 kernel headers fail to
+    # compile on Windows.
+    # https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:__cplusplus")
+  endif()
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
     include_directories($ENV{EXTERNAL_CUTLASS_INCLUDE_DIR})
@@ -83,8 +95,14 @@ else()
 endif()
 
 if (MSVC)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32")
+  # /Zc:__cplusplus makes MSVC report the actual C++ standard via __cplusplus
+  # (it otherwise reports 199711L regardless of /std:c++NN). Required so that
+  # CUTLASS 3.9 headers gated on raw __cplusplus (e.g. is_unsigned_v in
+  # cutlass/platform/platform.h) and CUDA <13's `dim3` constexpr ctors are
+  # actually visible. Mirrors the -Xcompiler=/Zc:__cplusplus we add for nvcc.
+  # https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus")
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
@@ -102,6 +120,18 @@ if (NOT MSVC)
 endif()
 
 find_package(Torch REQUIRED)
+if (MSVC)
+  # PyTorch's caffe2/public/cuda.cmake (gated on MSVC only) injects
+  # `--Werror cross-execution-space-call` into CMAKE_CUDA_FLAGS. CUTLASS 3.9
+  # has a longstanding pattern where CUTLASS_HOST_DEVICE templates call
+  # __host__-only virtuals — e.g. cutlass::CudaHostAdapter::memsetDevice in
+  # cuda_host_adapter.hpp:408 calls the pure-virtual __host__ memsetDeviceImpl.
+  # nvcc treats that as a warning by default, but with --Werror it becomes a
+  # hard error, breaking matmul_kernel.cu on Windows. Linux builds are unaffected
+  # because PyTorch only adds the flag on MSVC. Strip it so we keep nvcc's
+  # check as a warning instead of fatal.
+  string(REPLACE "--Werror cross-execution-space-call" "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
+endif()
 message("-- TORCH_LIBRARIES: ${TORCH_LIBRARIES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES})
 
