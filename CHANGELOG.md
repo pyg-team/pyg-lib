@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed incorrect reduction condition in `fused_scatter_reduce` Triton kernel
+
 ### Security
 
 ## [0.6.0] - 2026-03-24
