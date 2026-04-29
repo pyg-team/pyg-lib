@@ -76,6 +76,9 @@ delocate-wheel \
   --exclude libomp.dylib
 """
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.pytest.ini_options]
 addopts=[
     "--capture=no",
