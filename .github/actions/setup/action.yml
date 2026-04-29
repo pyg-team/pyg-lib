@@ -39,6 +39,8 @@ runs:
       shell: bash
 
     - name: Install PyTorch ${{ inputs.torch-version }}+${{ inputs.cuda-version }}
+        env:
+        UV_INDEX_STRATEGY: unsafe-best-match
       run: |
         if [ ${{ inputs.torch-version }} == '2.13.0' ]; then
           # packaging is required at torch import time (torch._native.cutedsl_utils)
