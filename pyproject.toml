@@ -78,6 +78,7 @@ delocate-wheel \
 
 [tool.uv]
 exclude-newer = "7 days"
+exclude-newer-package = { torch = "2099-01-01" }
 
 [tool.pytest.ini_options]
 addopts=[
