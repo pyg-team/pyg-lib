@@ -56,20 +56,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Free up disk space
-        # Disk space required for CPU builds is usually small enough, so we
-        # save a few minutes by skipping this step.
-        if: ${{ matrix.cuda-version != 'cpu' }}
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
-        with:
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-          tool-cache: true
-
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
