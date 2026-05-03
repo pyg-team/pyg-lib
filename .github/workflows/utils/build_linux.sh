@@ -27,7 +27,7 @@ fi
 
 if [[ "${CUDA_VERSION}" == "cu"* ]]; then
   # Use CUDA-pre-installed image
-  export CIBW_MANYLINUX_X86_64_IMAGE=akihironitta/manylinux:${CUDA_VERSION}
+  export CIBW_MANYLINUX_X86_64_IMAGE=ghcr.io/pyg-team/pyg-lib/manylinux_2_28_x86_64:${CUDA_VERSION}
 else
   export CIBW_MANYLINUX_X86_64_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 fi

@@ -28,8 +28,6 @@ elif [ "$CUDA_VERSION" == "12.1" ]; then
 elif [ "$CUDA_VERSION" == "11.8" ]; then
     URL=https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-rhel8-11-8-local-11.8.0_520.61.05-1.x86_64.rpm
     PACKAGE_NAME=cuda
-elif [ "$CUDA_VERSION" == "cpu" ]; then
-    echo "No need to install CUDA"
 else
     echo "Invalid CUDA version: $CUDA_VERSION"
     exit 1
