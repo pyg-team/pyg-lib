@@ -10,7 +10,7 @@ defaults:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         cuda-version: [cu126, cu128, cu130, cu132]
-        arch: [x86_64]
+        arch: [x86_64, aarch64]
         include:
           - cuda-version: cu126
             cuda-number: "12.6"
@@ -28,6 +28,10 @@ jobs:
             cuda-number: "13.0"
           - cuda-version: cu132
             cuda-number: "13.2"
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
