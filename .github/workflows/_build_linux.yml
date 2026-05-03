@@ -11,6 +11,10 @@ on:  # yamllint disable-line rule:truthy
         required: false
         default: ''
         description: 'nightly or final'
+      arch:
+        type: string
+        required: true
+        description: 'x86_64 or aarch64'
     secrets:
       aws-access-key-id:
         required: true
@@ -23,7 +27,7 @@ defaults:
 
 jobs:
   wheel:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: read

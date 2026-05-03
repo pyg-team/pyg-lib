@@ -58,6 +58,18 @@ jobs:
     with:
       test-matrix: ${{ needs.trigger.outputs.matrix-linux }}
       release-type: ${{ inputs.release-type || 'nightly' }}
+      arch: x86_64
+    secrets:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  linux-aarch64:
+    needs: [trigger]
+    uses: ./.github/workflows/_build_linux.yml
+    with:
+      test-matrix: ${{ needs.trigger.outputs.matrix-linux }}
+      release-type: ${{ inputs.release-type || 'nightly' }}
+      arch: aarch64
     secrets:
       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -82,7 +94,7 @@ jobs:
 
   index:
     if: ${{ always() && (inputs.release-type || 'nightly') == 'nightly' }}
-    needs: [linux, macos, windows]
+    needs: [linux, linux-aarch64, macos, windows]
     uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: ${{ inputs.release-type || 'nightly' }}
