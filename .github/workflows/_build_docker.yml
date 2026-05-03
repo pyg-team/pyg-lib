@@ -1,0 +1,65 @@
+name: Build Docker Image
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda-version: [cu126, cu128, cu130, cu132]
+        arch: [x86_64]
+        include:
+          - cuda-version: cu126
+            cuda-number: "12.6"
+          - cuda-version: cu128
+            cuda-number: "12.8"
+          - cuda-version: cu130
+            cuda-number: "13.0"
+          - cuda-version: cu132
+            cuda-number: "13.2"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          tool-cache: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
+        with:
+          context: .github/workflows/docker
+          build-args: |
+            CUDA_VERSION=${{ matrix.cuda-number }}
+            ARCH=${{ matrix.arch }}
+          tags: ghcr.io/pyg-team/pyg-lib/manylinux_2_28_${{ matrix.arch }}:${{ matrix.cuda-version }}
+          push: true
