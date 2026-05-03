@@ -52,7 +52,7 @@ jobs:
           echo "matrix-windows=$matrix"
           echo ::endgroup::
 
-  linux:
+  linux-x86-64:
     needs: [trigger]
     uses: ./.github/workflows/_build_linux.yml
     with:
@@ -94,7 +94,7 @@ jobs:
 
   index:
     if: ${{ always() && (inputs.release-type || 'nightly') == 'nightly' }}
-    needs: [linux, linux-aarch64, macos, windows]
+    needs: [linux-x86-64, linux-aarch64, macos, windows]
     uses: ./.github/workflows/_upload_index.yml
     with:
       release-type: ${{ inputs.release-type || 'nightly' }}

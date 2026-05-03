@@ -87,7 +87,7 @@ jobs:
           echo "trigger-windows=$trigger"
           echo ::endgroup::
 
-  linux:
+  linux-x86-64:
     needs: [trigger]
     if: ${{ needs.trigger.outputs.trigger-linux == 'true' || inputs.trigger-linux }}
     uses: ./.github/workflows/_build_linux.yml
@@ -128,7 +128,7 @@ jobs:
     secrets: inherit
 
   status:
-    needs: [trigger, linux, linux-aarch64, macos, windows]
+    needs: [trigger, linux-x86-64, linux-aarch64, macos, windows]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -137,7 +137,7 @@ jobs:
         run: |
           echo "One or more builds failed or cancelled:"
           echo "trigger: ${{ needs.trigger.result }}"
-          echo "linux: ${{ needs.linux.result }}"
+          echo "linux-x86-64: ${{ needs.linux-x86-64.result }}"
           echo "linux-aarch64: ${{ needs.linux-aarch64.result }}"
           echo "macos: ${{ needs.macos.result }}"
           echo "windows: ${{ needs.windows.result }}"
