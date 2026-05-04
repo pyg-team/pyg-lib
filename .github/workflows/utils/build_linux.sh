@@ -38,8 +38,3 @@ export CIBW_MANYLINUX_AARCH64_IMAGE=$IMAGE
 rm -rf Testing pyg_lib/libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist
 ls -ahl dist/
-python -m auditwheel show dist/*.whl
-
-unzip dist/*.whl -d debug/
-ldd debug/pyg_lib/libpyg.so
-readelf -d debug/pyg_lib/libpyg.so
