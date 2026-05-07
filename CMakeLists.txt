@@ -60,7 +60,12 @@ if(WITH_CUDA)
     # __cplusplus alone). Both make CUTLASS 3.9 sm100 kernel headers fail to
     # compile on Windows.
     # https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:__cplusplus")
+    #
+    # /Zc:preprocessor switches cl.exe to the standard-conforming preprocessor.
+    # CCCL 3.x headers (pulled in by torch/CUDA) hard-error on the traditional
+    # preprocessor.
+    # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:__cplusplus -Xcompiler=/Zc:preprocessor")
   endif()
 
   if (NOT "$ENV{EXTERNAL_CUTLASS_INCLUDE_DIR}" STREQUAL "")
@@ -101,8 +106,12 @@ if (MSVC)
   # cutlass/platform/platform.h) and CUDA <13's `dim3` constexpr ctors are
   # actually visible. Mirrors the -Xcompiler=/Zc:__cplusplus we add for nvcc.
   # https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus")
+  #
+  # /Zc:preprocessor enables MSVC's standard-conforming preprocessor; required
+  # by CCCL 3.x headers that may be pulled in via torch/CUDA includes.
+  # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus /Zc:preprocessor")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DIDXTYPEWIDTH=64 /DREALTYPEWIDTH=32 /Zc:__cplusplus /Zc:preprocessor")
 else()
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIDXTYPEWIDTH=64 -DREALTYPEWIDTH=32")
