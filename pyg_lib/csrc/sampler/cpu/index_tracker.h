@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <ATen/ATen.h>
 
 #include "parallel_hashmap/phmap.h"

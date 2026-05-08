@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <ATen/ATen.h>
 #include "pyg_lib/csrc/macros.h"
 

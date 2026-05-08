@@ -1,5 +1,7 @@
 #include "../matmul.h"
 
+#include <vector>
+
 #include <torch/autograd.h>
 
 #include "pyg_lib/csrc/utils/convert.h"

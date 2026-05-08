@@ -1,3 +1,6 @@
+#include <map>
+#include <string>
+
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>

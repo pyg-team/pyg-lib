@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <torch/library.h>
 #include "pyg_lib/csrc/utils/types.h"

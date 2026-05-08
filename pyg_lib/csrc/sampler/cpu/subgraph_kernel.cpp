@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
 #include <torch/library.h>

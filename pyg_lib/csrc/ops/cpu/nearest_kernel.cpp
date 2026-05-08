@@ -1,5 +1,7 @@
 #include "../nearest.h"
 
+#include <limits>
+
 #include <ATen/ATen.h>
 #include <torch/library.h>
 

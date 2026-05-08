@@ -1,3 +1,9 @@
+#include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>
 #include <parallel_hashmap/phmap.h>

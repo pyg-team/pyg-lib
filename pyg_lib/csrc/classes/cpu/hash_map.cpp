@@ -1,3 +1,8 @@
+#include <algorithm>
+#include <memory>
+#include <type_traits>
+#include <utility>
+
 #include <ATen/ATen.h>
 #include <ATen/Dispatch.h>
 #include <ATen/Parallel.h>

@@ -1,5 +1,8 @@
 #include "pyg_lib/csrc/random/cpu/biased_sampling.h"
 
+#include <utility>
+#include <vector>
+
 #include <ATen/Parallel.h>
 
 namespace pyg {

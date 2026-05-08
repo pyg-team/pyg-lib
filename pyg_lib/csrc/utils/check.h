@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <ATen/ATen.h>
 
 namespace pyg {

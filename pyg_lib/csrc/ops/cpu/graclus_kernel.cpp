@@ -1,5 +1,7 @@
 #include "../graclus.h"
 
+#include <algorithm>
+
 #include <ATen/ATen.h>
 #include <torch/library.h>
 

@@ -1,5 +1,7 @@
 #include "../sampled.h"
 
+#include <string>
+
 #include <torch/autograd.h>
 
 namespace pyg {

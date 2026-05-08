@@ -1,5 +1,8 @@
 #pragma once
 
+#include <limits>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <limits.h>
 

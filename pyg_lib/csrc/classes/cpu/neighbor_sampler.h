@@ -1,5 +1,10 @@
 #pragma once
 
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <parallel_hashmap/phmap.h>
 #include <torch/library.h>

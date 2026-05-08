@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <torch/script.h>
 #include "pyg_lib/csrc/macros.h"

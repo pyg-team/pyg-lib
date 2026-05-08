@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include "pyg_lib/csrc/macros.h"
 #include "pyg_lib/csrc/utils/types.h"

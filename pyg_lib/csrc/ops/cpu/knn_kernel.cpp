@@ -1,5 +1,7 @@
 #include "../knn.h"
 
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <torch/library.h>
 

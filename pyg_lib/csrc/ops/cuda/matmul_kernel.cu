@@ -1,3 +1,5 @@
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <cutlass/cutlass.h>

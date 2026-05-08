@@ -1,5 +1,8 @@
 #include "../radius.h"
 
+#include <utility>
+#include <vector>
+
 #include <ATen/ATen.h>
 #include <torch/library.h>
 

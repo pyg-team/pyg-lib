@@ -1,4 +1,5 @@
 #include <tuple>
+#include <vector>
 
 #include <ATen/ATen.h>
 #include <ATen/Parallel.h>

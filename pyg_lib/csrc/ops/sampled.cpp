@@ -1,5 +1,7 @@
 #include "sampled.h"
 
+#include <string>
+
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <torch/library.h>
 

@@ -1,7 +1,11 @@
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <type_traits>
+
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
-#include <limits>
 
 #ifndef _WIN32
 #include <cuco/static_map.cuh>
