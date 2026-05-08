@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed build with `clang++` by upgrading `cuCollections` and `cccl` submodules ([#555](https://github.com/pyg-team/pyg-lib/issues/555))
+
 ### Security
 
 ## [0.6.0] - 2026-03-24
