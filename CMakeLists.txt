@@ -9,6 +9,7 @@ set(NO_METIS 0)
 option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
+option(WITH_ASAN "Enable AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
@@ -158,9 +159,23 @@ endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
+if(WITH_COV AND WITH_ASAN)
+  message(FATAL_ERROR "WITH_COV and WITH_ASAN cannot both be ON — gcov and ASan instrumentation interact badly.")
+endif()
+
 if(BUILD_TEST)
   if(WITH_COV)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --coverage")
+  endif()
+  if(WITH_ASAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address,undefined")
+    # Use PRE_TEST discovery so the binaries are not run bare during cmake
+    # --build (without ASAN_OPTIONS set).  With PRE_TEST, ctest discovers tests
+    # just before running them, inheriting the ASAN_OPTIONS from the ctest
+    # invocation environment rather than from the cmake build environment.
+    set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE "PRE_TEST")
   endif()
   include(cmake/test.cmake)
 endif()
