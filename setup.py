@@ -54,7 +54,8 @@ class CMakeBuild(build_ext):
             os.makedirs(self.build_temp)
 
         WITH_CUDA = torch.cuda.is_available() and not getattr(
-            torch.version, 'hip', None)
+            torch.version, 'hip', None
+        )
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
 
         WITH_ROCM = torch.version.hip is not None
@@ -105,10 +106,12 @@ class CMakeBuild(build_ext):
             rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
             prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
             rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
-                'AMDGPU_TARGETS')
+                'AMDGPU_TARGETS'
+            )
             if rocm_arch:
                 rocm_arch = ';'.join(
-                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x])
+                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x]
+                )
                 cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
 
         cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')

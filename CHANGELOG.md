@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Windows support ([#315](https://github.com/pyg-team/pyg-lib/pull/315))
 - Added macOS Apple Silicon support ([#310](https://github.com/pyg-team/pyg-lib/pull/310))
 - Added ROCM 6.4 support ([#507](https://github.com/pyg-team/pyg-lib/pull/507))
+
 ### Changed
 
 ### Removed
