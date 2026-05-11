@@ -13,10 +13,19 @@ OPT_REDUCTIONS = [NONE] + REDUCTIONS
 
 
 @triton.jit
-def _fused_scatter_reduce_forward_kernel(inputs_ptr, index_ptr, out_ptr,
-                                         num_feats, num_reductions, numel,
-                                         REDUCE0, REDUCE1, REDUCE2, REDUCE3,
-                                         BLOCK_SIZE: tl.constexpr):
+def _fused_scatter_reduce_forward_kernel(
+    inputs_ptr,
+    index_ptr,
+    out_ptr,
+    num_feats,
+    num_reductions,
+    numel,
+    REDUCE0,
+    REDUCE1,
+    REDUCE2,
+    REDUCE3,
+    BLOCK_SIZE: tl.constexpr,
+):
     pid = tl.program_id(axis=0)
     block_start = pid * BLOCK_SIZE
 
@@ -107,9 +116,11 @@ def fused_scatter_reduce(
     assert isinstance(reduce_list, list) and len(reduce_list) <= NUM_REDUCTIONS
 
     if len(reduce_list) <= 1:
-        warnings.warn(f"It is not recommended to call `fused_scatter_reduce` "
-                      f"with a single reduction (got {reduce_list}). Please "
-                      f"consider using vanilla `scatter_reduce_` instead.")
+        warnings.warn(
+            f'It is not recommended to call `fused_scatter_reduce` '
+            f'with a single reduction (got {reduce_list}). Please '
+            f'consider using vanilla `scatter_reduce_` instead.',
+        )
 
     reduce_slice_dict = {
         reduce: slice(i * num_feats, (i + 1) * num_feats)
@@ -136,7 +147,8 @@ def fused_scatter_reduce(
     # TODO (matthias) Do not compute "sum" and "mean" reductions twice.
 
     grid = lambda meta: (  # noqa: E731
-        triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']), )
+        triton.cdiv(inputs.numel(), meta['BLOCK_SIZE']),
+    )
 
     _fused_scatter_reduce_forward_kernel[grid](
         inputs,
@@ -161,9 +173,9 @@ def fused_scatter_reduce(
         tmp /= degree.view(-1, 1)
     if 'min' in reduce_slice_dict:
         tmp = out[:, reduce_slice_dict['min']]
-        tmp[tmp == float('inf')] = 0.
+        tmp[tmp == float('inf')] = 0.0
     if 'max' in reduce_slice_dict:
         tmp = out[:, reduce_slice_dict['max']]
-        tmp[tmp == float('-inf')] = 0.
+        tmp[tmp == float('-inf')] = 0.0
 
     return out

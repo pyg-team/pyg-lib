@@ -2,8 +2,8 @@
 set -ex
 
 CUDA_VERSION="${1:?Specify cuda version, e.g. cpu, cu130}"
-PYTHON_VERSION="${2:?Specify python version, e.g. 3.13}"
-TORCH_VERSION="${3:?Specify torch version, e.g. 2.10.0}"
+PYTHON_VERSION="${2:?Specify python version, e.g. 3.14}"
+TORCH_VERSION="${3:?Specify torch version, e.g. 2.11.0}"
 echo "CUDA_VERSION: ${CUDA_VERSION}"
 echo "PYTHON_VERSION: ${PYTHON_VERSION//./}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"
@@ -14,9 +14,12 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-if [[ "${TORCH_VERSION}" == "2.11.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.13.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
+elif [[ "${TORCH_VERSION}" == "2.12.0" ]]; then
+  export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/test/${CUDA_VERSION}"
+  export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/test/${CUDA_VERSION}"
 else
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
@@ -24,16 +27,16 @@ fi
 
 if [[ "${CUDA_VERSION}" == "cu"* ]]; then
   # Use CUDA-pre-installed image
-  export CIBW_MANYLINUX_X86_64_IMAGE=akihironitta/manylinux:${CUDA_VERSION}
+  export CIBW_MANYLINUX_X86_64_IMAGE=ghcr.io/pyg-team/pyg-lib/manylinux_2_28_x86_64:${CUDA_VERSION}
 else
   export CIBW_MANYLINUX_X86_64_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 fi
 
-rm -rf Testing libpyg.so build dist outputs  # for local testing
+rm -rf Testing pyg_lib/libpyg.so build dist outputs  # for local testing
 python -m cibuildwheel --output-dir dist
 ls -ahl dist/
 python -m auditwheel show dist/*.whl
 
 unzip dist/*.whl -d debug/
-ldd debug/libpyg.so
-readelf -d debug/libpyg.so
+ldd debug/pyg_lib/libpyg.so
+readelf -d debug/pyg_lib/libpyg.so

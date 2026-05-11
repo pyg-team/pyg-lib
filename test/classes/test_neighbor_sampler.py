@@ -1,6 +1,5 @@
-import torch
-
 import pyg_lib  # noqa
+import torch
 
 
 def test_neighbor_sampler() -> None:
@@ -46,8 +45,15 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
     }
 
     Sampler = torch.classes.pyg.HeteroNeighborSampler
-    sampler = Sampler(node_types, edge_types, rowptr, col, None, node_time,
-                      None)
+    sampler = Sampler(
+        node_types,
+        edge_types,
+        rowptr,
+        col,
+        None,
+        node_time,
+        None,
+    )
 
     num_neighbors = {
         'A__to__B': [1, 1],
@@ -55,9 +61,15 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
     }
     seed_node = {'A': torch.tensor([2, 0]), 'B': torch.tensor([1, 1, 0])}
     seed_time = {'A': torch.tensor([3, 1]), 'B': torch.tensor([2, 4, 3])}
-    (row, col, node_id, edge_id, batch, num_sampled_nodes,
-     num_sampled_edges) = sampler.sample(num_neighbors, seed_node, seed_time,
-                                         True, 'last', True)
+    (
+        row,
+        col,
+        node_id,
+        edge_id,
+        batch,
+        num_sampled_nodes,
+        num_sampled_edges,
+    ) = sampler.sample(num_neighbors, seed_node, seed_time, True, 'last', True)
     # Due to random shuffle, the output isn't entirely deterministic
     assert row['A__to__B'].shape[0] == sum(num_sampled_edges['A__to__B'])
     assert row['B__to__A'].shape[0] == sum(num_sampled_edges['B__to__A'])
@@ -83,13 +95,10 @@ def test_hetero_neighbor_sampler_temporal_sample() -> None:
     assert (batch['A'] == 4).sum() == 1
     assert (batch['B'] == 4).sum() == 2
     assert num_sampled_nodes == {'A': [2, 4, 2], 'B': [3, 2, 2]}
-    assert (num_sampled_edges == {
+    assert num_sampled_edges == {
         'A__to__B': [0, 2, 4],
-        'B__to__A': [0, 4, 2]
-    } or num_sampled_edges == {
-        'A__to__B': [0, 2, 3],
-        'B__to__A': [0, 4, 2]
-    })
+        'B__to__A': [0, 4, 2],
+    } or num_sampled_edges == {'A__to__B': [0, 2, 3], 'B__to__A': [0, 4, 2]}
 
 
 def test_hetero_neighbor_sampler_static_sample() -> None:
@@ -112,9 +121,15 @@ def test_hetero_neighbor_sampler_static_sample() -> None:
         'B__to__A': [1, 1],
     }
     seed_node = {'A': torch.tensor([2, 0]), 'B': torch.tensor([1])}
-    (row, col, node_id, edge_id, batch, num_sampled_nodes,
-     num_sampled_edges) = sampler.sample(num_neighbors, seed_node, None, True,
-                                         'uniform', True)
+    (
+        row,
+        col,
+        node_id,
+        edge_id,
+        batch,
+        num_sampled_nodes,
+        num_sampled_edges,
+    ) = sampler.sample(num_neighbors, seed_node, None, True, 'uniform', True)
     # Outputs are non-deterministic so we just assert that we get them
     assert row
     assert col

@@ -42,7 +42,7 @@ def _pytreeify(cls):
     def new_backward(ctx, *flat_grad_outputs):
         outs_grad = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
         if not isinstance(outs_grad, tuple):
-            outs_grad = (outs_grad, )
+            outs_grad = (outs_grad,)
 
         grad_inputs = orig_bw(ctx, *outs_grad)
 
@@ -62,8 +62,8 @@ class GroupedMatmul(torch.autograd.Function):
     def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
         ctx.save_for_backward(*args)
 
-        inputs: List[Tensor] = [x for x in args[:int(len(args) / 2)]]
-        others: List[Tensor] = [other for other in args[int(len(args) / 2):]]
+        inputs: List[Tensor] = [x for x in args[: int(len(args) / 2)]]
+        others: List[Tensor] = [other for other in args[int(len(args) / 2) :]]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # NOTE Autograd doesnt set `out[i].requires_grad = True` automatically
@@ -76,8 +76,8 @@ class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
         args = ctx.saved_tensors
-        inputs: List[Tensor] = [x for x in args[:int(len(outs_grad))]]
-        others: List[Tensor] = [other for other in args[int(len(outs_grad)):]]
+        inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
+        others: List[Tensor] = [other for other in args[int(len(outs_grad)) :]]
 
         inputs_grad = []
         if any([x.requires_grad for x in inputs]):
@@ -168,7 +168,7 @@ def segment_matmul(
     out = torch.ops.pyg.segment_matmul(inputs, ptr, other)
     if bias is not None:
         for i in range(ptr.numel() - 1):
-            out[ptr[i]:ptr[i + 1]] += bias[i]
+            out[ptr[i] : ptr[i + 1]] += bias[i]
     return out
 
 
@@ -198,7 +198,7 @@ def sampled_add(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "add")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'add')
     return out
 
 
@@ -228,7 +228,7 @@ def sampled_sub(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "sub")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'sub')
     return out
 
 
@@ -258,7 +258,7 @@ def sampled_mul(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "mul")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'mul')
     return out
 
 
@@ -288,7 +288,7 @@ def sampled_div(
     Returns:
         The output tensor.
     """
-    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, "div")
+    out = torch.ops.pyg.sampled_op(left, right, left_index, right_index, 'div')
     return out
 
 
@@ -350,6 +350,235 @@ def softmax_csr(
     return torch.ops.pyg.softmax_csr(src, ptr, dim)
 
 
+def spline_basis(
+    pseudo: Tensor,
+    kernel_size: Tensor,
+    is_open_spline: Tensor,
+    degree: int = 1,
+) -> Tuple[Tensor, Tensor]:
+    r"""Computes the B-spline basis functions.
+
+    Args:
+        pseudo: Pseudo-coordinates of shape :obj:`[E, D]`.
+        kernel_size: Kernel size in each dimension of shape :obj:`[D]`.
+        is_open_spline: Whether to use open B-splines of shape :obj:`[D]`.
+        degree: B-spline degree (1, 2, or 3).
+
+    Returns:
+        Basis values of shape :obj:`[E, S]` and weight indices of shape
+        :obj:`[E, S]`.
+    """
+    return torch.ops.pyg.spline_basis(
+        pseudo,
+        kernel_size,
+        is_open_spline,
+        degree,
+    )
+
+
+def spline_weighting(
+    x: Tensor,
+    weight: Tensor,
+    basis: Tensor,
+    weight_index: Tensor,
+) -> Tensor:
+    r"""Computes the spline weighting of input features.
+
+    Args:
+        x: Input features of shape :obj:`[E, M_in]`.
+        weight: Weight tensor of shape :obj:`[K, M_in, M_out]`.
+        basis: B-spline basis values of shape :obj:`[E, S]`.
+        weight_index: Weight indices of shape :obj:`[E, S]`.
+
+    Returns:
+        Output features of shape :obj:`[E, M_out]`.
+    """
+    return torch.ops.pyg.spline_weighting(x, weight, basis, weight_index)
+
+
+def grid_cluster(
+    pos: Tensor,
+    size: Tensor,
+    start: Optional[Tensor] = None,
+    end: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Clusters all points in :obj:`pos` into voxels of size :obj:`size`.
+
+    Each point is assigned a cluster index based on which voxel it falls into.
+    The voxel grid is defined by the :obj:`size` parameter and optionally
+    bounded by :obj:`start` and :obj:`end`.
+
+    Args:
+        pos: Point positions of shape :obj:`[N, D]`.
+        size: Voxel size in each dimension of shape :obj:`[D]`.
+        start: Start of the voxel grid in each dimension of shape :obj:`[D]`.
+            If :obj:`None`, uses the minimum of :obj:`pos`.
+        end: End of the voxel grid in each dimension of shape :obj:`[D]`.
+            If :obj:`None`, uses the maximum of :obj:`pos`.
+
+    Returns:
+        Cluster index for each point of shape :obj:`[N]`.
+    """
+    return torch.ops.pyg.grid_cluster(pos, size, start, end)
+
+
+def fps(
+    src: Tensor,
+    ptr: Tensor,
+    ratio: float = 0.5,
+    random_start: bool = True,
+) -> Tensor:
+    r"""Performs greedy farthest point sampling.
+
+    Starting from a random point (or the first point), iteratively selects
+    the point that is farthest from the already selected set.
+
+    Args:
+        src: Point positions of shape :obj:`[N, D]`.
+        ptr: Batch boundaries as a CSR pointer of shape :obj:`[B + 1]`.
+        ratio: Fraction of points to sample from each batch (in :obj:`(0, 1]`).
+        random_start: If :obj:`True`, starts from a random point.
+
+    Returns:
+        Indices of the sampled points of shape :obj:`[M]`.
+    """
+    return torch.ops.pyg.fps(src, ptr, ratio, random_start)
+
+
+def knn(
+    x: Tensor,
+    y: Tensor,
+    k: int = 1,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+    cosine: bool = False,
+    num_workers: int = 1,
+) -> Tensor:
+    r"""Finds for each element in :obj:`y` the :obj:`k` nearest points in
+    :obj:`x`.
+
+    Args:
+        x: Reference points of shape :obj:`[N, D]`.
+        y: Query points of shape :obj:`[M, D]`.
+        k: Number of nearest neighbors.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+        cosine: If :obj:`True`, uses cosine distance (CUDA only).
+        num_workers: Number of workers (unused, for API compat).
+
+    Returns:
+        Edge indices of shape :obj:`[2, M*k]` where row 0 is query indices
+        and row 1 is reference indices.
+    """
+    return torch.ops.pyg.knn(x, y, ptr_x, ptr_y, k, cosine, num_workers)
+
+
+def radius(
+    x: Tensor,
+    y: Tensor,
+    r: float = 1.0,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+    max_num_neighbors: int = 32,
+    num_workers: int = 1,
+    ignore_same_index: bool = False,
+) -> Tensor:
+    r"""Finds all points in :obj:`x` within distance :obj:`r` of points in
+    :obj:`y`.
+
+    Args:
+        x: Reference points of shape :obj:`[N, D]`.
+        y: Query points of shape :obj:`[M, D]`.
+        r: Radius.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+        max_num_neighbors: Maximum number of neighbors per query point.
+        num_workers: Number of workers (unused, for API compat).
+        ignore_same_index: If :obj:`True`, ignores pairs with same index.
+
+    Returns:
+        Edge indices of shape :obj:`[2, E]` where row 0 is query indices
+        and row 1 is reference indices.
+    """
+    return torch.ops.pyg.radius(
+        x,
+        y,
+        ptr_x,
+        ptr_y,
+        r,
+        max_num_neighbors,
+        num_workers,
+        ignore_same_index,
+    )
+
+
+def nearest(
+    x: Tensor,
+    y: Tensor,
+    ptr_x: Optional[Tensor] = None,
+    ptr_y: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Finds the nearest point in :obj:`y` for each point in :obj:`x`.
+
+    Args:
+        x: Query points of shape :obj:`[N, D]`.
+        y: Reference points of shape :obj:`[M, D]`.
+        ptr_x: Batch boundaries for :obj:`x` as a CSR pointer.
+        ptr_y: Batch boundaries for :obj:`y` as a CSR pointer.
+
+    Returns:
+        Index tensor of shape :obj:`[N]` with the index of the nearest
+        point in :obj:`y` for each point in :obj:`x`.
+    """
+    return torch.ops.pyg.nearest(x, y, ptr_x, ptr_y)
+
+
+def graclus_cluster(
+    rowptr: Tensor,
+    col: Tensor,
+    weight: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Computes a greedy graph clustering via the Graclus algorithm.
+
+    Nodes are matched greedily in random order. The cluster ID for a
+    matched pair (u, v) is :obj:`min(u, v)`. Unmatched nodes are assigned
+    their own index as cluster ID.
+
+    Args:
+        rowptr: CSR row pointer of shape :obj:`[N + 1]`.
+        col: Column indices of shape :obj:`[E]`.
+        weight: Optional edge weights of shape :obj:`[E]`.
+
+    Returns:
+        Cluster assignment of shape :obj:`[N]`.
+    """
+    return torch.ops.pyg.graclus_cluster(rowptr, col, weight)
+
+
+def edge_sample(
+    start: Tensor,
+    rowptr: Tensor,
+    count: int = 0,
+    factor: float = 1.0,
+) -> Tensor:
+    r"""Samples edges incident to the given start nodes.
+
+    For each start node, samples up to :obj:`count` edges. If
+    :obj:`count < 1`, samples :obj:`ceil(factor * degree)` edges instead.
+
+    Args:
+        start: Start node indices of shape :obj:`[S]`.
+        rowptr: CSR row pointer of shape :obj:`[N + 1]`.
+        count: Fixed number of edges to sample per node. If :obj:`< 1`,
+            uses :obj:`factor` instead.
+        factor: Fraction of edges to sample when :obj:`count < 1`.
+
+    Returns:
+        Sampled edge indices (into the edge list).
+    """
+    return torch.ops.pyg.edge_sample(start, rowptr, count, factor)
+
+
 __all__ = [
     'grouped_matmul',
     'segment_matmul',
@@ -359,4 +588,13 @@ __all__ = [
     'sampled_div',
     'index_sort',
     'softmax_csr',
+    'spline_basis',
+    'spline_weighting',
+    'grid_cluster',
+    'fps',
+    'knn',
+    'radius',
+    'nearest',
+    'graclus_cluster',
+    'edge_sample',
 ]

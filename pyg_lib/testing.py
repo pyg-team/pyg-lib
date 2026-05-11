@@ -21,9 +21,10 @@ def withSeed(func: Callable) -> Callable:
 
 def onlyCUDA(func: Callable) -> Callable:
     import pytest
+
     return pytest.mark.skipif(
         not torch.cuda.is_available(),
-        reason="CUDA not available",
+        reason='CUDA not available',
     )(func)
 
 
@@ -98,6 +99,7 @@ def get_sparse_matrix(
         os.makedirs(get_home_dir(), exist_ok=True)
 
         import urllib
+
         url = f'https://sparse.tamu.edu/mat/{group}/{name}.mat'
         print(f'Downloading {url}...', end='')
         data = urllib.request.urlopen(url)
@@ -106,6 +108,7 @@ def get_sparse_matrix(
         print(' Done!')
 
     from scipy.io import loadmat
+
     mat = loadmat(path)['Problem'][0][0][2].tocsr()
 
     rowptr = torch.from_numpy(mat.indptr).to(device, dtype)

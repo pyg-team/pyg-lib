@@ -15,11 +15,19 @@ torch.set_float32_matmul_precision('highest')  # Enforce FP32
 @pytest.mark.parametrize('dtype', [torch.float, torch.bfloat16])
 def test_segment_matmul_autograd(dtype, device):
 
-    inputs = torch.randn((8, 16), requires_grad=True, device=device,
-                         dtype=dtype)
+    inputs = torch.randn(
+        (8, 16),
+        requires_grad=True,
+        device=device,
+        dtype=dtype,
+    )
     ptr = torch.tensor([0, 5, 8]).to(torch.device(device))
-    other = torch.randn((2, 16, 32), requires_grad=True, device=device,
-                        dtype=dtype)
+    other = torch.randn(
+        (2, 16, 32),
+        requires_grad=True,
+        device=device,
+        dtype=dtype,
+    )
     bias = torch.randn((2, 32), requires_grad=True, device=device, dtype=dtype)
     out = pyg_lib.ops.segment_matmul(inputs, ptr, other, bias)
     assert out.size() == (8, 32)
@@ -33,11 +41,11 @@ def test_segment_matmul_autograd(dtype, device):
     else:
         atol = 1e-6
 
-    out1 = inputs[ptr[0]:ptr[1]] @ other[0] + bias[0]
-    assert torch.allclose(out[ptr[0]:ptr[1]], out1, atol=atol, rtol=atol)
+    out1 = inputs[ptr[0] : ptr[1]] @ other[0] + bias[0]
+    assert torch.allclose(out[ptr[0] : ptr[1]], out1, atol=1e-6)
 
-    out2 = inputs[ptr[1]:ptr[2]] @ other[1] + bias[1]
-    assert torch.allclose(out[ptr[1]:ptr[2]], out2, atol=atol, rtol=atol)
+    out2 = inputs[ptr[1] : ptr[2]] @ other[1] + bias[1]
+    assert torch.allclose(out[ptr[1] : ptr[2]], out2, atol=1e-6)
 
     out.mean().backward()
     assert other.grad.size() == other.size()

@@ -82,10 +82,22 @@ def neighbor_sample(
         Lastly, returns information about the sampled amount of nodes and edges
         per hop.
     """
-    return torch.ops.pyg.neighbor_sample(  #
-        rowptr, col, seed, num_neighbors, node_time, edge_time, seed_time,
-        edge_weight, csc, replace, directed, disjoint, temporal_strategy,
-        return_edge_id)
+    return torch.ops.pyg.neighbor_sample(
+        rowptr,
+        col,
+        seed,
+        num_neighbors,
+        node_time,
+        edge_time,
+        seed_time,
+        edge_weight,
+        csc,
+        replace,
+        directed,
+        disjoint,
+        temporal_strategy,
+        return_edge_id,
+    )
 
 
 def hetero_neighbor_sample(
@@ -103,9 +115,14 @@ def hetero_neighbor_sample(
     disjoint: bool = False,
     temporal_strategy: str = 'uniform',
     return_edge_id: bool = True,
-) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor], Dict[
-        NodeType, Tensor], Optional[Dict[EdgeType, Tensor]], Dict[
-            NodeType, List[int]], Dict[EdgeType, List[int]]]:
+) -> Tuple[
+    Dict[EdgeType, Tensor],
+    Dict[EdgeType, Tensor],
+    Dict[NodeType, Tensor],
+    Optional[Dict[EdgeType, Tensor]],
+    Dict[NodeType, List[int]],
+    Dict[EdgeType, List[int]],
+]:
     r"""Recursively samples neighbors from all node indices in :obj:`seed_dict`
     in the heterogeneous graph given by :obj:`(rowptr_dict, col_dict)`.
 
@@ -126,25 +143,42 @@ def hetero_neighbor_sample(
     rowptr_dict = {TO_REL_TYPE[k]: v for k, v in rowptr_dict.items()}
     col_dict = {TO_REL_TYPE[k]: v for k, v in col_dict.items()}
     num_neighbors_dict = {
-        TO_REL_TYPE[k]: v
-        for k, v in num_neighbors_dict.items()
+        TO_REL_TYPE[k]: v for k, v in num_neighbors_dict.items()
     }
     if edge_time_dict is not None:
         edge_time_dict = {TO_REL_TYPE[k]: v for k, v in edge_time_dict.items()}
     if edge_weight_dict is not None:
         edge_weight_dict = {
-            TO_REL_TYPE[k]: v
-            for k, v in edge_weight_dict.items()
+            TO_REL_TYPE[k]: v for k, v in edge_weight_dict.items()
         }
 
-    out = torch.ops.pyg.hetero_neighbor_sample(  #
-        node_types, edge_types, rowptr_dict, col_dict, seed_dict,
-        num_neighbors_dict, node_time_dict, edge_time_dict, seed_time_dict,
-        edge_weight_dict, csc, replace, directed, disjoint, temporal_strategy,
-        return_edge_id)
+    out = torch.ops.pyg.hetero_neighbor_sample(
+        node_types,
+        edge_types,
+        rowptr_dict,
+        col_dict,
+        seed_dict,
+        num_neighbors_dict,
+        node_time_dict,
+        edge_time_dict,
+        seed_time_dict,
+        edge_weight_dict,
+        csc,
+        replace,
+        directed,
+        disjoint,
+        temporal_strategy,
+        return_edge_id,
+    )
 
-    (row_dict, col_dict, node_id_dict, edge_id_dict, num_nodes_per_hop_dict,
-     num_edges_per_hop_dict) = out
+    (
+        row_dict,
+        col_dict,
+        node_id_dict,
+        edge_id_dict,
+        num_nodes_per_hop_dict,
+        num_edges_per_hop_dict,
+    ) = out
 
     row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
     col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
@@ -153,12 +187,17 @@ def hetero_neighbor_sample(
         edge_id_dict = {TO_EDGE_TYPE[k]: v for k, v in edge_id_dict.items()}
 
     num_edges_per_hop_dict = {
-        TO_EDGE_TYPE[k]: v
-        for k, v in num_edges_per_hop_dict.items()
+        TO_EDGE_TYPE[k]: v for k, v in num_edges_per_hop_dict.items()
     }
 
-    return (row_dict, col_dict, node_id_dict, edge_id_dict,
-            num_nodes_per_hop_dict, num_edges_per_hop_dict)
+    return (
+        row_dict,
+        col_dict,
+        node_id_dict,
+        edge_id_dict,
+        num_nodes_per_hop_dict,
+        num_edges_per_hop_dict,
+    )
 
 
 def subgraph(

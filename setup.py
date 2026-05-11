@@ -14,7 +14,7 @@ import warnings
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
@@ -26,9 +26,9 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     @staticmethod
-    def check_env_flag(name: str, default: str = "") -> bool:
+    def check_env_flag(name: str, default: str = '') -> bool:
         value = os.getenv(name, default).upper()
-        return value in ["1", "ON", "YES", "TRUE", "Y"]
+        return value in ['1', 'ON', 'YES', 'TRUE', 'Y']
 
     def get_ext_filename(self, ext_name):
         # Remove Python ABI suffix:
@@ -43,12 +43,12 @@ class CMakeBuild(build_ext):
         import torch
 
         extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
-        self.build_type = "DEBUG" if self.debug else "RELEASE"
+        self.build_type = 'DEBUG' if self.debug else 'RELEASE'
         if self.debug is None:
-            if CMakeBuild.check_env_flag("DEBUG"):
-                self.build_type = "DEBUG"
-            elif CMakeBuild.check_env_flag("REL_WITH_DEB_INFO"):
-                self.build_type = "RELWITHDEBINFO"
+            if CMakeBuild.check_env_flag('DEBUG'):
+                self.build_type = 'DEBUG'
+            elif CMakeBuild.check_env_flag('REL_WITH_DEB_INFO'):
+                self.build_type = 'RELWITHDEBINFO'
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -114,7 +114,7 @@ class CMakeBuild(build_ext):
         cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
-            include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
+            include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
             cmake_args.append('-DUSE_MKL_BLAS=ON')
 
@@ -123,8 +123,10 @@ class CMakeBuild(build_ext):
         if with_ninja:
             cmake_args += ['-GNinja']
         else:
-            warnings.warn("Building times of 'pyg-lib' can be heavily improved"
-                          " by installing 'ninja': `pip install ninja`")
+            warnings.warn(
+                "Building times of 'pyg-lib' can be heavily improved"
+                " by installing 'ninja': `pip install ninja`",
+            )
 
         build_args = []
         num_jobs = os.getenv('MAX_JOBS', str(multiprocessing.cpu_count()))
@@ -161,21 +163,8 @@ def mkl_dependencies():
 
 install_requires = [] + mkl_dependencies()
 
-triton_requires = [
-    'triton',
-]
-
-test_requires = [
-    'pytest',
-    'pytest-cov',
-]
-
-dev_requires = [
-    'pre-commit',
-]
-
 if not bool(os.getenv('BUILD_DOCS', 0)):
-    ext_modules = [CMakeExtension('libpyg')]
+    ext_modules = [CMakeExtension('pyg_lib.libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
 else:
     ext_modules = None
@@ -185,11 +174,6 @@ setup(
     name='pyg_lib',
     version=__version__,
     install_requires=install_requires,
-    extras_require={
-        'triton': triton_requires,
-        'test': test_requires,
-        'dev': dev_requires,
-    },
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,

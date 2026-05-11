@@ -47,6 +47,7 @@ cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DBUILD_BENCHMARK=ON
 If you want to include the test suite or benchmarks, specify `-DBUILD_TEST=ON` or `-DBUILD_BENCHMARK=ON`, respectively
 (both are `OFF` by default).
 Finally, run tests via:
+
 ```
 ctest --verbose --output-on-failure
 ```

@@ -1,12 +1,3 @@
-[contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat&color=4B26A4
-[contributing-url]: https://github.com/pyg-team/pytorch_geometric/blob/master/.github/CONTRIBUTING.md
-[coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
-[coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=master
-[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
-[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
-[slack-image]: https://img.shields.io/badge/slack-join-white.svg?logo=slack&color=4B26A4
-[slack-url]: https://data.pyg.org/slack.html
-
 # pyg-lib
 
 <div align="center">
@@ -20,7 +11,7 @@
 
 ## Installation
 
-We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.10 till 3.13, see [here](https://data.pyg.org/whl).
+We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.10 till 3.14, see [here](https://data.pyg.org/whl).
 
 To install the wheels for CPU/CUDA backend, simply run
 
@@ -30,28 +21,34 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 where
 
-* `${TORCH}` should be replaced by either `2.8.0`, `2.9.0`, or `2.10.0`
-* `${CUDA}` should be replaced by either `cpu`, `cu126`, `cu128`, `cu129`, or `cu130`
+- `${TORCH}` should be replaced by either `2.9.0`, `2.10.0`, `2.11.0`, or `2.12.0`
+- `${CUDA}` should be replaced by either `cpu`, `cu126`, `cu128`, `cu130`, or `cu132`
 
 The following combinations are supported:
 
-| PyTorch 2.10 | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
-|--------------|-------|---------|---------|---------|---------|
-| **Linux**    | ✅    | ✅      | ✅      |       | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      |       | ✅      |
-| **macOS**    | ✅    |         |         |        |        |
+| PyTorch Nightly | `cpu` | `cu126` | `cu128` | `cu130` | `cu132` |
+| --------------- | ----- | ------- | ------- | ------- | ------- |
+| **Linux**       | ✅    | ✅      |         | ✅      | ✅      |
+| **Windows**     | ✅    | ✅      |         | ✅      | ✅      |
+| **macOS**       |       |         |         |         |         |
 
-| PyTorch 2.9  | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
-|--------------|-------|---------|---------|---------|---------|
-| **Linux**    | ✅    | ✅      | ✅      |       | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      |       | ✅      |
-| **macOS**    | ✅    |         |         |        |        |
+| PyTorch 2.11 | `cpu` | `cu126` | `cu128` | `cu130` |
+| ------------ | ----- | ------- | ------- | ------- |
+| **Linux**    | ✅    | ✅      | ✅      | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |         |
 
-| PyTorch 2.8  | `cpu` | `cu126` | `cu128` | `cu129` | `cu130` |
-|--------------|-------|---------|---------|---------|---------|
-| **Linux**    | ✅    | ✅      | ✅      | ✅      |       |
-| **Windows**  | ✅    | ✅      | ✅      | ✅      |       |
-| **macOS**    | ✅    |         |         |        |        |
+| PyTorch 2.10 | `cpu` | `cu126` | `cu128` | `cu130` |
+| ------------ | ----- | ------- | ------- | ------- |
+| **Linux**    | ✅    | ✅      | ✅      | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |         |
+
+| PyTorch 2.9 | `cpu` | `cu126` | `cu128` | `cu130` |
+| ----------- | ----- | ------- | ------- | ------- |
+| **Linux**   | ✅    | ✅      | ✅      | ✅      |
+| **Windows** | ✅    | ✅      | ✅      | ✅      |
+| **macOS**   | ✅    |         |         |         |
 
 For ROCM backend, there is an external [`pyg-rocm-build` repository](https://github.com/Looong01/pyg-rocm-build) provides wheels and detailed instructions on how to install PyG for ROCm.
 If you have any questions about it, please open an issue [here](https://github.com/Looong01/pyg-rocm-build/issues).
@@ -142,7 +139,7 @@ python3 -c "import torch; print(torch.version.hip)"
 
 ### From nightly
 
-Nightly wheels are provided for Linux from Python 3.10 till 3.13:
+Nightly wheels are provided for Linux from Python 3.10 till 3.14:
 
 ```
 pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.html
@@ -154,3 +151,12 @@ pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.h
 pip install ninja wheel
 pip install --no-build-isolation git+https://github.com/pyg-team/pyg-lib.git
 ```
+
+[contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat&color=4B26A4
+[contributing-url]: https://github.com/pyg-team/pytorch_geometric/blob/master/.github/CONTRIBUTING.md
+[coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
+[coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=master
+[docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
+[docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
+[slack-image]: https://img.shields.io/badge/slack-join-white.svg?logo=slack&color=4B26A4
+[slack-url]: https://data.pyg.org/slack.html

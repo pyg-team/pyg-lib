@@ -7,7 +7,7 @@ import torch
 
 from pyg_lib.home import get_home_dir, set_home_dir
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 # * `libpyg.so`: The name of the shared library file.
 # * `torch.ops.pyg`: The used namespace.
@@ -18,10 +18,12 @@ def load_library(lib_name: str) -> None:
     if bool(os.getenv('BUILD_DOCS', 0)):
         return
 
-    loader_details = (importlib.machinery.ExtensionFileLoader,
-                      importlib.machinery.EXTENSION_SUFFIXES)
+    loader_details = (
+        importlib.machinery.ExtensionFileLoader,
+        importlib.machinery.EXTENSION_SUFFIXES,
+    )
 
-    path = osp.abspath(osp.join(osp.dirname(__file__), '..'))
+    path = osp.dirname(osp.abspath(__file__))
     ext_finder = importlib.machinery.FileFinder(path, loader_details)
     spec = ext_finder.find_spec(lib_name)
 

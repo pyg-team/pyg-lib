@@ -50,6 +50,8 @@ for wheel in wheels:
         wheels_dict[torch_version.replace('2.5.0', '2.5.1')].append(wheel)
     if '2.7.0' in torch_version:
         wheels_dict[torch_version.replace('2.7.0', '2.7.1')].append(wheel)
+    if '2.9.0' in torch_version:
+        wheels_dict[torch_version.replace('2.9.0', '2.9.1')].append(wheel)
 
 html = '<!DOCTYPE html>\n<html>\n<body>\n{}\n</body>\n</html>'
 href = '<a href="{}">{}</a><br/>'
@@ -67,27 +69,40 @@ with open('index.html', 'w') as f:
 
 bucket.Object('index.html').upload_file('index.html', ExtraArgs=args)
 
-index_html = html.format('\n'.join([
-    href.format(f'{torch_version}.html'.replace('+', '%2B'), torch_version)
-    for torch_version in wheels_dict
-]))
+index_html = html.format(
+    '\n'.join(
+        [
+            href.format(
+                f'{torch_version}.html'.replace('+', '%2B'),
+                torch_version,
+            )
+            for torch_version in wheels_dict
+        ],
+    ),
+)
 
 with open('index.html', 'w') as f:
     f.write(index_html)
 
 bucket.Object('whl/index.html').upload_file('index.html', ExtraArgs=args)
 
-root = 'https://data.pyg.org'
-
 for torch_version, wheels in wheels_dict.items():
-    torch_version_html = html.format('\n'.join([
-        href.format(
-            f'{root}/whl/{orig_torch_version}/{wheel}'.replace('+', '%2B'),
-            wheel) for orig_torch_version, wheel in wheels
-    ]))
+    torch_version_html = html.format(
+        '\n'.join(
+            [
+                href.format(
+                    f'{orig_torch_version}/{wheel}'.replace('+', '%2B'),
+                    wheel,
+                )
+                for orig_torch_version, wheel in wheels
+            ],
+        ),
+    )
 
     with open(f'{torch_version}.html', 'w') as f:
         f.write(torch_version_html)
 
     bucket.Object(f'whl/{torch_version}.html').upload_file(
-        f'{torch_version}.html', ExtraArgs=args)
+        f'{torch_version}.html',
+        ExtraArgs=args,
+    )

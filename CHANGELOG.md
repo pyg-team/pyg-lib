@@ -1,23 +1,59 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Added
+
+- Added CUDA 13.2 support to `manylinux` Dockerfile ([#614](https://github.com/pyg-team/pyg-lib/pull/614))
+- Added support for PyTorch `2.12.0` wheels in nightly releases ([#615](https://github.com/pyg-team/pyg-lib/pull/615), [#629](https://github.com/pyg-team/pyg-lib/pull/629), [#630](https://github.com/pyg-team/pyg-lib/pull/630))
+
+### Changed
+
+- Upgraded C++ standard from C++17 to C++20 required by PyTorch ([#639](https://github.com/pyg-team/pyg-lib/pull/639))
+- Auto-detect CUDA architectures from PyTorch via `torch.cuda.get_arch_list()` at build time instead of hardcoding them in CMake, overridable via `TORCH_CUDA_ARCH_LIST` env var ([#616](https://github.com/pyg-team/pyg-lib/pull/616))
+- Added `--compress-mode=size` to CUDA compiler flags to reduce binary size
+- Moved `libpyg.so` from `site-packages/` to `site-packages/pyg_lib/` ([#635](https://github.com/pyg-team/pyg-lib/pull/635))
+
+### Deprecated
+
+### Removed
+
+- Dropped support for PyTorch 2.8 ([#628](https://github.com/pyg-team/pyg-lib/pull/628))
+- Dropped support for CUDA architectures below `sm_60` (required by cuCollections)
+
+### Fixed
+
+- Fixed build with `clang++` by upgrading `cuCollections` and `cccl` submodules ([#645](https://github.com/pyg-team/pyg-lib/pull/645))
+
+### Security
+
+## [0.6.0] - 2026-03-24
+
+### Added
+
+- Added PyTorch 2.11 support ([#608](https://github.com/pyg-team/pyg-lib/pull/608))
+- Added Python 3.14 support ([#581](https://github.com/pyg-team/pyg-lib/pull/581), [#582](https://github.com/pyg-team/pyg-lib/pull/582), [#583](https://github.com/pyg-team/pyg-lib/pull/583))
+- Migrated `rusty1s/pytorch_spline_conv` to `pyg-lib` ([#566](https://github.com/pyg-team/pyg-lib/pull/566), [#567](https://github.com/pyg-team/pyg-lib/pull/567), [#568](https://github.com/pyg-team/pyg-lib/pull/568), [#569](https://github.com/pyg-team/pyg-lib/pull/569), [#570](https://github.com/pyg-team/pyg-lib/pull/570), [#572](https://github.com/pyg-team/pyg-lib/pull/572))
+- Migrated `rusty1s/pytorch_cluster` to `pyg-lib` ([#585](https://github.com/pyg-team/pyg-lib/pull/585), [#586](https://github.com/pyg-team/pyg-lib/pull/586), [#587](https://github.com/pyg-team/pyg-lib/pull/587), [#588](https://github.com/pyg-team/pyg-lib/pull/588), [#589](https://github.com/pyg-team/pyg-lib/pull/589), [#590](https://github.com/pyg-team/pyg-lib/pull/590), [#591](https://github.com/pyg-team/pyg-lib/pull/591), [#592](https://github.com/pyg-team/pyg-lib/pull/592), [#593](https://github.com/pyg-team/pyg-lib/pull/593), [#594](https://github.com/pyg-team/pyg-lib/pull/594), [#595](https://github.com/pyg-team/pyg-lib/pull/595))
+- Added CUDA 13.0 support on Windows ([#580](https://github.com/pyg-team/pyg-lib/pull/580))
 - Added PyTorch 2.10 support ([#561](https://github.com/pyg-team/pyg-lib/pull/561))
 - Added PyTorch 2.9 support ([#536](https://github.com/pyg-team/pyg-lib/pull/536))
 - Added macOS 11 support ([#558](https://github.com/pyg-team/pyg-lib/pull/558))
-### Changed
-### Deprecated
+
 ### Removed
+
 - Removed CUDA 11.8 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
 - Removed PyTorch 2.6 and 2.7 support ([#556](https://github.com/pyg-team/pyg-lib/pull/556))
-### Fixed
-### Security
 
 ## [0.5.0] - 2025-10-14
+
 ### Added
+
 - Added support for `manylinux_2_28` wheels built with CUDA in nightly releases ([#496](https://github.com/pyg-team/pyg-lib/pull/496))
 - Added support for `manylinux_2_28` wheels in nightly releases ([#480](https://github.com/pyg-team/pyg-lib/pull/480))
 - Added CUDA 13.0 support ([#509](https://github.com/pyg-team/pyg-lib/pull/509), [#511](https://github.com/pyg-team/pyg-lib/pull/511))
@@ -32,60 +68,79 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added macOS Apple Silicon support ([#310](https://github.com/pyg-team/pyg-lib/pull/310))
 - Added ROCM 6.4 support ([#507](https://github.com/pyg-team/pyg-lib/pull/507))
 ### Changed
+
 ### Removed
+
 - Removed Support for PyTorch 1.13-2.5 ([#532](https://github.com/pyg-team/pyg-lib/pull/532))
 - Dropped Python 3.9 support ([#525](https://github.com/pyg-team/pyg-lib/pull/525))
 - Dropped Python 3.8 support ([#356](https://github.com/pyg-team/pyg-lib/pull/356))
 - Removed linking to Python ([#462](https://github.com/pyg-team/pyg-lib/pull/462))
 
 ## [0.4.0] - 2024-02-07
+
 ### Added
+
 - Added PyTorch 2.2 support ([#294](https://github.com/pyg-team/pyg-lib/pull/294))
 - Added `softmax_csr` implementation ([#264](https://github.com/pyg-team/pyg-lib/pull/264), [#282](https://github.com/pyg-team/pyg-lib/pull/282))
 - Added support for edge-level sampling ([#280](https://github.com/pyg-team/pyg-lib/pull/280))
 - Added support for `bfloat16` data type in `segment_matmul` and `grouped_matmul` (CPU only) ([#272](https://github.com/pyg-team/pyg-lib/pull/272))
+
 ### Changed
+
 - Dropped the MKL code path when sampling neighbors with `replace=False` since it does not correctly prevent duplicates ([#275](https://github.com/pyg-team/pyg-lib/pull/275))
 - Added `--biased` parameter to run benchmarks for biased sampling ([#267](https://github.com/pyg-team/pyg-lib/pull/267))
 - Improved speed of biased sampling ([#270](https://github.com/pyg-team/pyg-lib/pull/270))
 - Fixed `grouped_matmul` when tensors are not contiguous ([#290](https://github.com/pyg-team/pyg-lib/pull/290))
+
 ### Removed
 
 ## [0.3.0] - 2023-10-11
+
 ### Added
+
 - Added PyTorch 2.1 support ([#256](https://github.com/pyg-team/pyg-lib/pull/256))
 - Added low-level support for distributed neighborhood sampling ([#246](https://github.com/pyg-team/pyg-lib/pull/246), [#252](https://github.com/pyg-team/pyg-lib/pull/252), [#253](https://github.com/pyg-team/pyg-lib/pull/253), [#254](https://github.com/pyg-team/pyg-lib/pull/254))
 - Added support for homogeneous and heterogeneous biased neighborhood sampling ([#247](https://github.com/pyg-team/pyg-lib/pull/247), [#251](https://github.com/pyg-team/pyg-lib/pull/251))
 - Added dispatch for XPU device in `index_sort` ([#243](https://github.com/pyg-team/pyg-lib/pull/243))
 - Added `metis` partitioning ([#229](https://github.com/pyg-team/pyg-lib/pull/229))
 - Enable `hetero_neighbor_samplee` to work in parallel ([#211](https://github.com/pyg-team/pyg-lib/pull/211))
+
 ### Changed
+
 - Fixed vector-based mapping issue in `Mapping` ([#244](https://github.com/pyg-team/pyg-lib/pull/244))
 - Fixed performance issues reported by Coverity Tool ([#240](https://github.com/pyg-team/pyg-lib/pull/240))
 - Updated `cutlass` version for speed boosts in `segment_matmul` and `grouped_matmul` ([#235](https://github.com/pyg-team/pyg-lib/pull/235))
 - Drop nested tensor wrapper for `grouped_matmul` implementation ([#226](https://github.com/pyg-team/pyg-lib/pull/226))
 - Added `generate_range_of_ints` function (it uses MKL library in order to generate ints) to RandintEngine class ([#222](https://github.com/pyg-team/pyg-lib/pull/222))
 - Fixed TorchScript support in `grouped_matmul` ([#220](https://github.com/pyg-team/pyg-lib/pull/220))
+
 ### Removed
 
 ## [0.2.0] - 2023-03-22
+
 ### Added
+
 - Added PyTorch 2.0 support ([#214](https://github.com/pyg-team/pyg-lib/pull/214))
 - `neighbor_sample` routines now also return information about the number of sampled nodes/edges per layer ([#197](https://github.com/pyg-team/pyg-lib/pull/197))
 - Added `index_sort` implementation ([#181](https://github.com/pyg-team/pyg-lib/pull/181), [#192](https://github.com/pyg-team/pyg-lib/pull/192))
 - Added `triton>=2.0` support ([#171](https://github.com/pyg-team/pyg-lib/pull/171))
 - Added `bias` term to `grouped_matmul` and `segment_matmul` ([#161](https://github.com/pyg-team/pyg-lib/pull/161))
 - Added `sampled_op` implementation ([#156](https://github.com/pyg-team/pyg-lib/pull/156), [#159](https://github.com/pyg-team/pyg-lib/pull/159), [#160](https://github.com/pyg-team/pyg-lib/pull/160))
+
 ### Changed
+
 - Improved `[segment|grouped]_matmul` GPU implementation by reducing launch overheads ([#213](https://github.com/pyg-team/pyg-lib/pull/213))
 - Sample the nodes with the same timestamp as seed nodes ([#187](https://github.com/pyg-team/pyg-lib/pull/187))
 - Added `write-csv` (saves benchmark results as csv file) and `libraries` (determines which libraries will be used in benchmark) parameters ([#167](https://github.com/pyg-team/pyg-lib/pull/167))
 - Enable benchmarking of neighbor sampler on temporal graphs ([#165](https://github.com/pyg-team/pyg-lib/pull/165))
 - Improved `[segment|grouped]_matmul` CPU implementation via `at::matmul_out` and MKL BLAS `gemm_batch` ([#146](https://github.com/pyg-team/pyg-lib/pull/146), [#172](https://github.com/pyg-team/pyg-lib/pull/172))
+
 ### Removed
 
 ## [0.1.0] - 2022-11-28
+
 ### Added
+
 - Added PyTorch 1.13 support ([#145](https://github.com/pyg-team/pyg-lib/pull/145))
 - Added native PyTorch support for `grouped_matmul` ([#137](https://github.com/pyg-team/pyg-lib/pull/137))
 - Added `fused_scatter_reduce` operation for multiple reductions ([#141](https://github.com/pyg-team/pyg-lib/pull/141), [#142](https://github.com/pyg-team/pyg-lib/pull/142))
@@ -119,7 +174,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Added `clang-format` linting via `pre-commit` ([#12](https://github.com/pyg-team/pyg-lib/pull/12))
 - Added `CMake` support ([#5](https://github.com/pyg-team/pyg-lib/pull/5))
 - Added `pyg.cuda_version()` ([#4](https://github.com/pyg-team/pyg-lib/pull/4))
+
 ### Changed
+
 - Allow different types for graph and timestamp data ([#143](https://github.com/pyg-team/pyg-lib/pull/143))
 - Fixed dispatcher in `hetero_neighbor_sample` ([#125](https://github.com/pyg-team/pyg-lib/pull/125))
 - Require sorted neighborhoods according to time in temporal sampling ([#108](https://github.com/pyg-team/pyg-lib/pull/108))
