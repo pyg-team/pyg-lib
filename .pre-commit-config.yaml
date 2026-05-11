@@ -65,7 +65,7 @@ repos:
         args: [--extend-ignore=E203]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.4
+    rev: v22.1.5
     hooks:
       - id: clang-format
         name: Format C++ code
