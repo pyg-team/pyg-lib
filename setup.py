@@ -4,6 +4,7 @@
 #   Enables use of MKL BLAS (requires PyTorch to be built with MKL support)
 
 import importlib
+import multiprocessing
 import os
 import os.path as osp
 import re
@@ -52,8 +53,13 @@ class CMakeBuild(build_ext):
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        WITH_CUDA = torch.cuda.is_available()
+        WITH_CUDA = torch.cuda.is_available() and not getattr(
+            torch.version, 'hip', None
+        )
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+
+        WITH_ROCM = torch.version.hip is not None
+        WITH_ROCM = bool(int(os.getenv('FORCE_ROCM', WITH_ROCM)))
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
@@ -62,10 +68,10 @@ class CMakeBuild(build_ext):
             # Disable cmake's default CUDA architectures; torch's cmake
             # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
             *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
+            f'-DWITH_ROCM={"ON" if WITH_ROCM else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
-            f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
 
         if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
@@ -96,6 +102,19 @@ class CMakeBuild(build_ext):
 
             assert os.environ['TORCH_CUDA_ARCH_LIST'] is not None
             print(f'TORCH_CUDA_ARCH_LIST={os.environ["TORCH_CUDA_ARCH_LIST"]}')
+        if WITH_ROCM:
+            rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
+            prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
+            rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
+                'AMDGPU_TARGETS'
+            )
+            if rocm_arch:
+                rocm_arch = ';'.join(
+                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x]
+                )
+                cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
+
+        cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
@@ -113,13 +132,13 @@ class CMakeBuild(build_ext):
             )
 
         build_args = []
-
+        num_jobs = os.getenv('MAX_JOBS', str(multiprocessing.cpu_count()))
         subprocess.check_call(
             ['cmake', ext.sourcedir] + cmake_args,
             cwd=self.build_temp,
         )
         subprocess.check_call(
-            ['cmake', '--build', '.'] + build_args,
+            ['cmake', '--build', '.', f'-j{num_jobs}'] + build_args,
             cwd=self.build_temp,
         )
 

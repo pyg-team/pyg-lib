@@ -54,6 +54,12 @@ argparser.add_argument(
 )
 args = argparser.parse_args()
 
+if not args.directed and 'pyg-lib' in args.libraries:
+    raise ValueError(
+        'pyg-lib neighbor sampling does not support directed=False. '
+        'Run with --directed, or remove pyg-lib from --libraries.'
+    )
+
 
 @withSeed
 @withDataset('DIMACS10', 'citationCiteseer')
