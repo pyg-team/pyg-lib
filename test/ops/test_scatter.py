@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import pyg_lib
-from pyg_lib.testing import withCUDA
+from pyg_lib.testing import withCUDA, withSeed
 
 
 def _broadcast_index(
@@ -835,5 +835,445 @@ def test_scatter_mean_backward_gradcheck_with_dim_size(device):
 
     def fn(s):
         return pyg_lib.ops.scatter_mean(s, index, dim=-1, dim_size=6)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# scatter_min
+# ---------------------------------------------------------------------------
+
+
+def _scatter_min_ref(
+    src: torch.Tensor,
+    index: torch.Tensor,
+    dim: int = -1,
+    dim_size: int = None,
+):
+    """Pure-PyTorch reference implementation of :func:`scatter_min`.
+
+    Returns a tuple ``(value, argindex)``:
+      * ``value[j]`` is the minimum of ``src`` entries whose broadcast index
+        equals ``j`` along ``dim``.
+      * ``argindex[j]`` is the position along ``dim`` of *any* entry that
+        attains that minimum. On CPU the upstream contract is first-match;
+        we match that here.
+      * Empty buckets get ``value == 0`` and ``argindex == src.size(dim)``
+        (the upstream sentinel).
+    """
+    if dim < 0:
+        dim = dim + src.dim()
+    bcast_index = _broadcast_index(index, src, dim)
+
+    if dim_size is None:
+        dim_size = int(index.max().item()) + 1 if index.numel() > 0 else 0
+
+    sentinel = src.size(dim)
+    out_size = list(src.size())
+    out_size[dim] = dim_size
+    value = torch.zeros(out_size, dtype=src.dtype, device=src.device)
+    argindex = torch.full(
+        out_size,
+        sentinel,
+        dtype=torch.long,
+        device=src.device,
+    )
+
+    # Walk over ``src`` along ``dim`` and, for each output position, track the
+    # running min and the position of its first-match.
+    # We implement this with a per-element Python loop for clarity.
+    other_shape = list(src.size())
+    del other_shape[dim]
+    for i in range(src.size(dim)):
+        src_slice = src.select(dim, i)
+        idx_slice = bcast_index.select(dim, i)
+        flat_src = src_slice.reshape(-1)
+        flat_idx = idx_slice.reshape(-1)
+        for k in range(flat_idx.numel()):
+            j = int(flat_idx[k].item())
+            if j < 0 or j >= dim_size:
+                continue
+            # Recover the multi-index for the "other" dims.
+            coord = []
+            rem = k
+            for s in reversed(other_shape):
+                coord.append(rem % s)
+                rem //= s
+            coord = list(reversed(coord))
+            out_idx = list(coord)
+            out_idx.insert(dim, j)
+            out_idx_t = tuple(out_idx)
+            if argindex[out_idx_t].item() == sentinel:
+                # First contribution into this bucket; always take it.
+                value[out_idx_t] = flat_src[k]
+                argindex[out_idx_t] = i
+            else:
+                cur = value[out_idx_t]
+                v = flat_src[k]
+                if bool(v < cur):  # strict less: first-match tie-break
+                    value[out_idx_t] = v
+                    argindex[out_idx_t] = i
+
+    # Empty buckets: value == 0 (already initialized), argindex stays at
+    # sentinel == src.size(dim).
+    return value, argindex
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'dtype',
+    [
+        torch.int32,
+        torch.int64,
+        torch.float16,
+        torch.float32,
+        torch.float64,
+        torch.bfloat16,
+    ],
+)
+def test_scatter_min_forward_dtypes(dtype, device):
+    """Forward correctness on a unique-value fixture across dtypes.
+
+    Unique values mean argindex is unambiguous on both CPU and CUDA.
+    """
+    if dtype in (torch.int32, torch.int64):
+        # A unique-value integer fixture covering the chosen buckets.
+        src = torch.tensor(
+            [[9, 1, 8, 2],
+             [3, 7, 0, 5],
+             [4, 6, -1, 11],
+             [-3, 10, 12, -2],
+             [13, -4, 14, 15],
+             [16, 17, 18, 19],
+             [20, 21, 22, 23],
+             [24, 25, 26, 27]],
+            dtype=dtype,
+            device=device,
+        )  # yapf: disable
+    else:
+        # Build a unique-valued float tensor via a randperm permutation.
+        torch.manual_seed(0)
+        flat = (torch.randperm(32, device=device) - 16).to(dtype)
+        src = flat.view(8, 4)
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=0)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=0)
+    if dtype in (torch.float16, torch.bfloat16):
+        torch.testing.assert_close(value, ref_value, atol=1e-2, rtol=1e-2)
+    else:
+        torch.testing.assert_close(value, ref_value)
+    # Unique values -> exact argindex equivalence on both CPU and CUDA.
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_forward_dim_neg1(device):
+    # Unique values along dim=-1 ensure deterministic argindex.
+    torch.manual_seed(0)
+    src = (torch.randperm(3 * 8, device=device).to(torch.float32) - 12).view(
+        3,
+        8,
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=-1)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=-1)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_forward_dim_nonneg(device):
+    torch.manual_seed(0)
+    src = (torch.randperm(8 * 4, device=device).to(torch.float32) - 16).view(
+        8,
+        4,
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=0)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=0)
+    assert value.size() == (4, 4)
+    assert arg.size() == (4, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_forward_dim_middle(device):
+    torch.manual_seed(0)
+    src = (
+        torch.randperm(3 * 6 * 5, device=device).to(torch.float32) - 40
+    ).view(3, 6, 5)
+    index = torch.tensor([0, 2, 1, 0, 2, 1], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=1)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=1)
+    assert value.size() == (3, 3, 5)
+    assert arg.size() == (3, 3, 5)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_broadcasting_1d_index(device):
+    """1-D ``index`` broadcasts to 2-D ``src`` along ``dim``."""
+    torch.manual_seed(0)
+    src = (torch.randperm(6 * 4, device=device).to(torch.float32) - 12).view(
+        6,
+        4,
+    )
+    index = torch.tensor([0, 1, 0, 2, 1, 2], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=0)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=0)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_dim_size_auto_infer(device):
+    src = torch.tensor([5.0, -1.0, 3.0, -7.0, 2.0, 9.0], device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=-1)
+    # Auto-inferred dim_size = index.max() + 1 = 4.
+    assert value.size(-1) == 4
+    assert arg.size(-1) == 4
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=-1)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_scatter_min_dim_size_explicit_empty_buckets(device):
+    """Explicit ``dim_size`` larger than implicit — trailing buckets are
+    empty. Upstream convention: value == 0, argindex == sentinel
+    (== src.size(dim)).
+    """
+    src = torch.tensor([5.0, -1.0, 3.0, -7.0, 2.0, 9.0], device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+    sentinel = src.size(-1)  # 6
+
+    value, arg = pyg_lib.ops.scatter_min(
+        src,
+        index,
+        dim=-1,
+        dim_size=6,
+    )
+    assert value.size(-1) == 6
+    assert arg.size(-1) == 6
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=-1, dim_size=6)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+    # Empty trailing buckets at positions 2, 4, 5 must have value 0 and
+    # argindex == sentinel.
+    empty_positions = [2, 4, 5]
+    for p in empty_positions:
+        assert value[p].item() == 0
+        assert arg[p].item() == sentinel
+
+
+@withCUDA
+def test_scatter_min_empty_bucket_in_middle(device):
+    """Empty buckets anywhere (not just trailing) yield value 0 + sentinel
+    argindex.
+    """
+    # index skips bucket 2 entirely.
+    src = torch.tensor(
+        [[1.0, 2.0, 3.0],
+         [-1.0, 4.0, 5.0],
+         [6.0, -3.0, 7.0],
+         [8.0, 9.0, -10.0],
+         [11.0, 12.0, 13.0],
+         [14.0, 15.0, 16.0]],
+        device=device,
+    )  # yapf: disable
+    index = torch.tensor([0, 1, 0, 1, 3, 3], device=device)
+    sentinel = src.size(0)  # 6
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=0, dim_size=4)
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=0, dim_size=4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+    # Row 2 has no contributors -> zero row + sentinel arg row.
+    torch.testing.assert_close(
+        value[2],
+        torch.zeros(3, device=device),
+    )
+    torch.testing.assert_close(
+        arg[2],
+        torch.full((3,), sentinel, dtype=torch.long, device=device),
+    )
+
+
+@withCUDA
+def test_scatter_min_out_overrides_init_buffer(device):
+    """When ``out`` is provided, the op writes the per-bucket min into it
+    (per the contract: out is initialized to numeric_limits::max() internally,
+    callers supplying ``out`` are responsible for any non-default initial
+    state).
+    """
+    src = torch.tensor([5.0, -1.0, 3.0, -7.0, 2.0, 9.0], device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    # Pre-fill out with something that should NOT contaminate the min — the
+    # per-bucket min of src is strictly less than these values for every
+    # non-empty bucket.
+    out = torch.full((4,), 100.0, device=device)
+    result_value, result_arg = pyg_lib.ops.scatter_min(
+        src,
+        index,
+        dim=0,
+        out=out,
+    )
+
+    # The non-empty buckets should match the reference exactly.
+    ref_value, ref_arg = _scatter_min_ref(src, index, dim=0, dim_size=4)
+    # Non-empty buckets: 0 (idx 0,2), 1 (idx 1,3,4), 3 (idx 5).
+    # Bucket 2 is empty; with out=, the upstream contract leaves the caller's
+    # value in place when nothing is written. We only assert the non-empty
+    # buckets match the reference.
+    non_empty = [0, 1, 3]
+    for p in non_empty:
+        torch.testing.assert_close(result_value[p], ref_value[p])
+        torch.testing.assert_close(result_arg[p], ref_arg[p])
+
+
+@withCUDA
+def test_scatter_min_empty_input(device):
+    """An empty source with an empty index yields an all-zero value tensor
+    and an all-sentinel argindex tensor.
+    """
+    src = torch.empty(0, 4, device=device)
+    index = torch.empty(0, dtype=torch.long, device=device)
+    sentinel = src.size(0)  # 0
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=0, dim_size=3)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, torch.zeros(3, 4, device=device))
+    torch.testing.assert_close(
+        arg,
+        torch.full((3, 4), sentinel, dtype=torch.long, device=device),
+    )
+
+
+@withCUDA
+@withSeed
+def test_scatter_min_argindex_ties_returns_valid(device):
+    """Tied values: only assert the returned argindex is *a valid* argmin,
+    not a specific tie-breaker. CUDA atomic ordering is non-deterministic.
+    """
+    # Construct a deliberate tie: indices 0 and 2 both map to bucket 0 with
+    # value 1.0; indices 1 and 4 both map to bucket 1 with value 2.0.
+    src = torch.tensor(
+        [1.0, 2.0, 1.0, 5.0, 2.0, 7.0],
+        device=device,
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=-1)
+    # Value tensor must equal the true per-bucket min regardless of tie-break.
+    expected_value = torch.tensor(
+        [1.0, 2.0, 0.0, 7.0],
+        device=device,
+    )
+    torch.testing.assert_close(value, expected_value)
+    # Argindex on bucket 0 must be 0 or 2 (both have value 1.0).
+    assert int(arg[0].item()) in (0, 2)
+    # Argindex on bucket 1 must be one of the value-2.0 positions: 1 or 4.
+    assert int(arg[1].item()) in (1, 4)
+    # Bucket 2 is empty -> sentinel.
+    assert int(arg[2].item()) == src.size(0)
+    # Bucket 3 has a unique value at position 5.
+    assert int(arg[3].item()) == 5
+    # All non-sentinel argindexes must in fact attain the bucket's min value.
+    for j in range(value.size(0)):
+        a = int(arg[j].item())
+        if a == src.size(0):
+            continue  # empty bucket
+        assert src[a].item() == value[j].item(), (
+            f'arg[{j}]={a} points to src value {src[a].item()} but bucket '
+            f'min is {value[j].item()}'
+        )
+
+
+@withCUDA
+def test_scatter_min_arg_non_differentiable(device):
+    """The argindex output must have ``requires_grad=False`` even when the
+    value output participates in autograd.
+    """
+    src = torch.randn(6, dtype=torch.double, device=device, requires_grad=True)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    value, arg = pyg_lib.ops.scatter_min(src, index, dim=-1)
+    # Value tensor must require grad (forwarded from src).
+    assert value.requires_grad
+    # Argindex must NOT require grad — it's non-differentiable.
+    assert not arg.requires_grad
+    # And it must be an integer tensor.
+    assert arg.dtype in (torch.long, torch.int64)
+
+
+@withCUDA
+def test_scatter_min_backward_gradcheck(device):
+    """Gradcheck on the value output. Argindex is non-differentiable and
+    excluded by extracting ``[0]`` from the tuple.
+
+    Uses unique-valued src so the active argindex is deterministic and the
+    finite-difference numerical Jacobian aligns with the analytical one.
+    """
+    # Unique-valued src via randperm avoids ties (which would break gradcheck).
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(6 * 3, device=device).to(torch.double) - 9)
+        .view(6, 3)
+        .requires_grad_(True)
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_min(s, index, dim=0)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_scatter_min_backward_gradcheck_dim_middle(device):
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(2 * 6 * 3, device=device).to(torch.double) - 18)
+        .view(2, 6, 3)
+        .requires_grad_(True)
+    )
+    index = torch.tensor([0, 1, 0, 1, 2, 1], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_min(s, index, dim=1)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_scatter_min_backward_gradcheck_with_dim_size(device):
+    """Gradcheck with an explicit (larger) ``dim_size`` exercising empty
+    buckets. Their argindex points at the sentinel (== src.size(dim)) and
+    the ``+1``/``narrow`` backward pattern in the implementation drops that
+    slot — so the gradient w.r.t. ``src`` for empty buckets is zero.
+    """
+    torch.manual_seed(0)
+    src = (
+        torch.randperm(6, device=device).to(torch.double) - 3
+    ).requires_grad_(True)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_min(s, index, dim=-1, dim_size=6)[0]
 
     assert torch.autograd.gradcheck(fn, (src,))
