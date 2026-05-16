@@ -62,7 +62,9 @@ auditwheel repair \
   --exclude 'libtorch*.so' \
   --exclude 'libc10*.so' \
   --exclude 'libgomp*.so*' \
-  --exclude 'libcuda.so*'
+  --exclude 'libcuda.so*' \
+  --exclude 'libcudart*.so*' \
+  --exclude 'libnvrtc*.so*'
 """
 
 [tool.cibuildwheel.macos]
