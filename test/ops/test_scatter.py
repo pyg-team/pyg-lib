@@ -69,10 +69,8 @@ def test_scatter_add_is_scatter_sum_alias():
     ],
 )
 def test_scatter_sum_forward_dtypes(dtype, device):
-    if device.type == 'cpu' and dtype == torch.float16:
-        # CPU half-precision arithmetic is supported but tolerances are loose;
-        # we still run it to check parity.
-        pass
+    # Seed for deterministic random inputs across dtypes.
+    torch.manual_seed(0)
     if dtype in (torch.int32, torch.int64):
         src = torch.randint(-10, 10, (8, 4), dtype=dtype, device=device)
     else:
@@ -81,7 +79,11 @@ def test_scatter_sum_forward_dtypes(dtype, device):
 
     out = pyg_lib.ops.scatter_sum(src, index, dim=0)
     expected = _scatter_sum_ref(src, index, dim=0)
-    torch.testing.assert_close(out, expected)
+    # Half/bfloat16 accumulation drifts further than the default rtol allows.
+    if dtype in (torch.float16, torch.bfloat16):
+        torch.testing.assert_close(out, expected, atol=1e-2, rtol=1e-2)
+    else:
+        torch.testing.assert_close(out, expected)
 
 
 @withCUDA
@@ -568,3 +570,270 @@ def test_scatter_mul_gradient_at_src_zero(device):
         grad2[5],
         torch.tensor(5.0, dtype=torch.double, device=device),
     )
+
+
+# ---------------------------------------------------------------------------
+# scatter_mean
+# ---------------------------------------------------------------------------
+
+
+def _scatter_mean_ref(
+    src: torch.Tensor,
+    index: torch.Tensor,
+    dim: int = -1,
+    out: torch.Tensor = None,
+    dim_size: int = None,
+) -> torch.Tensor:
+    """Pure-PyTorch reference implementation of :func:`scatter_mean`.
+
+    Mirrors the contract of ``pyg_lib.ops.scatter_mean``:
+      * Index is broadcast to ``src`` along ``dim``.
+      * Computes scatter_sum of ``src`` and divides by per-bucket counts.
+      * Empty buckets (count == 0) are masked-filled to 1 to avoid div-by-0;
+        the numerator is also zero there, so the result is zero.
+      * Floats use true-division; integers use floor-division (matches the
+        upstream ``div(_, rounding_mode="floor")`` semantics).
+      * If ``out`` is :obj:`None`, an output of the appropriate shape is
+        zero-initialised before the scatter_sum.
+      * If ``out`` is provided, the sum accumulates into it *before* division.
+      * If ``dim_size`` is :obj:`None`, infer from ``index.max() + 1``.
+    """
+    if dim < 0:
+        dim = dim + src.dim()
+    bcast_index = _broadcast_index(index, src, dim)
+
+    # Numerator: scatter_sum into (a clone of) ``out``.
+    if out is None:
+        if dim_size is None:
+            dim_size = int(index.max().item()) + 1 if index.numel() > 0 else 0
+        size = list(src.size())
+        size[dim] = dim_size
+        numer = torch.zeros(size, dtype=src.dtype, device=src.device)
+    else:
+        # Don't mutate the caller's tensor in the reference.
+        numer = out.clone()
+    numer.scatter_add_(dim, bcast_index, src)
+
+    # Denominator: per-bucket counts. Use a 1-D scatter_sum-of-ones along
+    # ``dim``; then broadcast to ``numer.shape`` for the division.
+    ones = torch.ones(src.size(dim), dtype=src.dtype, device=src.device)
+    count = torch.zeros(numer.size(dim), dtype=src.dtype, device=src.device)
+    count.scatter_add_(0, index, ones)
+    count.masked_fill_(count < 1, 1)
+    # Broadcast count along ``dim`` to ``numer.shape``.
+    view = [1] * numer.dim()
+    view[dim] = -1
+    count = count.view(view).expand_as(numer)
+
+    if numer.is_floating_point():
+        return numer / count
+    else:
+        return torch.div(numer, count, rounding_mode='floor')
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'dtype',
+    [
+        torch.float16,
+        torch.float32,
+        torch.float64,
+        torch.bfloat16,
+    ],
+)
+def test_scatter_mean_forward_dtypes(dtype, device):
+    src = torch.randn(8, 4, dtype=dtype, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0)
+    expected = _scatter_mean_ref(src, index, dim=0)
+    if dtype in (torch.float16, torch.bfloat16):
+        torch.testing.assert_close(out, expected, atol=1e-2, rtol=1e-2)
+    else:
+        torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+@pytest.mark.parametrize('dtype', [torch.int32, torch.int64])
+def test_scatter_mean_forward_integer_floor_div(dtype, device):
+    """Integer dtype: per-bucket result is the floor of sum/count."""
+    src = torch.randint(-10, 10, (8, 4), dtype=dtype, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0)
+    expected = _scatter_mean_ref(src, index, dim=0)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_forward_dim_neg1(device):
+    src = torch.randn(3, 8, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=-1)
+    expected = _scatter_mean_ref(src, index, dim=-1)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_forward_dim_nonneg(device):
+    src = torch.randn(8, 4, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3, 2, 0], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0)
+    expected = _scatter_mean_ref(src, index, dim=0)
+    assert out.size() == (4, 4)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_forward_dim_middle(device):
+    src = torch.randn(3, 6, 5, device=device)
+    index = torch.tensor([0, 2, 1, 0, 2, 1], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=1)
+    expected = _scatter_mean_ref(src, index, dim=1)
+    assert out.size() == (3, 3, 5)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_broadcasting_1d_index(device):
+    """1-D ``index`` broadcasts to 2-D ``src`` along ``dim``."""
+    src = torch.randn(6, 4, device=device)
+    index = torch.tensor([0, 1, 0, 2, 1, 2], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0)
+    expected = _scatter_mean_ref(src, index, dim=0)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_dim_size_auto_infer(device):
+    src = torch.randn(6, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=-1)
+    # Auto-inferred dim_size = index.max() + 1 = 4
+    assert out.size(-1) == 4
+    expected = _scatter_mean_ref(src, index, dim=-1)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_dim_size_explicit_empty_buckets(device):
+    """Explicit ``dim_size`` larger than implicit — trailing buckets are empty
+    and must yield exactly zero (count masked-filled to 1, then 0/1 = 0).
+    This is the key contract that distinguishes scatter_mean from a naive
+    sum/count which would produce NaN.
+    """
+    src = torch.randn(6, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=-1, dim_size=6)
+    assert out.size(-1) == 6
+    expected = _scatter_mean_ref(src, index, dim=-1, dim_size=6)
+    torch.testing.assert_close(out, expected)
+    # Empty trailing buckets at positions 4, 5 must be exactly zero, not NaN.
+    torch.testing.assert_close(out[4:], torch.zeros(2, device=device))
+    assert torch.isfinite(out).all(), (
+        f'scatter_mean produced non-finite values: {out}'
+    )
+
+
+@withCUDA
+def test_scatter_mean_empty_bucket_in_middle(device):
+    """Empty buckets anywhere (not just trailing) must yield zero, not NaN."""
+    # index skips bucket 2 entirely.
+    src = torch.randn(6, 3, device=device)
+    index = torch.tensor([0, 1, 0, 1, 3, 3], device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0, dim_size=4)
+    assert out.size() == (4, 3)
+    expected = _scatter_mean_ref(src, index, dim=0, dim_size=4)
+    torch.testing.assert_close(out, expected)
+    # Bucket 2 has no contributors — expect a zero row.
+    torch.testing.assert_close(out[2], torch.zeros(3, device=device))
+    assert torch.isfinite(out).all()
+
+
+@withCUDA
+def test_scatter_mean_out_accumulates_then_divides(device):
+    """When ``out`` is provided, the numerator accumulates into it before the
+    final divide by per-bucket counts.
+    """
+    src = torch.randn(6, 4, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    out_init = torch.randn(4, 4, device=device)
+    out = out_init.clone()
+    result = pyg_lib.ops.scatter_mean(src, index, dim=0, out=out)
+
+    expected = _scatter_mean_ref(src, index, dim=0, out=out_init)
+    torch.testing.assert_close(result, expected)
+    # The op should also have updated ``out`` in-place.
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_mean_empty_input(device):
+    """An empty source with an empty index should yield an all-zero output
+    (every bucket is empty -> count masked to 1 -> 0/1 = 0).
+    """
+    src = torch.empty(0, 4, device=device)
+    index = torch.empty(0, dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.scatter_mean(src, index, dim=0, dim_size=3)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, torch.zeros(3, 4, device=device))
+
+
+@withCUDA
+def test_scatter_mean_backward_gradcheck(device):
+    src = torch.randn(
+        6,
+        3,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_mean(s, index, dim=0)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_scatter_mean_backward_gradcheck_dim_middle(device):
+    src = torch.randn(
+        2,
+        6,
+        3,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.tensor([0, 1, 0, 1, 2, 1], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_mean(s, index, dim=1)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_scatter_mean_backward_gradcheck_with_dim_size(device):
+    """Gradcheck with an explicit (larger) ``dim_size`` exercising empty
+    buckets in the output. Empty buckets have zero gradient w.r.t. ``src``.
+    """
+    src = torch.randn(6, dtype=torch.double, device=device, requires_grad=True)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.scatter_mean(s, index, dim=-1, dim_size=6)
+
+    assert torch.autograd.gradcheck(fn, (src,))

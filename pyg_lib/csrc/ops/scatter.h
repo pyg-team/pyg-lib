@@ -36,5 +36,24 @@ PYG_API at::Tensor scatter_mul(
     const std::optional<at::Tensor>& out = std::nullopt,
     std::optional<int64_t> dim_size = std::nullopt);
 
+// Averages all values from `src` into `out` at the indices specified in
+// `index` along a given axis `dim`.
+//
+// Implemented as two `scatter_sum` calls: one to accumulate the per-bucket
+// sum, and one (over a ones tensor sized to match `index`) to compute the
+// per-bucket count. The final result is the sum divided by the count, with
+// empty buckets producing `0` (the count is `masked_fill`-ed up to `1` so
+// the division does not generate NaNs). Integer dtypes use floor division
+// to match the upstream contract; floating dtypes use true division.
+//
+// When `out` is provided, the accumulation happens in the caller's buffer
+// (no zero-init), matching the upstream `scatter_sum` contract.
+PYG_API at::Tensor scatter_mean(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    int64_t dim = -1,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
 }  // namespace ops
 }  // namespace pyg
