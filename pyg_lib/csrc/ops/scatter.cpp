@@ -123,6 +123,36 @@ PYG_API std::tuple<at::Tensor, at::Tensor> scatter_min(
   return op.call(src, index, dim, out, dim_size);
 }
 
+PYG_API std::tuple<at::Tensor, at::Tensor> scatter_max(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    int64_t dim,
+    const std::optional<at::Tensor>& out,
+    std::optional<int64_t> dim_size) {
+  at::TensorArg src_arg{src, "src", 0};
+  at::TensorArg index_arg{index, "index", 1};
+  at::CheckedFrom c{"scatter_max"};
+
+  at::checkAllDefined(c, {src_arg, index_arg});
+  TORCH_CHECK(src.device() == index.device(),
+              "scatter_max: src and index must be on the same device "
+              "(got src=",
+              src.device(), ", index=", index.device(), ")");
+  if (out.has_value()) {
+    at::TensorArg out_arg{out.value(), "out", 3};
+    at::checkAllDefined(c, {out_arg});
+    TORCH_CHECK(src.device() == out.value().device(),
+                "scatter_max: src and out must be on the same device "
+                "(got src=",
+                src.device(), ", out=", out.value().device(), ")");
+  }
+
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::scatter_max", "")
+                       .typed<decltype(scatter_max)>();
+  return op.call(src, index, dim, out, dim_size);
+}
+
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::scatter_sum(Tensor src, Tensor index, int dim=-1, "
@@ -135,6 +165,9 @@ TORCH_LIBRARY_FRAGMENT(pyg, m) {
       "Tensor? out=None, int? dim_size=None) -> Tensor"));
   m.def(TORCH_SELECTIVE_SCHEMA(
       "pyg::scatter_min(Tensor src, Tensor index, int dim=-1, "
+      "Tensor? out=None, int? dim_size=None) -> (Tensor, Tensor)"));
+  m.def(TORCH_SELECTIVE_SCHEMA(
+      "pyg::scatter_max(Tensor src, Tensor index, int dim=-1, "
       "Tensor? out=None, int? dim_size=None) -> (Tensor, Tensor)"));
 }
 
