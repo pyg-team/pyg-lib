@@ -84,5 +84,33 @@ PYG_API std::tuple<at::Tensor, at::Tensor> scatter_min(
     const std::optional<at::Tensor>& out = std::nullopt,
     std::optional<int64_t> dim_size = std::nullopt);
 
+// Reduces all values from `src` into `out` at the indices specified in
+// `index` along a given axis `dim` using a maximum reduction, and returns
+// both the per-bucket maximum value and the source position that produced
+// it (`arg_out`).
+//
+// When `out` is not provided, a fresh buffer is allocated and initialized
+// to `numeric_limits<scalar_t>::lowest()` so that the running max is
+// updated on the first contributing element. Empty buckets (no
+// contributing source element) are reset to `0` after the reduction loop;
+// the matching slot in `arg_out` keeps the sentinel value `src.size(dim)`
+// (one past the last valid index along `dim`).
+//
+// When `out` *is* provided, the caller's buffer is used as the running
+// state and the caller is responsible for any non-default starting value.
+// This matches the upstream `pytorch_scatter` contract.
+//
+// **CPU determinism:** the CPU kernel produces a *first-match* `arg_out`
+// on ties. The CUDA kernel is not guaranteed to match on ties (any valid
+// argmax is acceptable).
+//
+// `arg_out` is non-differentiable; only `out` participates in autograd.
+PYG_API std::tuple<at::Tensor, at::Tensor> scatter_max(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    int64_t dim = -1,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
 }  // namespace ops
 }  // namespace pyg
