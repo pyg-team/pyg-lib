@@ -21,5 +21,20 @@ PYG_API at::Tensor scatter_sum(
     const std::optional<at::Tensor>& out = std::nullopt,
     std::optional<int64_t> dim_size = std::nullopt);
 
+// Multiplies all values from `src` into `out` at the indices specified in
+// `index` along a given axis `dim`.
+//
+// When `out` is not provided, a fresh ones-initialized buffer is allocated
+// (so that the multiplicative reduction starts from the multiplicative
+// identity). When `out` *is* provided, the operation multiplies into the
+// caller's buffer (no ones-init); the caller is responsible for any non-
+// default starting state. This matches the upstream contract.
+PYG_API at::Tensor scatter_mul(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    int64_t dim = -1,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
 }  // namespace ops
 }  // namespace pyg
