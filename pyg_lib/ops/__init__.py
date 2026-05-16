@@ -350,6 +350,38 @@ def softmax_csr(
     return torch.ops.pyg.softmax_csr(src, ptr, dim)
 
 
+def scatter_sum(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` at the
+    indices specified in the :obj:`index` tensor along a given axis
+    :obj:`dim`, using ``sum`` as the reduction.
+
+    If :obj:`out` is not given, a new tensor is allocated and zero-initialized.
+    If :obj:`out` is given, values are **accumulated** into it (no zero-init).
+
+    Args:
+        src: The source tensor.
+        index: The indices of elements to scatter.
+        dim: The axis along which to index.
+        out: The destination tensor.
+        dim_size: If :obj:`out` is not given, automatically create output with
+            size :obj:`dim_size` at dimension :obj:`dim`. If :obj:`dim_size` is
+            also :obj:`None`, a minimal sized output is returned.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.scatter_sum(src, index, dim, out, dim_size)
+
+
+scatter_add = scatter_sum
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -588,6 +620,8 @@ __all__ = [
     'sampled_div',
     'index_sort',
     'softmax_csr',
+    'scatter_sum',
+    'scatter_add',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
