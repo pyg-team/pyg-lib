@@ -17,9 +17,6 @@ export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_x86_64"
 if [[ "${TORCH_VERSION}" == "2.13.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
-elif [[ "${TORCH_VERSION}" == "2.12.0" ]]; then
-  export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/test/${CUDA_VERSION}"
-  export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/test/${CUDA_VERSION}"
 else
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest && pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/${CUDA_VERSION}"

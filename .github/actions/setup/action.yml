@@ -6,7 +6,7 @@ inputs:
     default: '3.10'
   torch-version:
     required: false
-    default: '2.11.0'
+    default: '2.12.0'
   cuda-version:
     required: false
     default: cpu
@@ -46,9 +46,6 @@ runs:
           # Use --index-url instead of --torch-backend since uv may not yet
           # support the latest CUDA versions (e.g. cu132).
           uv pip install --no-config --pre torch --index-url https://download.pytorch.org/whl/nightly/${{ inputs.cuda-version }}
-        elif [ ${{ inputs.torch-version }} == '2.12.0' ]; then
-          # 2.12.0 is currently a release candidate; install from the test index.
-          uv pip install --no-config torch==${{ inputs.torch-version }} --index-url https://download.pytorch.org/whl/test/${{ inputs.cuda-version }}
         else
           uv pip install --no-config torch==${{ inputs.torch-version }} --torch-backend ${{ inputs.cuda-version }}
         fi
