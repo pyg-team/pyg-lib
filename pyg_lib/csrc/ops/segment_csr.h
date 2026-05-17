@@ -96,6 +96,42 @@ PYG_API std::tuple<at::Tensor, at::Tensor> segment_min_csr(
     const at::Tensor& indptr,
     const std::optional<at::Tensor>& out = std::nullopt);
 
+// Computes the per-row maximum of `src` along the implicit axis
+// `dim = indptr.dim() - 1`, using the compressed row pointer `indptr`. Returns
+// `(out, arg_out)` where `arg_out[r]` is the source position that produced the
+// maximum value at row `r`.
+//
+// CSR ops do **not** take a `dim` argument: upstream `pytorch_scatter` fixes
+// the reduction axis at `indptr.dim() - 1` (the last indptr dim). They also
+// do **not** take a `dim_size`: the output size along `dim` is determined by
+// `indptr.size(-1) - 1` (one entry per row, plus a trailing sentinel).
+//
+// Each row `r` consumes the source slice `src[..., indptr[r]:indptr[r+1], ...]`
+// and writes the per-row max to `out[..., r, ...]`. Empty rows
+// (`indptr[r+1] == indptr[r]`) are reset to `0` after the reduction loop; the
+// matching slot in `arg_out` keeps the sentinel value `src.size(dim)` (one
+// past the last valid index along `dim`).
+//
+// `indptr` is `expand`-broadcast to match `src.shape[:indptr.dim()-1]` along
+// the leading dims; we force `.contiguous()` at the kernel boundary.
+//
+// When `out` is not provided, a fresh buffer is allocated and initialized to
+// `numeric_limits<scalar_t>::lowest()` so that the first contributing element
+// always wins. When `out` *is* provided, the caller's buffer is used as the
+// running state (no lowest-init); the caller is responsible for any
+// non-default starting value. This matches the upstream `pytorch_scatter`
+// contract.
+//
+// **CPU determinism:** the CPU kernel produces a *first-match* `arg_out`
+// on ties (strict `>` comparison). The CUDA kernel is not guaranteed to
+// match on ties (any valid argmax is acceptable).
+//
+// `arg_out` is non-differentiable; only `out` participates in autograd.
+PYG_API std::tuple<at::Tensor, at::Tensor> segment_max_csr(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& out = std::nullopt);
+
 // Gathers values from `src` at the row positions encoded in `indptr`, along
 // the implicit axis `dim = indptr.dim() - 1`. Concretely, for each row `r`,
 // the value `src[..., r, ...]` is broadcast to all output positions
