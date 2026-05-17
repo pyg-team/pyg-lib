@@ -244,6 +244,66 @@ std::tuple<at::Tensor, at::Tensor> segment_min_csr_autograd(
   return std::make_tuple(result[0], result[1]);
 }
 
+// Autograd Function for `pyg::segment_max_csr`.
+//
+// Symmetric to `SegmentMinCSR`: forward returns `(out, arg_out)`, only `out`
+// is differentiable. Backward uses the same `+1`/`narrow` trick to route
+// gradient only to the source positions that produced the per-row max and
+// silently drop sentinel slots (empty rows).
+class SegmentMaxCSR : public torch::autograd::Function<SegmentMaxCSR> {
+ public:
+  static variable_list forward(torch::autograd::AutogradContext* ctx,
+                               const at::Tensor& src,
+                               const at::Tensor& indptr,
+                               const std::optional<at::Tensor>& optional_out) {
+    at::AutoDispatchBelowADInplaceOrView g;
+
+    const int64_t dim = indptr.dim() - 1;
+    TORCH_CHECK(dim >= 0,
+                "segment_max_csr: indptr must have at least 1 dimension");
+
+    auto result = segment_max_csr(src, indptr, optional_out);
+    auto out = std::get<0>(result);
+    auto arg_out = std::get<1>(result);
+
+    ctx->save_for_backward({indptr, arg_out});
+    ctx->saved_data["dim"] = dim;
+    ctx->saved_data["src_shape"] = src.sizes();
+
+    ctx->mark_non_differentiable({arg_out});
+
+    if (optional_out.has_value()) {
+      ctx->mark_dirty({optional_out.value()});
+    }
+
+    return {out, arg_out};
+  }
+
+  static variable_list backward(torch::autograd::AutogradContext* ctx,
+                                variable_list grad_outs) {
+    const auto grad_out = grad_outs[0];
+    const auto saved = ctx->get_saved_variables();
+    const auto arg_out = saved[1];
+    const auto dim = ctx->saved_data["dim"].toInt();
+    auto src_shape = ctx->saved_data["src_shape"].toIntList().vec();
+
+    src_shape[dim] += 1;
+    auto grad_in = at::zeros(src_shape, grad_out.options());
+    grad_in.scatter_(dim, arg_out, grad_out);
+    grad_in = grad_in.narrow(dim, 0, src_shape[dim] - 1);
+
+    return {grad_in, at::Tensor(), at::Tensor()};
+  }
+};
+
+std::tuple<at::Tensor, at::Tensor> segment_max_csr_autograd(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  auto result = SegmentMaxCSR::apply(src, indptr, optional_out);
+  return std::make_tuple(result[0], result[1]);
+}
+
 // Autograd Function for `pyg::gather_csr`.
 //
 // CSR ops fix the gather axis at `dim = indptr.dim() - 1`. Forward saves
@@ -309,6 +369,8 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
          TORCH_FN(segment_mean_csr_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_csr"),
          TORCH_FN(segment_min_csr_autograd));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_max_csr"),
+         TORCH_FN(segment_max_csr_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"),
          TORCH_FN(gather_csr_autograd));
 }

@@ -404,6 +404,130 @@ std::tuple<at::Tensor, at::Tensor> segment_min_csr_kernel(
   return std::make_tuple(out, arg_out);
 }
 
+// CPU implementation of `pyg::segment_max_csr`.
+//
+// Symmetric to `segment_min_csr_kernel`: same (N, E, K) layout with
+// `dim = indptr.dim() - 1`, per-row sequential pass maintaining a running
+// maximum value and its first-match argindex per row. Two output tensors:
+//   * `out`: the per-row maximum value, init to `numeric_limits::lowest()`
+//     when `out=None` so the first contributing element wins. Empty rows
+//     (no contributing source element) are reset to `0` after the
+//     reduction loop (matched against the sentinel in `arg_out`).
+//   * `arg_out`: the source position that produced each per-row max, init
+//     to the sentinel `src.size(dim)`.
+//
+// Determinism: strict `>` comparison preserves first-match argindex on ties.
+//
+// `out=` contract mirrors `segment_min_csr_kernel`: when supplied, the
+// caller's buffer is the running state (no lowest-init).
+std::tuple<at::Tensor, at::Tensor> segment_max_csr_kernel(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  TORCH_CHECK(src.dim() >= indptr.dim(),
+              "segment_max_csr: src.dim() must be >= indptr.dim() "
+              "(got src.dim()=",
+              src.dim(), ", indptr.dim()=", indptr.dim(), ")");
+
+  const int64_t dim = indptr.dim() - 1;
+  TORCH_CHECK(dim >= 0,
+              "segment_max_csr: indptr must have at least 1 dimension");
+
+  auto sizes = indptr.sizes().vec();
+  for (int64_t i = 0; i < indptr.dim() - 1; ++i)
+    sizes[i] = src.size(i);
+  auto indptr_b = indptr.expand(sizes).contiguous();
+
+  auto src_c = src.contiguous();
+
+  at::Tensor out;
+  if (optional_out.has_value()) {
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim)
+        TORCH_CHECK(src_c.size(i) == out.size(i), "segment_max_csr: out.size(",
+                    i, ") must match src.size(", i, ")");
+    }
+    TORCH_CHECK(
+        src_c.numel() == 0 || out.size(dim) == indptr_b.size(dim) - 1,
+        "segment_max_csr: out.size(dim) must equal indptr.size(-1) - 1");
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    out_sizes[dim] = std::max<int64_t>(indptr_b.size(dim) - 1, 0);
+    out = at::empty(out_sizes, src_c.options());
+  }
+
+  const int64_t sentinel = src_c.size(dim);
+  auto arg_out = at::full(out.sizes(), sentinel, indptr_b.options());
+
+  if (src_c.numel() == 0) {
+    if (!optional_out.has_value()) {
+      out.fill_(0);
+    }
+    return std::make_tuple(out, arg_out);
+  }
+
+  const int64_t E = src_c.size(dim);
+  const int64_t rows_per_slice = indptr_b.size(dim) - 1;
+  const int64_t leading = indptr_b.numel() / indptr_b.size(-1);
+  const int64_t N = out.size(dim) * leading;
+  const int64_t K = out.numel() / N;
+
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_max_csr_cpu", [&] {
+        if (!optional_out.has_value()) {
+          out.fill_(std::numeric_limits<scalar_t>::lowest());
+        }
+
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        auto* arg_out_data = arg_out.data_ptr<int64_t>();
+        const auto* indptr_data = indptr_b.data_ptr<int64_t>();
+
+        at::parallel_for(
+            0, N, at::internal::GRAIN_SIZE, [&](int64_t n_beg, int64_t n_end) {
+              for (int64_t n = n_beg; n < n_end; ++n) {
+                const int64_t slice = n / rows_per_slice;
+                const int64_t row = n % rows_per_slice;
+                const int64_t indptr_off = slice * indptr_b.size(-1) + row;
+                const int64_t row_start = indptr_data[indptr_off];
+                const int64_t row_end = indptr_data[indptr_off + 1];
+                const int64_t src_off = slice * E * K;
+
+                if (K == 1) {
+                  auto* out_slot = out_data + n;
+                  auto* arg_slot = arg_out_data + n;
+                  for (int64_t e = row_start; e < row_end; ++e) {
+                    const scalar_t v = src_data[src_off + e];
+                    if (v > *out_slot) {
+                      *out_slot = v;
+                      *arg_slot = e;
+                    }
+                  }
+                } else {
+                  for (int64_t e = row_start; e < row_end; ++e) {
+                    for (int64_t k = 0; k < K; ++k) {
+                      const scalar_t v = src_data[src_off + e * K + k];
+                      auto* out_slot = out_data + n * K + k;
+                      if (v > *out_slot) {
+                        *out_slot = v;
+                        arg_out_data[n * K + k] = e;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+      });
+
+  if (!optional_out.has_value()) {
+    out.masked_fill_(arg_out == sentinel, 0);
+  }
+
+  return std::make_tuple(out, arg_out);
+}
+
 // CPU implementation of `pyg::gather_csr`.
 //
 // CSR ops fix the gather axis at `dim = indptr.dim() - 1`. For each row `r`,
@@ -532,6 +656,8 @@ TORCH_LIBRARY_IMPL(pyg, CPU, m) {
          TORCH_FN(segment_mean_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_csr"),
          TORCH_FN(segment_min_csr_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_max_csr"),
+         TORCH_FN(segment_max_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"), TORCH_FN(gather_csr_kernel));
 }
 

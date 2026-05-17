@@ -1022,3 +1022,280 @@ def test_segment_min_csr_backward_gradcheck_empty_rows(device):
         return pyg_lib.ops.segment_min_csr(s, indptr)[0]
 
     assert torch.autograd.gradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# segment_max_csr — reference
+# ---------------------------------------------------------------------------
+
+
+def _segment_max_csr_ref(
+    src: torch.Tensor,
+    indptr: torch.Tensor,
+):
+    """Pure-PyTorch reference for :func:`segment_max_csr`.
+
+    Reduces along ``dim = indptr.dim() - 1`` with output size along ``dim``
+    equal to ``indptr.size(-1) - 1``. Returns ``(value, argindex)``:
+      * ``value[..., r, ...]`` is the maximum of ``src`` entries whose
+        position along ``dim`` lies in ``[indptr[r], indptr[r+1])``.
+      * ``argindex[..., r, ...]`` is the position along ``dim`` of the
+        first-match max entry (CPU upstream contract).
+      * Empty rows (``indptr[r+1] == indptr[r]``) get ``value == 0`` and
+        ``argindex == src.size(dim)`` (upstream sentinel).
+
+    This reference handles the 1-D ``indptr`` case (the variant tested
+    below — matching the plan's spec for commit 13).
+    """
+    assert indptr.dim() == 1, '1-D indptr reference only'
+    dim = indptr.dim() - 1  # == 0
+    num_rows = indptr.size(-1) - 1
+    sentinel = src.size(dim)
+
+    out_size = list(src.size())
+    out_size[dim] = num_rows
+    value = torch.zeros(out_size, dtype=src.dtype, device=src.device)
+    argindex = torch.full(
+        out_size,
+        sentinel,
+        dtype=torch.long,
+        device=src.device,
+    )
+
+    indptr_cpu = indptr.detach().cpu().tolist()
+    for r in range(num_rows):
+        lo, hi = indptr_cpu[r], indptr_cpu[r + 1]
+        if lo == hi:
+            # Empty row -> leave zero value + sentinel arg.
+            continue
+        seg = src.narrow(dim, lo, hi - lo)
+        # max along the reduction dim; ``torch.max`` returns (values, indices)
+        # where indices index *into the narrowed segment*, so offset by ``lo``.
+        seg_val, seg_arg = seg.max(dim=dim)
+        # Assign into the r-th slice of value/argindex along ``dim``.
+        value.select(dim, r).copy_(seg_val)
+        argindex.select(dim, r).copy_(seg_arg + lo)
+
+    return value, argindex
+
+
+# ---------------------------------------------------------------------------
+# segment_max_csr — forward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'dtype',
+    [torch.int32, torch.int64, torch.float32, torch.float64],
+)
+def test_segment_max_csr_forward_dtypes(dtype, device):
+    """Forward correctness on a unique-value fixture across dtypes.
+
+    Unique values mean argindex is unambiguous on both CPU and CUDA.
+    """
+    if dtype in (torch.int32, torch.int64):
+        src = torch.tensor(
+            [[9, 1, 8, 2],
+             [3, 7, 0, 5],
+             [4, 6, -1, 11],
+             [-3, 10, 12, -2],
+             [13, -4, 14, 15],
+             [16, 17, 18, 19],
+             [20, 21, 22, 23],
+             [24, 25, 26, 27]],
+            dtype=dtype,
+            device=device,
+        )  # yapf: disable
+    else:
+        torch.manual_seed(0)
+        flat = (torch.randperm(32, device=device) - 16).to(dtype)
+        src = flat.view(8, 4)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    ref_value, ref_arg = _segment_max_csr_ref(src, indptr)
+    assert value.size() == (4, 4)
+    assert arg.size() == (4, 4)
+    torch.testing.assert_close(value, ref_value)
+    # Unique values -> exact argindex equivalence on both CPU and CUDA.
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_csr_forward_1d(device):
+    """Unique-value 1-D fixture exercising K==1 path."""
+    torch.manual_seed(0)
+    src = torch.randperm(8, device=device).to(torch.float32) - 4
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    ref_value, ref_arg = _segment_max_csr_ref(src, indptr)
+    assert value.size() == (4,)
+    assert arg.size() == (4,)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_csr_forward_k_large_broadcast(device):
+    """K>1 path: large trailing feature dim exercises broadcast kernel."""
+    torch.manual_seed(0)
+    src = (
+        torch.randperm(12 * 64, device=device).to(torch.float32) - 384
+    ).view(12, 64)
+    indptr = torch.tensor([0, 2, 5, 7, 9, 12], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    ref_value, ref_arg = _segment_max_csr_ref(src, indptr)
+    assert value.size() == (5, 64)
+    assert arg.size() == (5, 64)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_csr_forward_matches_segment_max_coo(device):
+    """Primary parity test: ``segment_max_csr`` must agree with
+    ``segment_max_coo`` invoked on the COO-equivalent index built by
+    ``repeat_interleave(arange(num_rows), indptr.diff())``.
+
+    Uses a unique-value source so argindex tie-breaks are deterministic on
+    both CPU and CUDA.
+    """
+    torch.manual_seed(0)
+    src = (torch.randperm(8 * 4, device=device).to(torch.float32) - 16).view(
+        8,
+        4,
+    )
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+    coo_index = _csr_to_coo(indptr)
+
+    val_csr, arg_csr = pyg_lib.ops.segment_max_csr(src, indptr)
+    val_coo, arg_coo = pyg_lib.ops.segment_max_coo(src, coo_index)
+    torch.testing.assert_close(val_csr, val_coo)
+    torch.testing.assert_close(arg_csr, arg_coo)
+
+
+@withCUDA
+def test_segment_max_csr_empty_rows_in_middle(device):
+    """Plan-mandated empty-rows fixture: ``indptr = [0, 2, 2, 5]`` —
+    row 1 is empty; its output value row is zero and arg row is sentinel.
+    """
+    torch.manual_seed(0)
+    src = (torch.randperm(5 * 4, device=device).to(torch.float32) - 10).view(
+        5,
+        4,
+    )
+    indptr = torch.tensor([0, 2, 2, 5], device=device)
+    sentinel = src.size(0)  # 5
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    ref_value, ref_arg = _segment_max_csr_ref(src, indptr)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+    # Row 1 is empty -> zero value row + sentinel arg row.
+    torch.testing.assert_close(value[1], torch.zeros(4, device=device))
+    torch.testing.assert_close(
+        arg[1],
+        torch.full((4,), sentinel, dtype=torch.long, device=device),
+    )
+
+
+@withCUDA
+@withSeed
+def test_segment_max_csr_argindex_ties_returns_valid(device):
+    """Tied values: validity-only assertion (CUDA atomic ordering is
+    non-deterministic).
+    """
+    # Row 0: positions 0, 1, 2 all with value 1.0 (tied max).
+    # Row 1: positions 3, 4 with value 2.0 (tied max).
+    # Row 2: empty.
+    # Row 3: position 5 with unique value 7.0.
+    src = torch.tensor(
+        [1.0, 1.0, 1.0, 2.0, 2.0, 7.0],
+        device=device,
+    )
+    indptr = torch.tensor([0, 3, 5, 5, 6], device=device)
+    sentinel = src.size(0)  # 6
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    # Value must equal the true per-row max regardless of tie-break.
+    expected_value = torch.tensor([1.0, 2.0, 0.0, 7.0], device=device)
+    torch.testing.assert_close(value, expected_value)
+    # Row 0 arg must be in {0, 1, 2}; row 1 in {3, 4}.
+    assert int(arg[0].item()) in (0, 1, 2)
+    assert int(arg[1].item()) in (3, 4)
+    # Row 2 is empty -> sentinel.
+    assert int(arg[2].item()) == sentinel
+    # Row 3 has unique value -> position 5.
+    assert int(arg[3].item()) == 5
+    # Every non-sentinel arg must attain the row's max value.
+    for r in range(value.size(0)):
+        a = int(arg[r].item())
+        if a == sentinel:
+            continue
+        assert src[a].item() == value[r].item(), (
+            f'arg[{r}]={a} points to src value {src[a].item()} but row '
+            f'max is {value[r].item()}'
+        )
+
+
+@withCUDA
+def test_segment_max_csr_arg_non_differentiable(device):
+    """``arg`` must have ``requires_grad=False`` even when ``value`` does."""
+    src = torch.randn(8, dtype=torch.double, device=device, requires_grad=True)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_csr(src, indptr)
+    assert value.requires_grad
+    assert not arg.requires_grad
+    assert arg.dtype in (torch.long, torch.int64)
+
+
+# ---------------------------------------------------------------------------
+# segment_max_csr — backward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+def test_segment_max_csr_backward_gradcheck(device):
+    """Gradcheck on the value output. Argindex is excluded via ``[0]``.
+
+    Uses a unique-valued src so the active argindex is deterministic and the
+    finite-difference numerical Jacobian aligns with the analytical one.
+    """
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(8 * 3, device=device).to(torch.double) - 12)
+        .view(8, 3)
+        .requires_grad_(True)
+    )
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_max_csr(s, indptr)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_max_csr_backward_gradcheck_empty_rows(device):
+    """Empty-row fixture under gradcheck — row 1 has no entries; its
+    argindex points at the sentinel and the ``+1``/``narrow`` backward
+    pattern drops that slot.
+    """
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(5 * 4, device=device).to(torch.double) - 10)
+        .view(5, 4)
+        .requires_grad_(True)
+    )
+    indptr = torch.tensor([0, 2, 2, 5], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_max_csr(s, indptr)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))

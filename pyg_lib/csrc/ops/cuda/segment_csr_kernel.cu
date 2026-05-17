@@ -43,6 +43,18 @@ static inline __device__ bool device_lt(scalar_t a, scalar_t b) {
   }
 }
 
+// Strict greater-than predicate used by the max reductions below. Same
+// half-precision routing as `device_lt`.
+template <typename scalar_t>
+static inline __device__ bool device_gt(scalar_t a, scalar_t b) {
+  if constexpr (std::is_same_v<scalar_t, at::Half> ||
+                std::is_same_v<scalar_t, at::BFloat16>) {
+    return static_cast<float>(a) > static_cast<float>(b);
+  } else {
+    return a > b;
+  }
+}
+
 // Convention 12: dynamic block sizing — replicates the inline `threads()` /
 // `blocks()` pattern used in `segment_coo_kernel.cu` / `scatter_kernel.cu`.
 // Each `.cu` file in `pyg_lib/csrc/ops/cuda/` carries its own copy until a
@@ -932,6 +944,259 @@ std::tuple<at::Tensor, at::Tensor> segment_min_csr_kernel(
   return std::make_tuple(out, arg_out);
 }
 
+// ============================================================================
+// `segment_max_csr` — Commit 13.
+//
+// Symmetric mirror of `segment_min_csr`: same TB == 32 warp-per-row layout,
+// same `SHFL_DOWN_SYNC` pair propagation across two independent shuffles
+// (one for `val`, one for `arg`), same K>1 broadcast variant with a
+// sequential per-thread row scan. The only differences vs the min kernel:
+//
+//   * Sentinel value is `numeric_limits<scalar_t>::lowest()` (not `max()`),
+//     so the first contributing element always wins.
+//   * Per-element comparison uses strict `>` (via `device_gt`) — on ties the
+//     **earlier** (lower `src_idx`) winner is kept, matching the CPU max
+//     kernel's first-match argindex convention.
+//   * Warp-tree reduction also uses `device_gt`: when the partner lane's
+//     `val` is *greater*, swap both pair members; otherwise keep the
+//     current pair.
+//
+// Empty-row post-pass: identical to min — `out.masked_fill_(arg_out == E_dim,
+// 0)` resets the sentinel `lowest()` to 0 for rows with zero contributors.
+//
+// No new atomics: like min, the warp-tree fully reduces the row before the
+// single lane-0 write; no `atomicMax` is involved.
+
+// K==1 kernel — one warp per row, lanes stride through the row by `TB == 32`.
+template <typename scalar_t>
+__global__ void segment_max_csr_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> indptr_info,
+    scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t N,
+    size_t E) {
+  constexpr int TB = WARP_SIZE;
+
+  const int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int row_idx = thread_idx / TB;
+  const int lane_idx = thread_idx & (TB - 1);
+
+  if (row_idx >= static_cast<int>(N))
+    return;
+
+  int ip_offset = IndexPtrToOffset::get(row_idx, indptr_info);
+  int64_t row_start = __ldg(indptr_info.data + ip_offset);
+  int64_t row_end = __ldg(indptr_info.data + ip_offset +
+                          indptr_info.strides[indptr_info.dims - 1]);
+
+  const int batch_offset =
+      (row_idx / (indptr_info.sizes[indptr_info.dims - 1] - 1)) *
+      static_cast<int>(E);
+
+  // Sentinel pair. `lowest()` for the value (so the first contributor wins
+  // against any real value), `E` for the argindex (host-side `at::full` init
+  // matches this; host post-pass detects empty rows via `arg_out == E`).
+  scalar_t val = std::numeric_limits<scalar_t>::lowest();
+  int64_t arg = static_cast<int64_t>(E);
+
+  // Lane-strided scan. Strict `>` keeps the earlier winner on ties,
+  // mirroring the CPU max kernel's first-match argindex.
+  for (int64_t src_idx = row_start + lane_idx; src_idx < row_end;
+       src_idx += TB) {
+    scalar_t cand = src_data[batch_offset + src_idx];
+    if (device_gt(cand, val)) {
+      val = cand;
+      arg = src_idx;
+    }
+  }
+
+  // Warp-tree max reduction over `(val, arg)` pairs. Two independent
+  // shuffles transport the pair members across lanes; we swap as a unit so
+  // the surviving `arg` always matches the surviving `val`. When the
+  // partner's `val` is *greater* than ours we adopt the partner's pair.
+#pragma unroll
+  for (int i = TB / 2; i > 0; i /= 2) {
+    scalar_t tmp_val = SHFL_DOWN_SYNC(FULL_MASK, val, i);
+    int64_t tmp_arg = SHFL_DOWN_SYNC(FULL_MASK, arg, i);
+    if (device_gt(tmp_val, val)) {
+      val = tmp_val;
+      arg = tmp_arg;
+    }
+  }
+
+  // Lane 0 writes the row's `(max, argmax)` pair. For empty rows
+  // (`row_start == row_end`), `val` is still `lowest()` and `arg` is still
+  // the sentinel `E`; the host post-pass resets those `out` slots to 0.
+  if (lane_idx == 0) {
+    out_data[row_idx] = val;
+    arg_out_data[row_idx] = arg;
+  }
+}
+
+// K>1 broadcast kernel — one thread per (row, col) pair. Sequential row scan
+// with running `(val, arg)`; no shuffle (each thread already owns its full
+// reduction).
+template <typename scalar_t>
+__global__ void segment_max_csr_broadcast_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> indptr_info,
+    scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t N,
+    size_t K,
+    size_t E) {
+  const int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int row_idx = thread_idx / static_cast<int>(K);
+  const int col_idx = thread_idx % static_cast<int>(K);
+
+  if (thread_idx >= static_cast<int>(N * K))
+    return;
+
+  int ip_offset = IndexPtrToOffset::get(row_idx, indptr_info);
+  int64_t row_start = __ldg(indptr_info.data + ip_offset);
+  int64_t row_end = __ldg(indptr_info.data + ip_offset +
+                          indptr_info.strides[indptr_info.dims - 1]);
+
+  const int batch_offset =
+      (row_idx / (indptr_info.sizes[indptr_info.dims - 1] - 1)) *
+      static_cast<int>(E) * static_cast<int>(K);
+
+  scalar_t val = std::numeric_limits<scalar_t>::lowest();
+  int64_t arg = static_cast<int64_t>(E);
+
+  for (int64_t src_idx = row_start; src_idx < row_end; ++src_idx) {
+    scalar_t cand =
+        src_data[batch_offset + static_cast<int>(K) * src_idx + col_idx];
+    // Same strict-`>` first-match logic as the K==1 kernel above.
+    if (device_gt(cand, val)) {
+      val = cand;
+      arg = src_idx;
+    }
+  }
+
+  out_data[thread_idx] = val;
+  arg_out_data[thread_idx] = arg;
+}
+
+std::tuple<at::Tensor, at::Tensor> segment_max_csr_kernel(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  TORCH_CHECK(src.is_cuda(),
+              "segment_max_csr (CUDA): src must be a CUDA tensor");
+  TORCH_CHECK(indptr.is_cuda(),
+              "segment_max_csr (CUDA): indptr must be a CUDA tensor");
+  TORCH_CHECK(src.device() == indptr.device(),
+              "segment_max_csr (CUDA): src and indptr must be on the same "
+              "device");
+  TORCH_CHECK(src.dim() >= indptr.dim(),
+              "segment_max_csr (CUDA): src.dim() must be >= indptr.dim() (got ",
+              src.dim(), " vs ", indptr.dim(), ")");
+  TORCH_CHECK(indptr.dim() >= 1,
+              "segment_max_csr (CUDA): indptr must have at least 1 dimension");
+
+  const c10::cuda::OptionalCUDAGuard device_guard(device_of(src));
+
+  // Same broadcast rule as `segment_sum_csr` / `segment_min_csr`.
+  auto sizes = indptr.sizes().vec();
+  for (int64_t i = 0; i < indptr.dim() - 1; ++i) {
+    sizes[i] = src.size(i);
+  }
+  auto indptr_b = indptr.expand(sizes);
+
+  const auto dim = indptr_b.dim() - 1;
+
+  auto src_c = src.contiguous();
+  auto indptr_c = indptr_b.contiguous();
+
+  const int64_t E_dim = src_c.size(dim);
+
+  at::Tensor out;
+  const bool out_was_provided = optional_out.has_value();
+  if (out_was_provided) {
+    // Caller owns the buffer; no lowest-init. With `out=` supplied, the
+    // kernel **overwrites** the per-row slot with the computed row max —
+    // same contract as `segment_min_csr` (the warp-tree fully reduces the
+    // row before the single write, so any prior value in `out` is
+    // discarded for non-empty rows).
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim) {
+        TORCH_CHECK(src_c.size(i) == out.size(i),
+                    "segment_max_csr (CUDA): out.size(", i,
+                    ") must match src.size(", i, ")");
+      }
+    }
+    TORCH_CHECK(src_c.numel() == 0 || out.size(dim) == indptr_c.size(dim) - 1,
+                "segment_max_csr (CUDA): out.size(", dim,
+                ") must equal indptr.size(-1) - 1 (got ", out.size(dim), " vs ",
+                indptr_c.size(dim) - 1, ")");
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    out_sizes[dim] = std::max<int64_t>(indptr_c.size(dim) - 1, 0);
+    // Allocate uninit then fill with per-dtype `lowest()`. Same rationale
+    // as `segment_min_csr`: `at::full` with a single host `Scalar` cannot
+    // represent each dtype's lowest correctly, so we route through
+    // `AT_DISPATCH_*` + `numeric_limits<scalar_t>::lowest()`.
+    out = at::empty(out_sizes, src_c.options());
+    AT_DISPATCH_ALL_TYPES_AND2(
+        at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+        "segment_max_csr_cuda_init_out",
+        [&] { out.fill_(std::numeric_limits<scalar_t>::lowest()); });
+  }
+
+  auto arg_out = at::full(out.sizes(), E_dim,
+                          indptr_c.options().dtype(at::ScalarType::Long));
+
+  if (src_c.numel() == 0) {
+    if (!out_was_provided) {
+      out.zero_();
+    }
+    return std::make_tuple(out, arg_out);
+  }
+
+  const auto N = out.size(dim) * (indptr_c.numel() / indptr_c.size(-1));
+  const auto K = out.numel() / N;
+  const auto E = src_c.size(dim);
+
+  auto indptr_info = at::cuda::detail::getTensorInfo<int64_t, int>(indptr_c);
+  const auto stream = at::cuda::getCurrentCUDAStream();
+
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_max_csr_cuda", [&] {
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        auto* arg_out_data = arg_out.data_ptr<int64_t>();
+
+        if (K == 1) {
+          constexpr int TB = WARP_SIZE;
+          const int T = threads();
+          const int B =
+              std::max<int>(1, static_cast<int>((TB * N + T - 1) / T));
+          segment_max_csr_cuda_kernel<scalar_t><<<B, T, 0, stream>>>(
+              src_data, indptr_info, out_data, arg_out_data, N, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          const int T = threads();
+          const int B = blocks(static_cast<int>(N * K));
+          segment_max_csr_broadcast_cuda_kernel<scalar_t><<<B, T, 0, stream>>>(
+              src_data, indptr_info, out_data, arg_out_data, N, K, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        }
+      });
+
+  // Empty-row cleanup: where `arg_out == E_dim`, no contributor wrote, so
+  // `out` still holds `lowest()`. Reset to `0` to match the CPU kernel's
+  // contract. Skipped when `out=` was caller-provided.
+  if (!out_was_provided) {
+    out.masked_fill_(arg_out == E_dim, 0);
+  }
+
+  return std::make_tuple(out, arg_out);
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
@@ -941,6 +1206,8 @@ TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
          TORCH_FN(segment_mean_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_csr"),
          TORCH_FN(segment_min_csr_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_max_csr"),
+         TORCH_FN(segment_max_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"), TORCH_FN(gather_csr_kernel));
 }
 
