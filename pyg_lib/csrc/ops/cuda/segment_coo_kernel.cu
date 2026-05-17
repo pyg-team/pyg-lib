@@ -535,6 +535,405 @@ at::Tensor segment_mean_coo_kernel(
   return out;
 }
 
+// Per-thread (register-level) `min` for the warp-tree and broadcast inner
+// loops. We do **not** use the built-in `<` operator on `at::Half` /
+// `at::BFloat16`: when `cuda_fp16.hpp` is included alongside `c10::Half`,
+// both an `operator<(__half, __half)` and the built-in `arithmetic <
+// arithmetic` participate in overload resolution and nvcc rejects the call as
+// ambiguous (same reason `atomicMinHalf` in `atomics.cuh` compares via
+// `static_cast<float>`). We dispatch on the dtype: half-precision goes through
+// `float`; everything else uses the natural operator.
+template <typename scalar_t>
+static inline __device__ scalar_t device_min(scalar_t a, scalar_t b) {
+  if constexpr (std::is_same_v<scalar_t, at::Half> ||
+                std::is_same_v<scalar_t, at::BFloat16>) {
+    return static_cast<float>(a) < static_cast<float>(b) ? a : b;
+  } else {
+    return a < b ? a : b;
+  }
+}
+
+// ============================================================================
+// `segment_min_coo` — Commit 8.
+//
+// Two CUDA kernels, launched on the same stream so completion ordering is
+// implicit:
+//
+//   1. Value pass — same structure as `segment_sum_coo`:
+//        * K==1: `segment_min_coo_cuda_kernel<scalar_t>` with `SHFL_UP_SYNC`
+//          warp-tree reduction over `val` only. The shuffle does **not**
+//          propagate `(value, idx)` pairs — argindex is assigned in a
+//          separate post-pass. At run boundaries the tail lane writes via
+//          `atomicMin(out_data + out_idx, val)` (CAS-loop helper from
+//          commit 4 in `atomics.cuh`).
+//        * K>1: `segment_min_coo_broadcast_cuda_kernel<scalar_t, TB>` with
+//          the same `TB ∈ {4, 8, 16, 32}` ladder as `segment_sum_coo`.
+//
+//   2. Arg pass — `segment_min_coo_arg_cuda_kernel<scalar_t>` (and a
+//      broadcast variant for K>1) re-scans `src` and, where `src[i] ==
+//      out[bucket]`, performs `atomicMin(arg_out + bucket, i_within_dim)`
+//      over `int64_t`. Initialising `arg_out` to the sentinel
+//      `src.size(dim)` makes any valid contributor win the CAS and produces
+//      deterministic "first match" semantics (mirrors `scatter_min`'s
+//      arg pass).
+//
+// After both kernels: when we allocated `out` ourselves, we clear empty
+// buckets via `out.masked_fill_(arg_out == src.size(dim), 0)` so empty
+// buckets produce `0` instead of `numeric_limits::max()`.
+
+// Value-pass K==1 kernel. Mirrors `segment_sum_coo_cuda_kernel` but reduces
+// via `min` and writes via `atomicMin`. The shuffle propagates `val` only.
+template <typename scalar_t>
+__global__ void segment_min_coo_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> index_info,
+    scalar_t* __restrict__ out_data,
+    size_t E,
+    size_t N) {
+  int row_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int lane_idx = row_idx & (WARP_SIZE - 1);
+  int D = index_info.sizes[index_info.dims - 1];
+
+  if (row_idx < E) {
+    int offset = at::cuda::detail::IndexToOffset<int64_t, int, -1>::get(
+        row_idx, index_info);
+    int64_t idx = index_info.data[offset];
+    int64_t next_idx;
+    int out_idx = (row_idx / D) * N + idx;
+
+    scalar_t val = src_data[row_idx];
+    scalar_t tmp;
+
+#pragma unroll
+    for (int i = 1; i < WARP_SIZE; i *= 2) {
+      // Warp-tree min reduction: same control flow as the sum kernel, but
+      // the per-pair update is `val = min(val, tmp)`. Argindex is NOT
+      // propagated through the shuffle — it is reconstructed in the arg
+      // pass by matching `src[i] == out[bucket]`.
+      tmp = SHFL_UP_SYNC(FULL_MASK, val, i);
+      next_idx = SHFL_UP_SYNC(FULL_MASK, idx, i);
+      if (lane_idx >= i && row_idx / D == (row_idx - i) / D) {
+        if (idx == next_idx) {
+          val = device_min(val, tmp);
+        }
+      }
+    }
+
+    // Tail-of-run lane writes via `atomicMin`. Conditions identical to the
+    // sum kernel: last lane in warp, outer-batch boundary, or next-row
+    // index differs.
+    next_idx = SHFL_DOWN_SYNC(FULL_MASK, idx, 1);
+    if (lane_idx == WARP_SIZE - 1 || row_idx / D != (row_idx + 1) / D ||
+        idx != next_idx) {
+      atomicMin(out_data + out_idx, val);
+    }
+  }
+}
+
+// Value-pass K>1 broadcast kernel. Mirrors
+// `segment_sum_coo_broadcast_cuda_kernel` but the per-thread accumulator is
+// `min` instead of `sum`, and the cross-thread atomic write is `atomicMin`.
+template <typename scalar_t, int TB>
+__global__ void segment_min_coo_broadcast_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> index_info,
+    scalar_t* __restrict__ out_data,
+    size_t E,
+    size_t K,
+    size_t N) {
+  int D = index_info.sizes[index_info.dims - 1];
+  int E_1 = E / D;
+  int E_2 = (D - 1) + TB - ((D - 1) % TB);
+
+  int row_idx = blockIdx.x * blockDim.y + threadIdx.y;
+  int col_idx = blockIdx.y * blockDim.x + threadIdx.x;
+
+  int dim_start = (row_idx * TB) / E_2;
+  int row_start = (row_idx * TB) % E_2;
+
+  if (dim_start < E_1 && col_idx < K) {
+    int offset = at::cuda::detail::IndexToOffset<int64_t, int, -1>::get(
+        dim_start * D + row_start, index_info);
+    int64_t idx1 = index_info.data[offset];
+    int64_t idx2;
+
+    scalar_t val = src_data[K * (dim_start * D + row_start) + col_idx];
+
+#pragma unroll
+    for (int i = 1; i < TB; ++i) {
+      if (row_start + i >= D)
+        break;
+
+      idx2 =
+          index_info.data[offset + i * index_info.strides[index_info.dims - 1]];
+      if (idx1 == idx2) {
+        scalar_t cand = src_data[K * (dim_start * D + row_start + i) + col_idx];
+        val = device_min(val, cand);
+      } else {
+        atomicMin(out_data + (dim_start * N + idx1) * K + col_idx, val);
+        val = src_data[K * (dim_start * D + row_start + i) + col_idx];
+      }
+      idx1 = idx2;
+    }
+
+    atomicMin(out_data + (dim_start * N + idx1) * K + col_idx, val);
+  }
+}
+
+// Arg-pass K==1 kernel. Re-scans `src` and lowers `arg_out[bucket]` to
+// `row_idx % D` (position within the reduction axis) where `src[i] ==
+// out[bucket]`. Uses `atomicMin` so the *smallest* `e` wins on ties —
+// matches `scatter_min_arg_cuda_kernel`'s deterministic semantics.
+template <typename scalar_t>
+__global__ void segment_min_coo_arg_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> index_info,
+    const scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t E,
+    size_t N) {
+  int row_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int D = index_info.sizes[index_info.dims - 1];
+
+  if (row_idx < E) {
+    int offset = at::cuda::detail::IndexToOffset<int64_t, int, -1>::get(
+        row_idx, index_info);
+    int64_t idx = index_info.data[offset];
+    int out_idx = (row_idx / D) * static_cast<int>(N) + static_cast<int>(idx);
+
+    // Bit-exact equality. For `at::Half` / `at::BFloat16` we cast through
+    // `.x` for the same reason as `scatter_min_arg_cuda_kernel` (see the
+    // detailed comment there). The value pass wrote a specific bit pattern;
+    // we are checking for that exact pattern in `src`.
+    bool match;
+    if constexpr (std::is_same_v<scalar_t, at::Half> ||
+                  std::is_same_v<scalar_t, at::BFloat16>) {
+      match = src_data[row_idx].x == out_data[out_idx].x;
+    } else {
+      match = src_data[row_idx] == out_data[out_idx];
+    }
+    if (match) {
+      atomicMin(arg_out_data + out_idx, static_cast<int64_t>(row_idx % D));
+    }
+  }
+}
+
+// Arg-pass K>1 broadcast kernel. One thread per `(row, col)` — re-reads
+// `out[bucket, col]` and lowers `arg_out[bucket, col]` to `row_idx % D` on
+// match.
+template <typename scalar_t>
+__global__ void segment_min_coo_arg_broadcast_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> index_info,
+    const scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t E,
+    size_t K,
+    size_t N) {
+  int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int row_idx = thread_idx / static_cast<int>(K);
+  int col_idx = thread_idx % static_cast<int>(K);
+  int D = index_info.sizes[index_info.dims - 1];
+
+  if (row_idx < static_cast<int>(E) && col_idx < static_cast<int>(K)) {
+    int offset = at::cuda::detail::IndexToOffset<int64_t, int, -1>::get(
+        row_idx, index_info);
+    int64_t idx = index_info.data[offset];
+    int out_idx =
+        ((row_idx / D) * static_cast<int>(N) + static_cast<int>(idx)) *
+            static_cast<int>(K) +
+        col_idx;
+
+    bool match;
+    if constexpr (std::is_same_v<scalar_t, at::Half> ||
+                  std::is_same_v<scalar_t, at::BFloat16>) {
+      match = src_data[thread_idx].x == out_data[out_idx].x;
+    } else {
+      match = src_data[thread_idx] == out_data[out_idx];
+    }
+    if (match) {
+      atomicMin(arg_out_data + out_idx, static_cast<int64_t>(row_idx % D));
+    }
+  }
+}
+
+std::tuple<at::Tensor, at::Tensor> segment_min_coo_kernel(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& optional_out,
+    std::optional<int64_t> dim_size) {
+  TORCH_CHECK(src.is_cuda(),
+              "segment_min_coo (CUDA): src must be a CUDA tensor");
+  TORCH_CHECK(index.is_cuda(),
+              "segment_min_coo (CUDA): index must be a CUDA tensor");
+  TORCH_CHECK(src.device() == index.device(),
+              "segment_min_coo (CUDA): src and index must be on the same "
+              "device");
+  TORCH_CHECK(src.dim() >= index.dim(),
+              "segment_min_coo (CUDA): src.dim() must be >= index.dim() (got ",
+              src.dim(), " vs ", index.dim(), ")");
+
+  const c10::cuda::OptionalCUDAGuard device_guard(device_of(src));
+
+  // Broadcast `index` up to `src.shape[:index.dim()]` (upstream convention;
+  // matches the sum/mean kernels above and `segment_coo_cuda.cu:164-168`).
+  auto sizes = index.sizes().vec();
+  for (int64_t i = 0; i < index.dim(); ++i) {
+    sizes[i] = src.size(i);
+  }
+  auto index_b = index.expand(sizes);
+
+  // COO ops do not take `dim` from Python — it is always `index.dim() - 1`.
+  const auto dim = index_b.dim() - 1;
+
+  auto src_c = src.contiguous();
+  auto index_c = index_b.contiguous();
+
+  // `E_dim = src.size(dim)` is the sentinel value for `arg_out` (matches
+  // `scatter_min`'s sentinel). It is also the per-row D of `src` along the
+  // reduction axis.
+  const int64_t E_dim = src_c.size(dim);
+
+  at::Tensor out;
+  const bool out_was_provided = optional_out.has_value();
+  if (out_was_provided) {
+    // Caller owns the buffer; no init. The min semantics with `out=` thus
+    // combine the caller's initial value with the computed minima via
+    // `atomicMin` (matches upstream `segment_coo_cuda.cu:175-179`).
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim) {
+        TORCH_CHECK(src_c.size(i) == out.size(i),
+                    "segment_min_coo (CUDA): out.size(", i,
+                    ") must match src.size(", i, ")");
+      }
+    }
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    if (dim_size.has_value()) {
+      out_sizes[dim] = dim_size.value();
+    } else if (index_c.numel() == 0) {
+      out_sizes[dim] = 0;
+    } else {
+      auto tail = index_c.select(dim, index_c.size(dim) - 1);
+      tail = tail.numel() > 1 ? tail.max() : tail;
+      out_sizes[dim] = 1 + tail.cpu().data_ptr<int64_t>()[0];
+    }
+    // Allocate uninit then fill with per-dtype `max()`. Same rationale as
+    // `scatter_min_kernel` (see `scatter_kernel.cu`): `at::full` with a
+    // single host `Scalar` can't represent each dtype's max correctly.
+    out = at::empty(out_sizes, src_c.options());
+    AT_DISPATCH_ALL_TYPES_AND2(
+        at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+        "segment_min_coo_cuda_init_out",
+        [&] { out.fill_(std::numeric_limits<scalar_t>::max()); });
+  }
+
+  // `arg_out` is always allocated and always initialized to the sentinel
+  // `E_dim = src.size(dim)`. Even when `out=` is supplied, `arg_out` is
+  // fresh (the schema returns it; the caller has no way to pre-allocate).
+  auto arg_out = at::full(out.sizes(), E_dim,
+                          index_c.options().dtype(at::ScalarType::Long));
+
+  if (index_c.numel() == 0) {
+    if (!out_was_provided) {
+      // No contributors at all -> every bucket is empty; reset to 0.
+      out.zero_();
+    }
+    return std::make_tuple(out, arg_out);
+  }
+
+  const auto E = index_c.numel();
+  const auto E_2 = index_c.size(dim);
+  const auto E_1 = E / E_2;
+  const auto K = src_c.numel() / E;
+  const auto N = out.size(dim);
+  const float avg_len = static_cast<float>(E_2) / static_cast<float>(N);
+
+  auto index_info = at::cuda::detail::getTensorInfo<int64_t, int>(index_c);
+  const auto stream = at::cuda::getCurrentCUDAStream();
+
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_min_coo_cuda", [&] {
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        auto* arg_out_data = arg_out.data_ptr<int64_t>();
+
+        // -------- Value pass.
+        if (K == 1) {
+          const int T = threads();
+          const int B = std::max(1, static_cast<int>((E + T - 1) / T));
+          segment_min_coo_cuda_kernel<scalar_t>
+              <<<B, T, 0, stream>>>(src_data, index_info, out_data, E, N);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          // Same `TB` ladder as `segment_sum_coo`.
+          const dim3 block_dim(32, 8);
+          const dim3 grid_cols((K + 31) / 32);
+          if (avg_len <= 8.0f) {
+            constexpr int TB = 4;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_min_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else if (avg_len <= 16.0f) {
+            constexpr int TB = 8;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_min_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else if (avg_len <= 32.0f) {
+            constexpr int TB = 16;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_min_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else {
+            constexpr int TB = 32;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_min_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          }
+        }
+
+        // -------- Arg pass. Same stream -> value-pass writes visible.
+        if (K == 1) {
+          const int T = threads();
+          const int B = std::max(1, static_cast<int>((E + T - 1) / T));
+          segment_min_coo_arg_cuda_kernel<scalar_t><<<B, T, 0, stream>>>(
+              src_data, index_info, out_data, arg_out_data, E, N);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          const int T = threads();
+          const int B = std::max(1, static_cast<int>((E * K + T - 1) / T));
+          segment_min_coo_arg_broadcast_cuda_kernel<scalar_t>
+              <<<B, T, 0, stream>>>(src_data, index_info, out_data,
+                                    arg_out_data, E, K, N);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        }
+      });
+
+  // Empty-bucket cleanup: where `arg_out == E_dim`, no contributor wrote to
+  // that bucket, so `out` still holds `numeric_limits::max()`. Reset to `0`
+  // to match the CPU kernel's contract. Skipped when `out=` is supplied —
+  // the caller's pre-existing values in empty buckets must be preserved.
+  if (!out_was_provided) {
+    out.masked_fill_(arg_out == E_dim, 0);
+  }
+
+  return std::make_tuple(out, arg_out);
+}
+
 // ============================================================================
 // `gather_coo` — Commit 6.
 //
@@ -685,6 +1084,8 @@ TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
          TORCH_FN(segment_sum_coo_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_coo"),
          TORCH_FN(segment_mean_coo_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_coo"),
+         TORCH_FN(segment_min_coo_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_coo"), TORCH_FN(gather_coo_kernel));
 }
 

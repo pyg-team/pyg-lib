@@ -2,6 +2,7 @@
 
 #include <ATen/ATen.h>
 #include <optional>
+#include <tuple>
 #include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
@@ -42,6 +43,37 @@ PYG_API at::Tensor segment_sum_coo(
 // by any `index` entry are left at their original value when `out=` is
 // supplied, or zero-initialized otherwise.
 PYG_API at::Tensor segment_mean_coo(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
+// Reduces all values from `src` into `out` at the segment positions specified
+// in `index` along the implicit axis `dim = index.dim() - 1` using a minimum
+// reduction, and returns both the per-bucket minimum value and the source
+// position that produced it (`arg_out`).
+//
+// COO ops do **not** take a `dim` argument: upstream `pytorch_scatter` fixes
+// the reduction axis at `index.dim() - 1`. The `index` tensor must be
+// **sorted ascending** along that axis.
+//
+// When `out` is not provided, a fresh buffer is allocated and initialized
+// to `numeric_limits<scalar_t>::max()` so that the running min is updated
+// on the first contributing element. Empty buckets (no contributing source
+// element) are reset to `0` after the reduction loop; the matching slot in
+// `arg_out` keeps the sentinel value `src.size(dim)` (one past the last
+// valid index along `dim`).
+//
+// When `out` *is* provided, the caller's buffer is used as the running
+// state (no max-init); the caller is responsible for any non-default
+// starting value. This matches the upstream `pytorch_scatter` contract.
+//
+// **CPU determinism:** the CPU kernel produces a *first-match* `arg_out`
+// on ties (strict `<` comparison). The CUDA kernel is not guaranteed to
+// match on ties (any valid argmin is acceptable).
+//
+// `arg_out` is non-differentiable; only `out` participates in autograd.
+PYG_API std::tuple<at::Tensor, at::Tensor> segment_min_coo(
     const at::Tensor& src,
     const at::Tensor& index,
     const std::optional<at::Tensor>& out = std::nullopt,
