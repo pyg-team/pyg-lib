@@ -532,6 +532,33 @@ def segment_sum_coo(
 segment_add_coo = segment_sum_coo
 
 
+def segment_mean_coo(
+    src: Tensor,
+    index: Tensor,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a sorted COO :obj:`index`, using ``mean`` as the reduction. Empty
+    buckets yield zero.
+
+    The reduction axis is ``index.dim() - 1``. For integer dtypes,
+    floor-division is used.
+
+    Args:
+        src: The source tensor.
+        index: Sorted COO indices.
+        out: The destination tensor.
+        dim_size: If :obj:`out` is not given, the output size along the
+            reduction axis. Auto-inferred from :obj:`index.max() + 1` if
+            :obj:`None`.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.segment_mean_coo(src, index, out, dim_size)
+
+
 def gather_coo(
     src: Tensor,
     index: Tensor,
@@ -798,6 +825,7 @@ __all__ = [
     'scatter_max',
     'segment_sum_coo',
     'segment_add_coo',
+    'segment_mean_coo',
     'gather_coo',
     'spline_basis',
     'spline_weighting',
