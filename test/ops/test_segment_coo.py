@@ -1457,3 +1457,63 @@ def test_segment_max_coo_backward_empty_input(device):
     assert src.grad is not None
     assert src.grad.size() == src.size()
     torch.testing.assert_close(src.grad, torch.zeros_like(src))
+
+
+# ---------------------------------------------------------------------------
+# segment_coo dispatcher (commit 14 — Python layer)
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'reduce',
+    ['sum', 'add', 'mean', 'min', 'max'],
+)
+def test_segment_coo_dispatcher(reduce, device):
+    """``segment_coo(src, index, out, dim_size, reduce=...)`` must route to
+    the corresponding typed op. For ``min``/``max`` the dispatcher returns
+    ``[0]`` (value only), not the ``(value, argindex)`` tuple.
+
+    Note: there is no ``segment_mul_coo``, so ``mul`` is not part of the
+    valid reduce set for this dispatcher.
+    """
+    torch.manual_seed(0)
+    # Unique values -> deterministic argindex tie-break across devices.
+    src = (torch.randperm(8 * 3, device=device).to(torch.float64) - 12).view(
+        8,
+        3,
+    )
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    out = pyg_lib.ops.segment_coo(src, index, reduce=reduce)
+    if reduce in ('sum', 'add'):
+        expected = pyg_lib.ops.segment_sum_coo(src, index)
+    elif reduce == 'mean':
+        expected = pyg_lib.ops.segment_mean_coo(src, index)
+    elif reduce == 'min':
+        expected = pyg_lib.ops.segment_min_coo(src, index)[0]
+    elif reduce == 'max':
+        expected = pyg_lib.ops.segment_max_coo(src, index)[0]
+    assert isinstance(out, torch.Tensor)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_coo_dispatcher_unknown_reduce_raises(device):
+    """The dispatcher must reject unknown reduce strings with a clear error."""
+    src = torch.randn(8, device=device)
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+    with pytest.raises(ValueError):
+        pyg_lib.ops.segment_coo(src, index, reduce='unsupported')
+
+
+@withCUDA
+def test_segment_coo_dispatcher_default_reduce_is_sum(device):
+    """Default ``reduce`` is ``"sum"`` (upstream convention)."""
+    torch.manual_seed(0)
+    src = torch.randn(8, 3, device=device)
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    out = pyg_lib.ops.segment_coo(src, index)
+    expected = pyg_lib.ops.segment_sum_coo(src, index)
+    torch.testing.assert_close(out, expected)
