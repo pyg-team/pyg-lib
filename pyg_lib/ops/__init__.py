@@ -679,6 +679,28 @@ def segment_mean_csr(
     return torch.ops.pyg.segment_mean_csr(src, indptr, out)
 
 
+def segment_min_csr(
+    src: Tensor,
+    indptr: Tensor,
+    out: Optional[Tensor] = None,
+) -> Tuple[Tensor, Tensor]:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a CSR :obj:`indptr`, using ``min`` as the reduction.
+
+    Returns a tuple ``(values, argindex)``. Empty rows yield value ``0`` and
+    argindex ``src.size(dim)`` (sentinel). Only ``values`` is differentiable.
+
+    Args:
+        src: The source tensor.
+        indptr: The CSR row pointer of shape :obj:`[..., R+1]`.
+        out: The destination tensor for the values.
+
+    Returns:
+        Tuple ``(values, argindex)``.
+    """
+    return torch.ops.pyg.segment_min_csr(src, indptr, out)
+
+
 def gather_csr(
     src: Tensor,
     indptr: Tensor,
@@ -954,6 +976,7 @@ __all__ = [
     'segment_sum_csr',
     'segment_add_csr',
     'segment_mean_csr',
+    'segment_min_csr',
     'gather_csr',
     'spline_basis',
     'spline_weighting',

@@ -157,6 +157,93 @@ at::Tensor segment_mean_csr_autograd(
   return SegmentMeanCSR::apply(src, indptr, optional_out)[0];
 }
 
+// Autograd Function for `pyg::segment_min_csr`.
+//
+// CSR ops fix the reduction axis at `dim = indptr.dim() - 1`. Forward returns
+// `(out, arg_out)`. Only `out` is differentiable; `arg_out` is marked
+// non-differentiable so PyTorch will not error when callers try to take
+// gradients through it (mirrors `SegmentMinCOO` / `ScatterMin`).
+//
+// Backward formula (mirrors `ScatterMin` from commit 4):
+//
+//   src_shape_plus = src_shape; src_shape_plus[dim] += 1
+//   grad_in = zeros(src_shape_plus)
+//   grad_in.scatter_(dim, arg_out, grad_out)   // sentinel lands in +1 slot
+//   grad_in = grad_in.narrow(dim, 0, src_shape[dim])  // drop sentinel
+//
+// The `+1`/`narrow` trick routes gradient only to the source positions that
+// produced the per-row min and silently drops any contribution from rows
+// whose `arg_out` is still at the sentinel (empty rows).
+class SegmentMinCSR : public torch::autograd::Function<SegmentMinCSR> {
+ public:
+  static variable_list forward(torch::autograd::AutogradContext* ctx,
+                               const at::Tensor& src,
+                               const at::Tensor& indptr,
+                               const std::optional<at::Tensor>& optional_out) {
+    at::AutoDispatchBelowADInplaceOrView g;
+
+    const int64_t dim = indptr.dim() - 1;
+    TORCH_CHECK(dim >= 0,
+                "segment_min_csr: indptr must have at least 1 dimension");
+
+    auto result = segment_min_csr(src, indptr, optional_out);
+    auto out = std::get<0>(result);
+    auto arg_out = std::get<1>(result);
+
+    // Backward needs `arg_out` (where to deposit each `grad_out`), the
+    // implicit `dim`, and the original `src.sizes()` (so the +1/narrow trick
+    // reconstructs the right shape). We save `indptr` for parity with other
+    // CSR Functions; it is not used directly by backward.
+    ctx->save_for_backward({indptr, arg_out});
+    ctx->saved_data["dim"] = dim;
+    ctx->saved_data["src_shape"] = src.sizes();
+
+    // `arg_out` is integer / non-differentiable; mark it so PyTorch will
+    // not attempt to propagate gradients through it.
+    ctx->mark_non_differentiable({arg_out});
+
+    if (optional_out.has_value()) {
+      ctx->mark_dirty({optional_out.value()});
+    }
+
+    return {out, arg_out};
+  }
+
+  static variable_list backward(torch::autograd::AutogradContext* ctx,
+                                variable_list grad_outs) {
+    // `grad_outs[0]` is the gradient w.r.t. `out`; `grad_outs[1]` is the
+    // gradient w.r.t. `arg_out` and is ignored (non-differentiable).
+    const auto grad_out = grad_outs[0];
+    const auto saved = ctx->get_saved_variables();
+    // saved[0] is `indptr`, kept for parity with other CSR Functions; not
+    // used directly by backward (the +1/narrow trick references `arg_out`).
+    const auto arg_out = saved[1];
+    const auto dim = ctx->saved_data["dim"].toInt();
+    auto src_shape = ctx->saved_data["src_shape"].toIntList().vec();
+
+    // `+1`/`narrow` trick: extend `src_shape` along `dim` by one extra
+    // sentinel slot, scatter `grad_out` into the extended buffer using
+    // `arg_out` (sentinel entries land in the trailing slot and are dropped
+    // by the subsequent `narrow`).
+    src_shape[dim] += 1;
+    auto grad_in = at::zeros(src_shape, grad_out.options());
+    grad_in.scatter_(dim, arg_out, grad_out);
+    grad_in = grad_in.narrow(dim, 0, src_shape[dim] - 1);
+
+    // 3 input slots: (src, indptr, out). Only `src` is a real differentiable
+    // tensor; the rest get undefined-Tensor grads.
+    return {grad_in, at::Tensor(), at::Tensor()};
+  }
+};
+
+std::tuple<at::Tensor, at::Tensor> segment_min_csr_autograd(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  auto result = SegmentMinCSR::apply(src, indptr, optional_out);
+  return std::make_tuple(result[0], result[1]);
+}
+
 // Autograd Function for `pyg::gather_csr`.
 //
 // CSR ops fix the gather axis at `dim = indptr.dim() - 1`. Forward saves
@@ -220,6 +307,8 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
          TORCH_FN(segment_sum_csr_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_csr"),
          TORCH_FN(segment_mean_csr_autograd));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_csr"),
+         TORCH_FN(segment_min_csr_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"),
          TORCH_FN(gather_csr_autograd));
 }

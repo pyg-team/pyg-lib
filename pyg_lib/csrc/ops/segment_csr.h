@@ -2,6 +2,7 @@
 
 #include <ATen/ATen.h>
 #include <optional>
+#include <tuple>
 #include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
@@ -56,6 +57,41 @@ PYG_API at::Tensor segment_sum_csr(
 // caller-supplied buffer — it overwrites the per-row slots. We allocate the
 // `out` buffer zero-initialized so that empty-row slots stay at 0.
 PYG_API at::Tensor segment_mean_csr(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& out = std::nullopt);
+
+// Computes the per-row minimum of `src` along the implicit axis
+// `dim = indptr.dim() - 1`, using the compressed row pointer `indptr`. Returns
+// `(out, arg_out)` where `arg_out[r]` is the source position that produced the
+// minimum value at row `r`.
+//
+// CSR ops do **not** take a `dim` argument: upstream `pytorch_scatter` fixes
+// the reduction axis at `indptr.dim() - 1` (the last indptr dim). They also
+// do **not** take a `dim_size`: the output size along `dim` is determined by
+// `indptr.size(-1) - 1` (one entry per row, plus a trailing sentinel).
+//
+// Each row `r` consumes the source slice `src[..., indptr[r]:indptr[r+1], ...]`
+// and writes the per-row min to `out[..., r, ...]`. Empty rows
+// (`indptr[r+1] == indptr[r]`) are reset to `0` after the reduction loop; the
+// matching slot in `arg_out` keeps the sentinel value `src.size(dim)` (one
+// past the last valid index along `dim`).
+//
+// `indptr` is `expand`-broadcast to match `src.shape[:indptr.dim()-1]` along
+// the leading dims; we force `.contiguous()` at the kernel boundary.
+//
+// When `out` is not provided, a fresh buffer is allocated and initialized to
+// `numeric_limits<scalar_t>::max()` so that the first contributing element
+// always wins. When `out` *is* provided, the caller's buffer is used as the
+// running state (no max-init); the caller is responsible for any non-default
+// starting value. This matches the upstream `pytorch_scatter` contract.
+//
+// **CPU determinism:** the CPU kernel produces a *first-match* `arg_out`
+// on ties (strict `<` comparison). The CUDA kernel is not guaranteed to
+// match on ties (any valid argmin is acceptable).
+//
+// `arg_out` is non-differentiable; only `out` participates in autograd.
+PYG_API std::tuple<at::Tensor, at::Tensor> segment_min_csr(
     const at::Tensor& src,
     const at::Tensor& indptr,
     const std::optional<at::Tensor>& out = std::nullopt);
