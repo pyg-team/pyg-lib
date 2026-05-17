@@ -631,6 +631,56 @@ def gather_coo(
     return torch.ops.pyg.gather_coo(src, index, out)
 
 
+def segment_sum_csr(
+    src: Tensor,
+    indptr: Tensor,
+    out: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a CSR :obj:`indptr`, using ``sum`` as the reduction.
+
+    The reduction axis is ``indptr.dim() - 1`` and the output size along that
+    axis is ``indptr.size(-1) - 1`` (no explicit ``dim_size`` arg).
+
+    If :obj:`out` is not given, a new zero-initialized tensor is allocated.
+    If :obj:`out` is given, values are **accumulated** into it.
+
+    Args:
+        src: The source tensor.
+        indptr: The CSR row pointer of shape :obj:`[..., R+1]`.
+        out: The destination tensor.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.segment_sum_csr(src, indptr, out)
+
+
+segment_add_csr = segment_sum_csr
+
+
+def gather_csr(
+    src: Tensor,
+    indptr: Tensor,
+    out: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Gathers values from :obj:`src` to all positions encoded by the CSR
+    :obj:`indptr`: for each row ``r``, broadcasts ``src[r]`` to all output
+    positions in ``[indptr[r], indptr[r+1])``. Symmetric inverse of
+    :func:`segment_sum_csr`.
+
+    Args:
+        src: The source tensor.
+        indptr: The CSR row pointer of shape :obj:`[..., R+1]`.
+        out: The destination tensor (overwritten if given).
+
+    Returns:
+        Broadcast tensor of shape ``src.shape`` with ``indptr.dim()-1`` axis
+        replaced by ``indptr[-1]``.
+    """
+    return torch.ops.pyg.gather_csr(src, indptr, out)
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -881,6 +931,9 @@ __all__ = [
     'segment_min_coo',
     'segment_max_coo',
     'gather_coo',
+    'segment_sum_csr',
+    'segment_add_csr',
+    'gather_csr',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
