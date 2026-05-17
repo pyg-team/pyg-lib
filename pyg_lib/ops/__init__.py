@@ -659,6 +659,26 @@ def segment_sum_csr(
 segment_add_csr = segment_sum_csr
 
 
+def segment_mean_csr(
+    src: Tensor,
+    indptr: Tensor,
+    out: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a CSR :obj:`indptr`, using ``mean`` as the reduction. Empty rows yield
+    zero.
+
+    Args:
+        src: The source tensor.
+        indptr: The CSR row pointer of shape :obj:`[..., R+1]`.
+        out: The destination tensor.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.segment_mean_csr(src, indptr, out)
+
+
 def gather_csr(
     src: Tensor,
     indptr: Tensor,
@@ -933,6 +953,7 @@ __all__ = [
     'gather_coo',
     'segment_sum_csr',
     'segment_add_csr',
+    'segment_mean_csr',
     'gather_csr',
     'spline_basis',
     'spline_weighting',

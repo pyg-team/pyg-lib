@@ -534,3 +534,214 @@ def test_segment_sum_csr_gradgradcheck_empty_rows(device):
         return pyg_lib.ops.segment_sum_csr(s, indptr)
 
     assert torch.autograd.gradgradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# segment_mean_csr — reference
+# ---------------------------------------------------------------------------
+
+
+def _segment_mean_csr_ref(
+    src: torch.Tensor,
+    indptr: torch.Tensor,
+    out: torch.Tensor = None,
+) -> torch.Tensor:
+    """Pure-PyTorch reference for :func:`segment_mean_csr`.
+
+    Computes the per-row sum via :func:`_segment_sum_csr_ref` and divides by
+    per-row counts (``indptr.diff()``). Counts for empty rows are masked to
+    ``1`` so empty rows yield exactly ``0`` (matching upstream semantics).
+    """
+    dim = indptr.dim() - 1
+    summed = _segment_sum_csr_ref(src, indptr)
+    # Per-row counts: same leading dims as indptr, trailing length R.
+    counts = indptr.diff().to(src.dtype)
+    # Broadcast counts along the reduction dim of ``summed``.
+    shape = [1] * summed.dim()
+    shape[dim] = counts.size(-1)
+    # If indptr has leading dims, expand counts to match.
+    if counts.dim() > 1:
+        # Shape counts to (..., R, 1, 1, ...) — broadcast across trailing dims.
+        view = list(counts.shape) + [1] * (summed.dim() - counts.dim())
+        counts = counts.view(view)
+    else:
+        counts = counts.view(shape)
+    safe_counts = counts.masked_fill(counts == 0, 1)
+    result = summed / safe_counts
+    if out is not None:
+        out.copy_(result)
+        return out
+    return result
+
+
+# ---------------------------------------------------------------------------
+# segment_mean_csr — forward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+def test_segment_mean_csr_forward_dtypes(dtype, device):
+    torch.manual_seed(0)
+    src = torch.randn(8, 4, dtype=dtype, device=device)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    expected = _segment_mean_csr_ref(src, indptr)
+    assert out.size() == (4, 4)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_csr_forward_1d(device):
+    src = torch.randn(8, device=device)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    expected = _segment_mean_csr_ref(src, indptr)
+    assert out.size() == (4,)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_csr_forward_k1_small_trailing(device):
+    """K==1 path: 1-D src, 1-D indptr — exercises the per-row CUDA kernel."""
+    src = torch.randn(10, device=device)
+    indptr = torch.tensor([0, 2, 4, 6, 8, 10], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    expected = _segment_mean_csr_ref(src, indptr)
+    assert out.size() == (5,)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_csr_forward_k_large_broadcast(device):
+    """K>1 path: large trailing feature dim exercises the broadcast kernel."""
+    src = torch.randn(12, 64, device=device)
+    indptr = torch.tensor([0, 2, 5, 7, 9, 12], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    expected = _segment_mean_csr_ref(src, indptr)
+    assert out.size() == (5, 64)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_csr_forward_matches_segment_mean_coo(device):
+    """Primary parity test: ``segment_mean_csr`` must agree with
+    ``segment_mean_coo`` invoked on the COO-equivalent index built by
+    ``repeat_interleave(arange(num_rows), indptr.diff())``.
+    """
+    torch.manual_seed(0)
+    src = torch.randn(8, 4, device=device)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+    coo_index = _csr_to_coo(indptr)
+
+    out_csr = pyg_lib.ops.segment_mean_csr(src, indptr)
+    out_coo = pyg_lib.ops.segment_mean_coo(src, coo_index)
+    torch.testing.assert_close(out_csr, out_coo)
+
+
+@withCUDA
+def test_segment_mean_csr_empty_rows_in_middle(device):
+    """Plan-mandated empty-rows fixture: ``indptr = [0, 2, 2, 5]`` —
+    row 1 is empty and its output row must be zero.
+    """
+    src = torch.randn(5, 4, device=device)
+    indptr = torch.tensor([0, 2, 2, 5], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    expected = _segment_mean_csr_ref(src, indptr)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, expected)
+    # Row 1 is empty -> zeros (count = 0 -> 0 / 1).
+    torch.testing.assert_close(out[1], torch.zeros(4, device=device))
+
+
+@withCUDA
+def test_segment_mean_csr_all_rows_empty(device):
+    """All rows empty -> output is all-zero of the expected shape."""
+    src = torch.empty(0, 4, device=device)
+    indptr = torch.tensor([0, 0, 0, 0], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, torch.zeros(3, 4, device=device))
+
+
+@withCUDA
+def test_segment_mean_csr_forward_matches_segment_mean_coo_empty_rows(device):
+    """COO parity on the empty-row fixture."""
+    src = torch.randn(5, 4, device=device)
+    indptr = torch.tensor([0, 2, 2, 5], device=device)
+    coo_index = _csr_to_coo(indptr)
+
+    out_csr = pyg_lib.ops.segment_mean_csr(src, indptr)
+    out_coo = pyg_lib.ops.segment_mean_coo(src, coo_index, dim_size=3)
+    torch.testing.assert_close(out_csr, out_coo)
+
+
+# ---------------------------------------------------------------------------
+# segment_mean_csr — backward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+def test_segment_mean_csr_backward_gradcheck(device):
+    src = torch.randn(
+        8,
+        3,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_mean_csr(s, indptr)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_mean_csr_backward_gradcheck_empty_rows(device):
+    """Empty-row fixture under gradcheck — row 1 has no entries."""
+    src = torch.randn(
+        5,
+        4,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    indptr = torch.tensor([0, 2, 2, 5], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_mean_csr(s, indptr)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_mean_csr_backward_empty_input(device):
+    """Empty ``src`` and all-zero ``indptr`` — exercises the
+    ``grad_in.numel() > 0`` guard in backward. Forward yields an all-zero
+    output and backward must not crash on the empty grad, returning a
+    correctly-shaped zero gradient.
+    """
+    src = torch.zeros(
+        0,
+        4,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    indptr = torch.tensor([0, 0, 0, 0], device=device)
+
+    out = pyg_lib.ops.segment_mean_csr(src, indptr)
+    assert out.size() == (3, 4)
+    # Sum to a scalar and backprop — exercises backward on an empty grad.
+    out.sum().backward()
+    assert src.grad is not None
+    assert src.grad.size() == src.size()
+    torch.testing.assert_close(src.grad, torch.zeros_like(src))
