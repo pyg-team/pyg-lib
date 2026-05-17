@@ -262,6 +262,147 @@ at::Tensor segment_sum_csr_kernel(
 }
 
 // ============================================================================
+// `segment_mean_csr` — Commit 11.
+//
+// Strategy: reuse the two `segment_sum_csr_*` kernels above for the per-row
+// sum pass, then divide by per-row lengths.
+//
+// Row-length computation — `indptr.diff()` along the last `indptr` dim. This
+// is the same data the kernels already load (`row_end - row_start`), but doing
+// it as a single tensor op on the host keeps the K==1 / K>1 kernels identical
+// to the sum case (no need to thread a `count_data` pointer through). Empty
+// rows have `diff == 0`; we `masked_fill_(diff == 0, 1)` so the subsequent
+// division leaves the zero-init `out[r]` at `0` — matches the upstream
+// reducer's "empty row -> 0" semantic at `segment_csr_cuda.cu:38-43` via
+// `Reducer::initial_value()` for MEAN.
+//
+// Compared to `segment_mean_coo` (which needs an atomic counting kernel
+// because COO `index` can repeat arbitrarily), CSR row lengths are trivially
+// available from `indptr` — no extra kernel launch.
+//
+// `out=` contract: matches upstream — divides into a fresh `at::zeros` buffer,
+// or into the caller-supplied buffer (where the sum kernel's `+=` accumulates
+// before the divide, then we divide the **combined** value by the row length).
+// This is the same combined semantic as `segment_mean_coo`.
+//
+// Dispatch: `AT_DISPATCH_FLOATING_TYPES_AND2` for the floating mean path
+// (true division); integer types take the `floor` path. Same convention as
+// `segment_mean_coo`.
+
+at::Tensor segment_mean_csr_kernel(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  TORCH_CHECK(src.is_cuda(),
+              "segment_mean_csr (CUDA): src must be a CUDA tensor");
+  TORCH_CHECK(indptr.is_cuda(),
+              "segment_mean_csr (CUDA): indptr must be a CUDA tensor");
+  TORCH_CHECK(src.device() == indptr.device(),
+              "segment_mean_csr (CUDA): src and indptr must be on the same "
+              "device");
+  TORCH_CHECK(src.dim() >= indptr.dim(),
+              "segment_mean_csr (CUDA): src.dim() must be >= indptr.dim() "
+              "(got ",
+              src.dim(), " vs ", indptr.dim(), ")");
+  TORCH_CHECK(indptr.dim() >= 1,
+              "segment_mean_csr (CUDA): indptr must have at least 1 dimension");
+
+  const c10::cuda::OptionalCUDAGuard device_guard(device_of(src));
+
+  // Same broadcast rule as `segment_sum_csr` — `indptr` leading dims expand
+  // up to `src.shape[:indptr.dim()-1]`, last dim of `indptr` stays as-is.
+  auto sizes = indptr.sizes().vec();
+  for (int64_t i = 0; i < indptr.dim() - 1; ++i) {
+    sizes[i] = src.size(i);
+  }
+  auto indptr_b = indptr.expand(sizes);
+
+  const auto dim = indptr_b.dim() - 1;
+
+  auto src_c = src.contiguous();
+  auto indptr_c = indptr_b.contiguous();
+
+  at::Tensor out;
+  const bool out_was_provided = optional_out.has_value();
+  if (out_was_provided) {
+    // Caller owns the buffer; we accumulate into it during the sum pass and
+    // then divide the combined value (mirrors `segment_mean_coo` semantics).
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim) {
+        TORCH_CHECK(src_c.size(i) == out.size(i),
+                    "segment_mean_csr (CUDA): out.size(", i,
+                    ") must match src.size(", i, ")");
+      }
+    }
+    TORCH_CHECK(src_c.numel() == 0 || out.size(dim) == indptr_c.size(dim) - 1,
+                "segment_mean_csr (CUDA): out.size(", dim,
+                ") must equal indptr.size(-1) - 1 (got ", out.size(dim), " vs ",
+                indptr_c.size(dim) - 1, ")");
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    out_sizes[dim] = std::max<int64_t>(indptr_c.size(dim) - 1, 0);
+    // Zero-init so the in-kernel `+=` sum accumulation starts from 0, and
+    // empty rows stay at 0 (no division occurs in the kernel; the
+    // post-pass divide reads `0 / 1 == 0`).
+    out = at::zeros(out_sizes, src_c.options());
+  }
+
+  if (src_c.numel() == 0) {
+    return out;
+  }
+
+  const auto N = out.size(dim) * (indptr_c.numel() / indptr_c.size(-1));
+  const auto K = out.numel() / N;
+  const auto E = src_c.size(dim);
+
+  auto indptr_info = at::cuda::detail::getTensorInfo<int64_t, int>(indptr_c);
+  const auto stream = at::cuda::getCurrentCUDAStream();
+
+  // -------- Pass 1: sum into `out`. Reuses the `segment_sum_csr_*` kernels.
+  // Mean uses floating-point div, so dispatch on floating types (+ Half /
+  // BFloat16). Mirrors the `segment_mean_coo` dispatch.
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_mean_csr_cuda", [&] {
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+
+        if (K == 1) {
+          const int T = threads();
+          const int B = blocks(static_cast<int>(N));
+          segment_sum_csr_cuda_kernel<scalar_t>
+              <<<B, T, 0, stream>>>(src_data, indptr_info, out_data, N, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          const int T = threads();
+          const int B = blocks(static_cast<int>(N * K));
+          segment_sum_csr_broadcast_cuda_kernel<scalar_t>
+              <<<B, T, 0, stream>>>(src_data, indptr_info, out_data, N, K, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        }
+      });
+
+  // -------- Pass 2: divide by row lengths.
+  //
+  // `indptr.diff()` along the last dim gives the per-row source-element
+  // count, shape `[..., rows]` (matches `out` along dims `[0, dim]`). Empty
+  // rows have count 0; mask them up to 1 so the broadcast divide preserves
+  // the zero-init in those slots. Cast to `out.dtype()` so the broadcast
+  // matches the output's scalar type. Then unsqueeze trailing K dims to
+  // broadcast along the feature axis. Same divide pattern as
+  // `segment_mean_coo`.
+  auto count = indptr_c.diff(/*n=*/1, /*dim=*/-1).to(out.options());
+  count.masked_fill_(count == 0, 1);
+  for (int64_t i = dim + 1; i < out.dim(); ++i) {
+    count = count.unsqueeze(-1);
+  }
+  out.true_divide_(count);
+
+  return out;
+}
+
+// ============================================================================
 // `gather_csr` — Commit 10.
 //
 // Symmetric inverse of `segment_sum_csr`: for each row `r`, broadcast
@@ -443,6 +584,8 @@ at::Tensor gather_csr_kernel(const at::Tensor& src,
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_sum_csr"),
          TORCH_FN(segment_sum_csr_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_csr"),
+         TORCH_FN(segment_mean_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"), TORCH_FN(gather_csr_kernel));
 }
 

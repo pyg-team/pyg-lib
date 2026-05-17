@@ -139,6 +139,120 @@ at::Tensor segment_sum_csr_kernel(
   return out;
 }
 
+// CPU implementation of `pyg::segment_mean_csr`.
+//
+// Same layout/shape as `segment_sum_csr_kernel` (sequential per-row pass with
+// `at::parallel_for` over rows), with an extra post-loop divide by the row
+// length. Row length is `indptr[r+1] - indptr[r]`; empty rows have length 0
+// so we clamp to 1 before dividing — the corresponding `out` slot is already
+// zero (from the zero-init) and `0 / 1 = 0` is the desired empty-row value.
+//
+// `out=` contract: upstream MEAN does **not** honor an accumulate contract.
+// We allocate `out` as `at::zeros(...)` and overwrite per row (sum into the
+// zero, then divide). If the caller supplies `out=`, we still overwrite —
+// the API surface accepts it for symmetry with sum.
+//
+// `AT_DISPATCH_FLOATING_TYPES_AND2` (not `_ALL_TYPES_AND2`) — mean returns a
+// floating result; integer dispatch would silently truncate the divide.
+at::Tensor segment_mean_csr_kernel(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  TORCH_CHECK(src.dim() >= indptr.dim(),
+              "segment_mean_csr: src.dim() must be >= indptr.dim() "
+              "(got src.dim()=",
+              src.dim(), ", indptr.dim()=", indptr.dim(), ")");
+
+  const int64_t dim = indptr.dim() - 1;
+  TORCH_CHECK(dim >= 0,
+              "segment_mean_csr: indptr must have at least 1 dimension");
+
+  // Broadcast `indptr` up to `src.shape[:indptr.dim()-1]` (mirrors the sum
+  // kernel) and force contiguous so we can use flat pointer arithmetic.
+  auto sizes = indptr.sizes().vec();
+  for (int64_t i = 0; i < indptr.dim() - 1; ++i)
+    sizes[i] = src.size(i);
+  auto indptr_b = indptr.expand(sizes).contiguous();
+
+  auto src_c = src.contiguous();
+
+  at::Tensor out;
+  if (optional_out.has_value()) {
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim)
+        TORCH_CHECK(src_c.size(i) == out.size(i), "segment_mean_csr: out.size(",
+                    i, ") must match src.size(", i, ")");
+    }
+    TORCH_CHECK(
+        src_c.numel() == 0 || out.size(dim) == indptr_b.size(dim) - 1,
+        "segment_mean_csr: out.size(dim) must equal indptr.size(-1) - 1");
+    // Mean overwrites; clear the buffer so the sum loop accumulates from 0
+    // and empty rows land at 0 after the divide.
+    out.zero_();
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    out_sizes[dim] = std::max<int64_t>(indptr_b.size(dim) - 1, 0);
+    out = at::zeros(out_sizes, src_c.options());
+  }
+
+  if (src_c.numel() == 0) {
+    return out;
+  }
+
+  const int64_t E = src_c.size(dim);
+  const int64_t rows_per_slice = indptr_b.size(dim) - 1;
+  const int64_t leading = indptr_b.numel() / indptr_b.size(-1);
+  const int64_t N = out.size(dim) * leading;
+  const int64_t K = out.numel() / N;
+
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_mean_csr_cpu", [&] {
+        using opmath_t = at::opmath_type<scalar_t>;
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        const auto* indptr_data = indptr_b.data_ptr<int64_t>();
+
+        at::parallel_for(
+            0, N, at::internal::GRAIN_SIZE, [&](int64_t n_beg, int64_t n_end) {
+              for (int64_t n = n_beg; n < n_end; ++n) {
+                const int64_t slice = n / rows_per_slice;
+                const int64_t row = n % rows_per_slice;
+                const int64_t indptr_off = slice * indptr_b.size(-1) + row;
+                const int64_t row_start = indptr_data[indptr_off];
+                const int64_t row_end = indptr_data[indptr_off + 1];
+                const int64_t src_off = slice * E * K;
+
+                // Row length: clamp to 1 for empty rows so the divide is a
+                // no-op (the accumulator is still 0).
+                const int64_t row_len = row_end - row_start;
+                const opmath_t denom =
+                    static_cast<opmath_t>(row_len > 0 ? row_len : 1);
+
+                if (K == 1) {
+                  opmath_t acc = static_cast<opmath_t>(0);
+                  for (int64_t e = row_start; e < row_end; ++e) {
+                    acc += static_cast<opmath_t>(src_data[src_off + e]);
+                  }
+                  out_data[n] = static_cast<scalar_t>(acc / denom);
+                } else {
+                  std::vector<opmath_t> acc(K, static_cast<opmath_t>(0));
+                  for (int64_t e = row_start; e < row_end; ++e) {
+                    for (int64_t k = 0; k < K; ++k)
+                      acc[k] +=
+                          static_cast<opmath_t>(src_data[src_off + e * K + k]);
+                  }
+                  for (int64_t k = 0; k < K; ++k)
+                    out_data[n * K + k] = static_cast<scalar_t>(acc[k] / denom);
+                }
+              }
+            });
+      });
+
+  return out;
+}
+
 // CPU implementation of `pyg::gather_csr`.
 //
 // CSR ops fix the gather axis at `dim = indptr.dim() - 1`. For each row `r`,
@@ -263,6 +377,8 @@ at::Tensor gather_csr_kernel(const at::Tensor& src,
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_sum_csr"),
          TORCH_FN(segment_sum_csr_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_csr"),
+         TORCH_FN(segment_mean_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"), TORCH_FN(gather_csr_kernel));
 }
 
