@@ -1074,3 +1074,386 @@ def test_segment_min_coo_backward_empty_input(device):
     assert src.grad is not None
     assert src.grad.size() == src.size()
     torch.testing.assert_close(src.grad, torch.zeros_like(src))
+
+
+# ---------------------------------------------------------------------------
+# segment_max_coo — reference
+# ---------------------------------------------------------------------------
+
+
+def _segment_max_coo_ref(
+    src: torch.Tensor,
+    index: torch.Tensor,
+    dim_size: int = None,
+):
+    """Pure-PyTorch reference for :func:`segment_max_coo`.
+
+    COO ops always reduce along ``dim = index.dim() - 1`` with a sorted
+    ``index``. Returns ``(value, argindex)``:
+      * ``value[..., j, ...]`` is the maximum of ``src`` entries whose
+        broadcast index equals ``j`` along ``dim``.
+      * ``argindex[..., j, ...]`` is the position along ``dim`` of the
+        *first-match* max entry (CPU upstream contract).
+      * Empty buckets get ``value == 0`` and ``argindex == src.size(dim)``
+        (upstream sentinel).
+    """
+    dim = index.dim() - 1
+    bcast_index = _broadcast_index(index, src)
+
+    if dim_size is None:
+        dim_size = int(index.max().item()) + 1 if index.numel() > 0 else 0
+
+    sentinel = src.size(dim)
+    out_size = list(src.size())
+    out_size[dim] = dim_size
+    value = torch.zeros(out_size, dtype=src.dtype, device=src.device)
+    argindex = torch.full(
+        out_size,
+        sentinel,
+        dtype=torch.long,
+        device=src.device,
+    )
+
+    # Per-element Python loop over src along the reduction dim, tracking
+    # running max + first-match argindex per output position.
+    other_shape = list(src.size())
+    del other_shape[dim]
+    for i in range(src.size(dim)):
+        src_slice = src.select(dim, i)
+        idx_slice = bcast_index.select(dim, i)
+        flat_src = src_slice.reshape(-1)
+        flat_idx = idx_slice.reshape(-1)
+        for k in range(flat_idx.numel()):
+            j = int(flat_idx[k].item())
+            if j < 0 or j >= dim_size:
+                continue
+            coord = []
+            rem = k
+            for s in reversed(other_shape):
+                coord.append(rem % s)
+                rem //= s
+            coord = list(reversed(coord))
+            out_idx = list(coord)
+            out_idx.insert(dim, j)
+            out_idx_t = tuple(out_idx)
+            if argindex[out_idx_t].item() == sentinel:
+                value[out_idx_t] = flat_src[k]
+                argindex[out_idx_t] = i
+            else:
+                cur = value[out_idx_t]
+                v = flat_src[k]
+                if bool(v > cur):
+                    value[out_idx_t] = v
+                    argindex[out_idx_t] = i
+
+    return value, argindex
+
+
+# ---------------------------------------------------------------------------
+# segment_max_coo — forward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'dtype',
+    [torch.int32, torch.int64, torch.float32, torch.float64],
+)
+def test_segment_max_coo_forward_dtypes(dtype, device):
+    """Forward correctness on a unique-value fixture across dtypes.
+
+    Unique values mean argindex is unambiguous on both CPU and CUDA.
+    """
+    if dtype in (torch.int32, torch.int64):
+        src = torch.tensor(
+            [[9, 1, 8, 2],
+             [3, 7, 0, 5],
+             [4, 6, -1, 11],
+             [-3, 10, 12, -2],
+             [13, -4, 14, 15],
+             [16, 17, 18, 19],
+             [20, 21, 22, 23],
+             [24, 25, 26, 27]],
+            dtype=dtype,
+            device=device,
+        )  # yapf: disable
+    else:
+        torch.manual_seed(0)
+        flat = (torch.randperm(32, device=device) - 16).to(dtype)
+        src = flat.view(8, 4)
+    # Sorted ascending index — required by segment_*_coo.
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    torch.testing.assert_close(value, ref_value)
+    # Unique values -> exact argindex equivalence on both CPU and CUDA.
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_coo_forward_1d(device):
+    """Unique-value 1-D fixture exercising K==1 path."""
+    torch.manual_seed(0)
+    src = torch.randperm(8, device=device).to(torch.float32) - 4
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    assert value.size() == (4,)
+    assert arg.size() == (4,)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_coo_forward_2d_broadcast_index(device):
+    """1-D ``index`` broadcasts over a 2-D ``src`` along ``dim = 0``."""
+    torch.manual_seed(0)
+    src = (torch.randperm(6 * 4, device=device).to(torch.float32) - 12).view(
+        6,
+        4,
+    )
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_coo_forward_k_large_broadcast(device):
+    """K>1 path: large trailing feature dim exercises broadcast kernel."""
+    torch.manual_seed(0)
+    src = (
+        torch.randperm(12 * 64, device=device).to(torch.float32) - 384
+    ).view(12, 64)
+    index = torch.tensor([0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    assert value.size() == (5, 64)
+    assert arg.size() == (5, 64)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_coo_dim_size_auto_infer(device):
+    src = torch.tensor([5.0, -1.0, 3.0, -7.0, 2.0, 9.0], device=device)
+    index = torch.tensor([0, 1, 1, 2, 2, 3], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    # Auto-inferred dim_size = index.max() + 1 = 4.
+    assert value.size(-1) == 4
+    assert arg.size(-1) == 4
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+
+
+@withCUDA
+def test_segment_max_coo_dim_size_explicit_empty_buckets(device):
+    """Explicit ``dim_size`` larger than implicit — trailing buckets are
+    empty. Upstream convention: value == 0, argindex == sentinel
+    (== src.size(dim)).
+    """
+    src = torch.tensor([5.0, -1.0, 3.0, -7.0, 2.0, 9.0], device=device)
+    index = torch.tensor([0, 1, 1, 2, 2, 3], device=device)
+    sentinel = src.size(-1)  # 6
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index, dim_size=6)
+    assert value.size(-1) == 6
+    assert arg.size(-1) == 6
+    ref_value, ref_arg = _segment_max_coo_ref(src, index, dim_size=6)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+    # Trailing empty buckets at positions 4, 5 must have value 0 and
+    # argindex == sentinel.
+    for p in [4, 5]:
+        assert value[p].item() == 0
+        assert arg[p].item() == sentinel
+
+
+@withCUDA
+def test_segment_max_coo_empty_rows_in_middle(device):
+    """Empty rows fixture: row 1 has no entries -> value 0 + sentinel arg."""
+    torch.manual_seed(0)
+    src = (torch.randperm(5 * 4, device=device).to(torch.float32) - 10).view(
+        5,
+        4,
+    )
+    # Row 1 entirely skipped.
+    index = torch.tensor([0, 0, 2, 2, 2], device=device)
+    sentinel = src.size(0)  # 5
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    ref_value, ref_arg = _segment_max_coo_ref(src, index)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, ref_value)
+    torch.testing.assert_close(arg, ref_arg)
+    # Row 1 has no contributors -> zero value row + sentinel arg row.
+    torch.testing.assert_close(value[1], torch.zeros(4, device=device))
+    torch.testing.assert_close(
+        arg[1],
+        torch.full((4,), sentinel, dtype=torch.long, device=device),
+    )
+
+
+@withCUDA
+def test_segment_max_coo_empty_input(device):
+    """Empty source + empty index -> all-zero value, all-sentinel arg."""
+    src = torch.empty(0, 4, device=device)
+    index = torch.empty(0, dtype=torch.long, device=device)
+    sentinel = src.size(0)  # 0
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index, dim_size=3)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    torch.testing.assert_close(value, torch.zeros(3, 4, device=device))
+    torch.testing.assert_close(
+        arg,
+        torch.full((3, 4), sentinel, dtype=torch.long, device=device),
+    )
+
+
+@withCUDA
+@withSeed
+def test_segment_max_coo_argindex_ties_returns_valid(device):
+    """Tied values: validity-only assertion (CUDA atomic ordering is
+    non-deterministic).
+    """
+    # Bucket 0: positions 0, 1, 2 all with value 1.0 (tied max).
+    # Bucket 1: positions 3, 4 with value 2.0 (tied max).
+    # Bucket 2: empty.
+    # Bucket 3: position 5 with unique value 7.0.
+    src = torch.tensor(
+        [1.0, 1.0, 1.0, 2.0, 2.0, 7.0],
+        device=device,
+    )
+    index = torch.tensor([0, 0, 0, 1, 1, 3], device=device)
+    sentinel = src.size(0)  # 6
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index, dim_size=4)
+    # Value must equal the true per-bucket max regardless of tie-break.
+    expected_value = torch.tensor([1.0, 2.0, 0.0, 7.0], device=device)
+    torch.testing.assert_close(value, expected_value)
+    # Bucket 0 arg must be in {0, 1, 2}; bucket 1 in {3, 4}.
+    assert int(arg[0].item()) in (0, 1, 2)
+    assert int(arg[1].item()) in (3, 4)
+    # Bucket 2 is empty -> sentinel.
+    assert int(arg[2].item()) == sentinel
+    # Bucket 3 has unique value -> position 5.
+    assert int(arg[3].item()) == 5
+    # Every non-sentinel arg must in fact attain the bucket's max value.
+    for j in range(value.size(0)):
+        a = int(arg[j].item())
+        if a == sentinel:
+            continue
+        assert src[a].item() == value[j].item(), (
+            f'arg[{j}]={a} points to src value {src[a].item()} but bucket '
+            f'max is {value[j].item()}'
+        )
+
+
+@withCUDA
+def test_segment_max_coo_arg_non_differentiable(device):
+    """``arg`` must have ``requires_grad=False`` even when ``value`` does."""
+    src = torch.randn(6, dtype=torch.double, device=device, requires_grad=True)
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index)
+    assert value.requires_grad
+    assert not arg.requires_grad
+    assert arg.dtype in (torch.long, torch.int64)
+
+
+# ---------------------------------------------------------------------------
+# segment_max_coo — backward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+def test_segment_max_coo_backward_gradcheck(device):
+    """Gradcheck on the value output. Argindex is excluded via ``[0]``.
+
+    Uses unique-valued src so the active argindex is deterministic and the
+    finite-difference numerical Jacobian aligns with the analytical one.
+    """
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(6 * 3, device=device).to(torch.double) - 9)
+        .view(6, 3)
+        .requires_grad_(True)
+    )
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_max_coo(s, index)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_max_coo_backward_gradcheck_with_dim_size(device):
+    """Gradcheck with explicit (larger) ``dim_size`` exercising empty
+    trailing rows. Their argindex points at the sentinel and the
+    ``+1``/``narrow`` backward pattern drops that slot — so the gradient
+    w.r.t. ``src`` for empty buckets is zero.
+    """
+    torch.manual_seed(0)
+    src = (
+        torch.randperm(6, device=device).to(torch.double) - 3
+    ).requires_grad_(True)
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_max_coo(s, index, dim_size=6)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_max_coo_backward_gradcheck_empty_rows(device):
+    """Empty-row fixture under gradcheck (row 1 has no entries)."""
+    torch.manual_seed(0)
+    src = (
+        (torch.randperm(5 * 4, device=device).to(torch.double) - 10)
+        .view(5, 4)
+        .requires_grad_(True)
+    )
+    index = torch.tensor([0, 0, 2, 2, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_max_coo(s, index)[0]
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_max_coo_backward_empty_input(device):
+    """Empty ``src`` and ``index`` — exercises the ``numel() > 0`` guard.
+    Backward must not crash on empty grad and must return a correctly-shaped
+    zero gradient.
+    """
+    src = torch.zeros(
+        0,
+        4,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.empty(0, dtype=torch.long, device=device)
+
+    value, arg = pyg_lib.ops.segment_max_coo(src, index, dim_size=3)
+    assert value.size() == (3, 4)
+    assert arg.size() == (3, 4)
+    # Sum to a scalar and backprop — exercises backward on empty grad.
+    value.sum().backward()
+    assert src.grad is not None
+    assert src.grad.size() == src.size()
+    torch.testing.assert_close(src.grad, torch.zeros_like(src))

@@ -585,6 +585,32 @@ def segment_min_coo(
     return torch.ops.pyg.segment_min_coo(src, index, out, dim_size)
 
 
+def segment_max_coo(
+    src: Tensor,
+    index: Tensor,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tuple[Tensor, Tensor]:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a sorted COO :obj:`index`, using ``max`` as the reduction.
+
+    Returns a tuple ``(values, argindex)``. The reduction axis is
+    ``index.dim() - 1``. Empty buckets yield value ``0`` and argindex
+    ``src.size(dim)`` (sentinel). Only ``values`` is differentiable.
+
+    Args:
+        src: The source tensor.
+        index: Sorted COO indices.
+        out: The destination tensor for the values.
+        dim_size: If :obj:`out` is not given, the output size along the
+            reduction axis.
+
+    Returns:
+        Tuple ``(values, argindex)``.
+    """
+    return torch.ops.pyg.segment_max_coo(src, index, out, dim_size)
+
+
 def gather_coo(
     src: Tensor,
     index: Tensor,
@@ -853,6 +879,7 @@ __all__ = [
     'segment_add_coo',
     'segment_mean_coo',
     'segment_min_coo',
+    'segment_max_coo',
     'gather_coo',
     'spline_basis',
     'spline_weighting',
