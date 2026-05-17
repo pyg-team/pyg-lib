@@ -79,6 +79,37 @@ PYG_API std::tuple<at::Tensor, at::Tensor> segment_min_coo(
     const std::optional<at::Tensor>& out = std::nullopt,
     std::optional<int64_t> dim_size = std::nullopt);
 
+// Reduces all values from `src` into `out` at the segment positions specified
+// in `index` along the implicit axis `dim = index.dim() - 1` using a maximum
+// reduction, and returns both the per-bucket maximum value and the source
+// position that produced it (`arg_out`).
+//
+// COO ops do **not** take a `dim` argument: upstream `pytorch_scatter` fixes
+// the reduction axis at `index.dim() - 1`. The `index` tensor must be
+// **sorted ascending** along that axis.
+//
+// When `out` is not provided, a fresh buffer is allocated and initialized
+// to `numeric_limits<scalar_t>::lowest()` so that the running max is updated
+// on the first contributing element. Empty buckets (no contributing source
+// element) are reset to `0` after the reduction loop; the matching slot in
+// `arg_out` keeps the sentinel value `src.size(dim)` (one past the last
+// valid index along `dim`).
+//
+// When `out` *is* provided, the caller's buffer is used as the running
+// state (no lowest-init); the caller is responsible for any non-default
+// starting value. This matches the upstream `pytorch_scatter` contract.
+//
+// **CPU determinism:** the CPU kernel produces a *first-match* `arg_out`
+// on ties (strict `>` comparison). The CUDA kernel is not guaranteed to
+// match on ties (any valid argmax is acceptable).
+//
+// `arg_out` is non-differentiable; only `out` participates in autograd.
+PYG_API std::tuple<at::Tensor, at::Tensor> segment_max_coo(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
 // Gathers values from `src` at positions specified in `index`, along the
 // implicit axis `dim = index.dim() - 1`. Concretely:
 //

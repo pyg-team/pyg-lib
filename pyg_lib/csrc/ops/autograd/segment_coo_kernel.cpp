@@ -263,6 +263,111 @@ std::tuple<at::Tensor, at::Tensor> segment_min_coo_autograd(
   return std::make_tuple(result[0], result[1]);
 }
 
+// Autograd Function for `pyg::segment_max_coo`.
+//
+// COO ops fix the reduction axis at `dim = index.dim() - 1`. Forward returns
+// `(out, arg_out)`. Only `out` is differentiable; `arg_out` is marked
+// non-differentiable so PyTorch will not error when callers try to take
+// gradients through it (mirrors `ScatterMax`).
+//
+// Backward formula (mirrors `ScatterMax` from commit 4):
+//
+//   src_shape_plus = src_shape; src_shape_plus[dim] += 1
+//   grad_in = zeros(src_shape_plus)
+//   grad_in.scatter_(dim, arg_out, grad_out)   // sentinel lands in +1 slot
+//   grad_in = grad_in.narrow(dim, 0, src_shape[dim])  // drop sentinel
+//
+// The `+1`/`narrow` trick routes gradient only to the source positions
+// that produced the per-bucket max and silently drops any contribution
+// from buckets whose `arg_out` is still at the sentinel (empty buckets).
+//
+// Adapted for COO: `dim = index.dim() - 1`. `arg_out` indexes positions
+// along that same `dim` (the reduction axis, which is the last axis of the
+// broadcast `index_b`). Because `arg_out` is shaped like `out` (which has
+// trailing K dims from `src` that `index_b` does not), we must broadcast
+// `arg_out` over the trailing K axes before the `scatter_` call so that
+// `grad_in.scatter_(dim, arg_out_b, grad_out)` lines up per (B, N, K).
+class SegmentMaxCOO : public torch::autograd::Function<SegmentMaxCOO> {
+ public:
+  static variable_list forward(torch::autograd::AutogradContext* ctx,
+                               const at::Tensor& src,
+                               const at::Tensor& index,
+                               const std::optional<at::Tensor>& optional_out,
+                               std::optional<int64_t> dim_size) {
+    at::AutoDispatchBelowADInplaceOrView g;
+
+    const int64_t dim = index.dim() - 1;
+    TORCH_CHECK(dim >= 0,
+                "segment_max_coo: index must have at least 1 dimension");
+
+    // Mirror the kernel's broadcast+contiguous so backward sees an index of
+    // shape `src.shape[:index.dim()]`. We save `index_b` not because backward
+    // uses it directly (only `arg_out` and `src_shape` are needed), but for
+    // consistency with the rest of the family and to make any future
+    // backward refactor (e.g. via `gather_coo`) trivial.
+    auto sizes = index.sizes().vec();
+    for (int64_t i = 0; i < index.dim(); ++i)
+      sizes[i] = src.size(i);
+    auto index_b = index.expand(sizes).contiguous();
+
+    auto result = segment_max_coo(src, index, optional_out, dim_size);
+    auto out = std::get<0>(result);
+    auto arg_out = std::get<1>(result);
+
+    // Backward needs `arg_out` (where to deposit each `grad_out`), the
+    // normalized `dim`, and the original `src.sizes()` (so the +1/narrow
+    // trick reconstructs the right shape).
+    ctx->save_for_backward({index_b, arg_out});
+    ctx->saved_data["dim"] = dim;
+    ctx->saved_data["src_shape"] = src.sizes();
+
+    // `arg_out` is integer / non-differentiable; mark it so PyTorch will
+    // not attempt to propagate gradients through it.
+    ctx->mark_non_differentiable({arg_out});
+
+    if (optional_out.has_value()) {
+      ctx->mark_dirty({optional_out.value()});
+    }
+
+    return {out, arg_out};
+  }
+
+  static variable_list backward(torch::autograd::AutogradContext* ctx,
+                                variable_list grad_outs) {
+    // `grad_outs[0]` is the gradient w.r.t. `out`; `grad_outs[1]` is the
+    // gradient w.r.t. `arg_out` and is ignored (non-differentiable).
+    const auto grad_out = grad_outs[0];
+    const auto saved = ctx->get_saved_variables();
+    // saved[0] is `index_b`, kept for parity with other COO Functions; not
+    // used directly by backward (the +1/narrow trick references `arg_out`).
+    const auto arg_out = saved[1];
+    const auto dim = ctx->saved_data["dim"].toInt();
+    auto src_shape = ctx->saved_data["src_shape"].toIntList().vec();
+
+    // `+1`/`narrow` trick: extend `src_shape` along `dim` by one extra
+    // sentinel slot, scatter `grad_out` into the extended buffer using
+    // `arg_out` (sentinel entries land in the trailing slot and are
+    // dropped by the subsequent `narrow`).
+    src_shape[dim] += 1;
+    auto grad_in = at::zeros(src_shape, grad_out.options());
+    grad_in.scatter_(dim, arg_out, grad_out);
+    grad_in = grad_in.narrow(dim, 0, src_shape[dim] - 1);
+
+    // 4 input slots: (src, index, out, dim_size). Only `src` is a real
+    // differentiable tensor; the rest get undefined-Tensor grads.
+    return {grad_in, at::Tensor(), at::Tensor(), at::Tensor()};
+  }
+};
+
+std::tuple<at::Tensor, at::Tensor> segment_max_coo_autograd(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& optional_out,
+    std::optional<int64_t> dim_size) {
+  auto result = SegmentMaxCOO::apply(src, index, optional_out, dim_size);
+  return std::make_tuple(result[0], result[1]);
+}
+
 // Autograd Function for `pyg::gather_coo`.
 //
 // COO ops fix the gather axis at `dim = index.dim() - 1`. Forward saves
@@ -330,6 +435,8 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
          TORCH_FN(segment_mean_coo_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_coo"),
          TORCH_FN(segment_min_coo_autograd));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_max_coo"),
+         TORCH_FN(segment_max_coo_autograd));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_coo"),
          TORCH_FN(gather_coo_autograd));
 }
