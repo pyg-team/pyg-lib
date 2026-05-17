@@ -326,6 +326,216 @@ at::Tensor segment_sum_coo_kernel(const at::Tensor& src,
 }
 
 // ============================================================================
+// `segment_mean_coo` — Commit 7.
+//
+// Strategy: reuse the `segment_sum_coo_*` kernels to compute the per-bucket
+// sum into `out`, then run a tiny counting kernel that atomically increments
+// a per-bucket `int64_t` count buffer, then divide `out` by `count` (clamped
+// at 1 to avoid div-by-zero for empty buckets).
+//
+// Count storage choice: a **separate `int64_t` buffer** of shape
+// `[..., out.size(dim)]` (leading dims match `index`, the reduction axis is
+// `N = out.size(dim)`). Upstream `pytorch_scatter` (`segment_coo_cuda.cu:
+// 199-203, 264-278`) instead reuses the `arg_out` slot typed as the input's
+// `scalar_t` and runs the sum kernel with a `nullptr` src to get count-of-1
+// behavior. We deviate for two reasons:
+//
+//   1. Precision: counting in `Half`/`BFloat16` saturates at the dtype's
+//      max representable integer (2048 / 256 for `Half`/`BFloat16`).
+//   2. Simplicity: a dedicated 1-thread-per-`src`-row counting kernel is
+//      trivial and avoids the `HAS_VAL=false` plumbing.
+//
+// Count tensor is `int64_t`; `atomicAdd(int64_t*, int64_t)` is provided in
+// `atomics.cuh`.
+
+// Counting kernel — one thread per `index` entry, atomically increments
+// `count[batch_offset + idx]`. `count` has shape `[B, N]` (leading dims of
+// `index` with the reduction axis replaced by `N = out.size(dim)`).
+__global__ void segment_mean_coo_count_cuda_kernel(
+    const at::cuda::detail::TensorInfo<int64_t, int> index_info,
+    int64_t* __restrict__ count_data,
+    size_t E,
+    size_t N) {
+  int row_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int D = index_info.sizes[index_info.dims - 1];
+
+  if (row_idx < E) {
+    int offset = at::cuda::detail::IndexToOffset<int64_t, int, -1>::get(
+        row_idx, index_info);
+    int64_t idx = index_info.data[offset];
+    // `(row_idx / D) * N + idx` picks the count slot inside the per-batch
+    // count row, matching the `out_idx` arithmetic in `segment_sum_coo`.
+    int count_idx = (row_idx / D) * static_cast<int>(N) + static_cast<int>(idx);
+    atomicAdd(count_data + count_idx, static_cast<int64_t>(1));
+  }
+}
+
+at::Tensor segment_mean_coo_kernel(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& optional_out,
+    std::optional<int64_t> dim_size) {
+  TORCH_CHECK(src.is_cuda(),
+              "segment_mean_coo (CUDA): src must be a CUDA tensor");
+  TORCH_CHECK(index.is_cuda(),
+              "segment_mean_coo (CUDA): index must be a CUDA tensor");
+  TORCH_CHECK(src.device() == index.device(),
+              "segment_mean_coo (CUDA): src and index must be on the same "
+              "device");
+  TORCH_CHECK(src.dim() >= index.dim(),
+              "segment_mean_coo (CUDA): src.dim() must be >= index.dim() (got ",
+              src.dim(), " vs ", index.dim(), ")");
+
+  const c10::cuda::OptionalCUDAGuard device_guard(device_of(src));
+
+  // Broadcast `index` up to `src.shape[:index.dim()]` (same rule as the sum
+  // kernel; matches upstream `segment_coo_cuda.cu:164-168`).
+  auto sizes = index.sizes().vec();
+  for (int64_t i = 0; i < index.dim(); ++i) {
+    sizes[i] = src.size(i);
+  }
+  auto index_b = index.expand(sizes);
+
+  // COO ops do not take `dim` from Python — it is always `index.dim() - 1`.
+  const auto dim = index_b.dim() - 1;
+
+  auto src_c = src.contiguous();
+  auto index_c = index_b.contiguous();
+
+  at::Tensor out;
+  const bool out_was_provided = optional_out.has_value();
+  if (out_was_provided) {
+    // Match `segment_sum_coo`'s `out=` handling: caller owns the buffer, no
+    // zero-init. The mean semantics with `out=` thus combine the caller's
+    // initial value with the new sum before division (mirrors upstream
+    // `segment_coo_cuda.cu:175-179, 264-278`).
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim) {
+        TORCH_CHECK(src_c.size(i) == out.size(i),
+                    "segment_mean_coo (CUDA): out.size(", i,
+                    ") must match src.size(", i, ")");
+      }
+    }
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    if (dim_size.has_value()) {
+      out_sizes[dim] = dim_size.value();
+    } else if (index_c.numel() == 0) {
+      out_sizes[dim] = 0;
+    } else {
+      // Auto-infer from the last (sorted-ascending) index along `dim`.
+      auto tail = index_c.select(dim, index_c.size(dim) - 1);
+      tail = tail.numel() > 1 ? tail.max() : tail;
+      out_sizes[dim] = 1 + tail.cpu().data_ptr<int64_t>()[0];
+    }
+    // Zero-init so the `atomicAdd` sum pass starts from a clean slate.
+    out = at::zeros(out_sizes, src_c.options());
+  }
+
+  if (index_c.numel() == 0) {
+    return out;
+  }
+
+  const auto E = index_c.numel();
+  const auto E_2 = index_c.size(dim);
+  const auto E_1 = E / E_2;
+  const auto K = src_c.numel() / E;
+  const auto N = out.size(dim);
+  const float avg_len = static_cast<float>(E_2) / static_cast<float>(N);
+
+  // Count buffer: shape `[..., N]` (leading dims of `index`, reduction axis
+  // replaced by `N`). Same shape rule upstream uses for the MEAN-reuse
+  // `arg_out` (`segment_coo_cuda.cu:200-203`).
+  auto count_sizes = index_c.sizes().vec();
+  count_sizes[dim] = N;
+  auto count = at::zeros(count_sizes, index_c.options());  // `int64_t`
+
+  auto index_info = at::cuda::detail::getTensorInfo<int64_t, int>(index_c);
+  const auto stream = at::cuda::getCurrentCUDAStream();
+
+  // -------- Pass 1: sum into `out`. Reuses the `segment_sum_coo_*` kernels.
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_mean_coo_cuda", [&] {
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+
+        if (K == 1) {
+          const int T = threads();
+          const int B = std::max(1, static_cast<int>((E + T - 1) / T));
+          segment_sum_coo_cuda_kernel<scalar_t>
+              <<<B, T, 0, stream>>>(src_data, index_info, out_data, E, N);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          // Same `TB` ladder as `segment_sum_coo` — picks the best
+          // per-thread inner-loop length for the average run.
+          const dim3 block_dim(32, 8);
+          const dim3 grid_cols((K + 31) / 32);
+          if (avg_len <= 8.0f) {
+            constexpr int TB = 4;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_sum_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else if (avg_len <= 16.0f) {
+            constexpr int TB = 8;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_sum_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else if (avg_len <= 32.0f) {
+            constexpr int TB = 16;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_sum_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          } else {
+            constexpr int TB = 32;
+            const dim3 grid_dim((E_1 * ((E_2 + TB - 1) / TB) + 7) / 8,
+                                grid_cols.x);
+            segment_sum_coo_broadcast_cuda_kernel<scalar_t, TB>
+                <<<grid_dim, block_dim, 0, stream>>>(src_data, index_info,
+                                                     out_data, E, K, N);
+            C10_CUDA_KERNEL_LAUNCH_CHECK();
+          }
+        }
+      });
+
+  // -------- Pass 2: count into `count`. One thread per `index` entry.
+  {
+    const int T = threads();
+    const int B = std::max(1, static_cast<int>((E + T - 1) / T));
+    segment_mean_coo_count_cuda_kernel<<<B, T, 0, stream>>>(
+        index_info, count.data_ptr<int64_t>(), E, N);
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
+  }
+
+  // -------- Pass 3: divide. Clamp count to >=1 to keep zero-count buckets
+  // unchanged (mirrors upstream `arg_out.masked_fill_(arg_out < 1, 1)` at
+  // `segment_coo_cuda.cu:269-270`). Then unsqueeze trailing K dims and
+  // broadcast-divide.
+  count.clamp_min_(1);
+  auto count_b = count;
+  for (int64_t i = dim + 1; i < out.dim(); ++i) {
+    count_b = count_b.unsqueeze(-1);
+  }
+  if (out.is_floating_point()) {
+    out.true_divide_(count_b);
+  } else {
+    out.div_(count_b, "floor");
+  }
+
+  return out;
+}
+
+// ============================================================================
 // `gather_coo` — Commit 6.
 //
 // Trivial gather: `out[i] = src[index[i]]` along `dim = index.dim() - 1`,
@@ -473,6 +683,8 @@ at::Tensor gather_coo_kernel(const at::Tensor& src,
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_sum_coo"),
          TORCH_FN(segment_sum_coo_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_coo"),
+         TORCH_FN(segment_mean_coo_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_coo"), TORCH_FN(gather_coo_kernel));
 }
 

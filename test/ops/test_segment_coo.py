@@ -52,6 +52,37 @@ def _segment_sum_coo_ref(
     return out
 
 
+def _segment_mean_coo_ref(
+    src: torch.Tensor,
+    index: torch.Tensor,
+    dim_size: int = None,
+) -> torch.Tensor:
+    """Pure-PyTorch reference for :func:`segment_mean_coo`.
+
+    Computes per-bucket sums via :func:`_segment_sum_coo_ref`, then divides by
+    per-bucket counts. Counts for empty buckets are masked to 1 so empty
+    buckets yield exactly 0 (matching upstream semantics).
+    """
+    dim = index.dim() - 1
+    summed = _segment_sum_coo_ref(src, index, dim_size=dim_size)
+    if dim_size is None:
+        dim_size = summed.size(dim)
+    # Count per bucket: scatter-add of ones along the COO dim.
+    counts = torch.zeros(dim_size, dtype=src.dtype, device=src.device)
+    if index.numel() > 0:
+        counts.scatter_add_(
+            0,
+            index.reshape(-1),
+            torch.ones(index.numel(), dtype=src.dtype, device=src.device),
+        )
+    # Shape counts for broadcasting along ``dim``.
+    shape = [1] * summed.dim()
+    shape[dim] = dim_size
+    counts = counts.view(shape)
+    safe_counts = counts.masked_fill(counts == 0, 1)
+    return summed / safe_counts
+
+
 def _gather_coo_ref(
     src: torch.Tensor,
     index: torch.Tensor,
@@ -464,3 +495,199 @@ def test_gather_coo_gradgradcheck(device):
         return pyg_lib.ops.gather_coo(s, index)
 
     assert torch.autograd.gradgradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# segment_mean_coo — forward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+def test_segment_mean_coo_forward_dtypes(dtype, device):
+    torch.manual_seed(0)
+    src = torch.randn(8, 4, dtype=dtype, device=device)
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_forward_1d(device):
+    src = torch.randn(8, device=device)
+    index = torch.tensor([0, 0, 0, 1, 1, 2, 3, 3], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    assert out.size() == (4,)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_forward_2d_broadcast_index(device):
+    """1-D ``index`` broadcasts over a 2-D ``src`` along ``dim = 0``."""
+    src = torch.randn(6, 4, device=device)
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_forward_k1_small_trailing(device):
+    """K==1 path: no trailing feature dims (purely 1-D)."""
+    src = torch.randn(10, device=device)
+    index = torch.tensor([0, 0, 1, 1, 2, 2, 3, 3, 4, 4], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    assert out.size() == (5,)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_forward_k_large_broadcast(device):
+    """K>1 path: large trailing feature dim exercises the broadcast kernel."""
+    src = torch.randn(12, 64, device=device)
+    index = torch.tensor([0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    assert out.size() == (5, 64)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_dim_size_auto_infer(device):
+    src = torch.randn(6, device=device)
+    index = torch.tensor([0, 1, 1, 2, 2, 3], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    # Auto-inferred dim_size = index.max() + 1 = 4.
+    assert out.size(-1) == 4
+    expected = _segment_mean_coo_ref(src, index)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_mean_coo_dim_size_explicit(device):
+    src = torch.randn(6, device=device)
+    index = torch.tensor([0, 1, 1, 2, 2, 3], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index, dim_size=6)
+    assert out.size(-1) == 6
+    expected = _segment_mean_coo_ref(src, index, dim_size=6)
+    torch.testing.assert_close(out, expected)
+    # Trailing empty buckets should be exactly zero (count masked to 1).
+    torch.testing.assert_close(out[4:], torch.zeros(2, device=device))
+
+
+@withCUDA
+def test_segment_mean_coo_empty_rows_in_middle(device):
+    """Row 1 has no entries — its output must be zero (count = 0 -> 0/1)."""
+    src = torch.randn(5, 4, device=device)
+    index = torch.tensor([0, 0, 2, 2, 2], device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index)
+    expected = _segment_mean_coo_ref(src, index)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, expected)
+    # Row 1 is empty -> zeros.
+    torch.testing.assert_close(out[1], torch.zeros(4, device=device))
+
+
+@withCUDA
+def test_segment_mean_coo_empty_input(device):
+    """Empty source and index — output is all-zero of the requested shape."""
+    src = torch.empty(0, 4, device=device)
+    index = torch.empty(0, dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index, dim_size=3)
+    assert out.size() == (3, 4)
+    torch.testing.assert_close(out, torch.zeros(3, 4, device=device))
+
+
+# ---------------------------------------------------------------------------
+# segment_mean_coo — backward
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+def test_segment_mean_coo_backward_gradcheck(device):
+    src = torch.randn(
+        6,
+        3,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.tensor([0, 0, 1, 1, 1, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_mean_coo(s, index)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_mean_coo_backward_gradcheck_with_dim_size(device):
+    """Gradcheck with explicit (larger) ``dim_size`` -> empty trailing rows."""
+    src = torch.randn(
+        5,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.tensor([0, 0, 2, 2, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_mean_coo(s, index, dim_size=5)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_mean_coo_backward_gradcheck_empty_rows(device):
+    """Empty-row fixture under gradcheck."""
+    src = torch.randn(
+        5,
+        4,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.tensor([0, 0, 2, 2, 2], device=device)
+
+    def fn(s):
+        return pyg_lib.ops.segment_mean_coo(s, index)
+
+    assert torch.autograd.gradcheck(fn, (src,))
+
+
+@withCUDA
+def test_segment_mean_coo_backward_empty_input(device):
+    """Empty ``src`` and ``index`` — exercises the ``numel() > 0`` guard in
+    backward. The forward is well-defined (all-zero output); the backward
+    must not crash on the empty grad and should return a correctly-shaped
+    zero gradient.
+    """
+    src = torch.zeros(
+        0,
+        4,
+        dtype=torch.double,
+        device=device,
+        requires_grad=True,
+    )
+    index = torch.empty(0, dtype=torch.long, device=device)
+
+    out = pyg_lib.ops.segment_mean_coo(src, index, dim_size=3)
+    assert out.size() == (3, 4)
+    # Sum to a scalar and backprop — exercises backward on an empty grad.
+    out.sum().backward()
+    assert src.grad is not None
+    assert src.grad.size() == src.size()
+    torch.testing.assert_close(src.grad, torch.zeros_like(src))
