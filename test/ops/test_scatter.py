@@ -1717,3 +1717,64 @@ def test_scatter_max_backward_gradcheck_with_dim_size(device):
         return pyg_lib.ops.scatter_max(s, index, dim=-1, dim_size=6)[0]
 
     assert torch.autograd.gradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# scatter dispatcher (commit 14 — Python layer)
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'reduce',
+    ['sum', 'add', 'mul', 'mean', 'min', 'max'],
+)
+def test_scatter_dispatcher(reduce, device):
+    """``scatter(src, index, dim, out, dim_size, reduce=...)`` must route to
+    the corresponding typed op. For ``min``/``max`` the dispatcher returns
+    ``[0]`` (value only), not the ``(value, argindex)`` tuple.
+
+    Uses a unique-valued ``src`` so argindex tie-breaks are deterministic
+    and ``min``/``max`` value outputs compare exactly across devices.
+    """
+    torch.manual_seed(0)
+    src = (torch.randperm(6 * 3, device=device).to(torch.float64) - 9).view(
+        6,
+        3,
+    )
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    out = pyg_lib.ops.scatter(src, index, dim=0, dim_size=4, reduce=reduce)
+    if reduce in ('sum', 'add'):
+        expected = pyg_lib.ops.scatter_sum(src, index, dim=0, dim_size=4)
+    elif reduce == 'mul':
+        expected = pyg_lib.ops.scatter_mul(src, index, dim=0, dim_size=4)
+    elif reduce == 'mean':
+        expected = pyg_lib.ops.scatter_mean(src, index, dim=0, dim_size=4)
+    elif reduce == 'min':
+        expected = pyg_lib.ops.scatter_min(src, index, dim=0, dim_size=4)[0]
+    elif reduce == 'max':
+        expected = pyg_lib.ops.scatter_max(src, index, dim=0, dim_size=4)[0]
+    assert isinstance(out, torch.Tensor)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_scatter_dispatcher_unknown_reduce_raises(device):
+    """The dispatcher must reject unknown reduce strings with a clear error."""
+    src = torch.randn(6, 3, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+    with pytest.raises(ValueError):
+        pyg_lib.ops.scatter(src, index, dim=0, reduce='unsupported')
+
+
+@withCUDA
+def test_scatter_dispatcher_default_reduce_is_sum(device):
+    """Default ``reduce`` is ``"sum"`` (upstream convention)."""
+    torch.manual_seed(0)
+    src = torch.randn(6, 3, device=device)
+    index = torch.tensor([0, 1, 0, 1, 1, 3], device=device)
+
+    out = pyg_lib.ops.scatter(src, index, dim=0)
+    expected = pyg_lib.ops.scatter_sum(src, index, dim=0)
+    torch.testing.assert_close(out, expected)
