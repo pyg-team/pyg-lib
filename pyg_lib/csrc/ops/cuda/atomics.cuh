@@ -453,9 +453,11 @@ static inline __device__ int16_t atomicMin(int16_t* address, int16_t val) {
 // where `int32_t` is `int`.)
 //
 // `int64_t` is `long int` on Linux x86_64 (LP64); CUDA's native
-// `atomicMin(long long int*, long long int)` covers a *different* type, so
-// we provide our own CAS loop. The comparison is done in signed space on the
-// reinterpreted 64-bit word.
+// `atomicMin(long long int*, long long int)` covers a *different* type there,
+// so we provide our own CAS loop. On Windows MSVC (LLP64), `int64_t` *is*
+// `long long int`, so the same CUDA intrinsic already participates in
+// overload resolution and defining a wrapper here would be a redefinition.
+#if !defined(_MSC_VER)
 static inline __device__ int64_t atomicMin(int64_t* address, int64_t val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
@@ -469,6 +471,7 @@ static inline __device__ int64_t atomicMin(int64_t* address, int64_t val) {
   } while (assumed != old);
   return (int64_t)old;
 }
+#endif
 
 // Floating-point overloads.
 static inline __device__ at::Half atomicMin(at::Half* address, at::Half val) {
@@ -607,9 +610,11 @@ static inline __device__ int16_t atomicMax(int16_t* address, int16_t val) {
 // Linux x86_64 where `int32_t` is `int`).
 //
 // `int64_t` is `long int` on Linux x86_64 (LP64); CUDA's native
-// `atomicMax(long long int*, long long int)` covers a *different* type, so
-// we provide our own CAS loop. The comparison is done in signed space on the
-// reinterpreted 64-bit word.
+// `atomicMax(long long int*, long long int)` covers a *different* type there,
+// so we provide our own CAS loop. On Windows MSVC (LLP64), `int64_t` *is*
+// `long long int`, so the same CUDA intrinsic already participates in
+// overload resolution and defining a wrapper here would be a redefinition.
+#if !defined(_MSC_VER)
 static inline __device__ int64_t atomicMax(int64_t* address, int64_t val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
@@ -623,6 +628,7 @@ static inline __device__ int64_t atomicMax(int64_t* address, int64_t val) {
   } while (assumed != old);
   return (int64_t)old;
 }
+#endif
 
 // Floating-point overloads.
 static inline __device__ at::Half atomicMax(at::Half* address, at::Half val) {
