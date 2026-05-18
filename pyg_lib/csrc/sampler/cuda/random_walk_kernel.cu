@@ -1,28 +1,12 @@
 #include <ATen/ATen.h>
-#include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
+
+#include "pyg_lib/csrc/utils/cuda/helpers.h"
 
 namespace pyg {
 namespace sampler {
 
 namespace {
-
-int threads() {
-  const auto props = at::cuda::getCurrentDeviceProperties();
-  return std::min(props->maxThreadsPerBlock, 1024);
-}
-
-int blocks(int numel) {
-  const auto props = at::cuda::getCurrentDeviceProperties();
-  const auto blocks_per_sm = props->maxThreadsPerMultiProcessor / 256;
-  const auto max_blocks = props->multiProcessorCount * blocks_per_sm;
-  const auto max_threads = threads();
-  return std::min(max_blocks, (numel + max_threads - 1) / max_threads);
-}
-
-#define CUDA_1D_KERNEL_LOOP(scalar_t, i, n)                           \
-  for (scalar_t i = (blockIdx.x * blockDim.x) + threadIdx.x; i < (n); \
-       i += (blockDim.x * gridDim.x))
 
 template <typename scalar_t>
 __global__ void random_walk_kernel_impl(
@@ -74,7 +58,8 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
     const auto rand_data = rand.data_ptr<float>();
     auto out_data = out.data_ptr<scalar_t>();
 
-    random_walk_kernel_impl<<<blocks(seed.size(0)), threads(), 0, stream>>>(
+    random_walk_kernel_impl<<<pyg::utils::blocks(seed.size(0)),
+                              pyg::utils::threads(), 0, stream>>>(
         rowptr_data, col_data, seed_data, rand_data, out_data, seed.size(0),
         walk_length);
 
