@@ -169,6 +169,167 @@ at::Tensor segment_sum_coo_kernel(const at::Tensor& src,
   return out;
 }
 
+// CPU implementation of `pyg::segment_mean_coo`.
+//
+// Same layout/shape as `segment_sum_coo_kernel`: sequential pass over the
+// sorted-ascending `index`, accumulate runs of equal indices, but ALSO track
+// the per-bucket count and divide at the end. The count tensor is allocated
+// with shape `index.sizes()` with the last dim replaced by `N` (i.e. without
+// the trailing K dims) — this is a flat `B*N` count, matching upstream
+// `segment_coo_cpu.cpp:54-56`. Backward gathers this 1-D-per-row count and
+// `unsqueeze`s along K, so we keep the storage minimal here.
+//
+// `out=` contract: upstream MEAN does **not** honor an accumulate contract
+// (it overwrites buckets touched by `index`). We match that. Buckets not
+// touched by `index` are left at zero (fresh `out`) or untouched (supplied
+// `out`). This means the `out=` form of `segment_mean_coo` is rarely useful
+// directly, but the kernel still accepts it for API symmetry with sum.
+at::Tensor segment_mean_coo_kernel(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& optional_out,
+    std::optional<int64_t> dim_size) {
+  TORCH_CHECK(src.dim() >= index.dim(),
+              "segment_mean_coo: src.dim() must be >= index.dim() "
+              "(got src.dim()=",
+              src.dim(), ", index.dim()=", index.dim(), ")");
+
+  const int64_t dim = index.dim() - 1;
+  TORCH_CHECK(dim >= 0,
+              "segment_mean_coo: index must have at least 1 dimension");
+
+  auto sizes = index.sizes().vec();
+  for (int64_t i = 0; i < index.dim(); ++i)
+    sizes[i] = src.size(i);
+  auto index_b = index.expand(sizes).contiguous();
+
+  auto src_c = src.contiguous();
+
+  at::Tensor out;
+  if (optional_out.has_value()) {
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim)
+        TORCH_CHECK(src_c.size(i) == out.size(i), "segment_mean_coo: out.size(",
+                    i, ") must match src.size(", i, ")");
+    }
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    if (dim_size.has_value()) {
+      out_sizes[dim] = dim_size.value();
+    } else if (index_b.numel() == 0) {
+      out_sizes[dim] = 0;
+    } else {
+      auto tmp = index_b.select(dim, index_b.size(dim) - 1);
+      tmp = tmp.numel() > 1 ? tmp.max() : tmp;
+      out_sizes[dim] = 1 + *tmp.data_ptr<int64_t>();
+    }
+    out = at::zeros(out_sizes, src_c.options());
+  }
+
+  if (src_c.numel() == 0) {
+    return out;
+  }
+
+  const int64_t E = src_c.size(dim);
+  int64_t B = 1;
+  for (int64_t i = 0; i < dim; ++i)
+    B *= index_b.size(i);
+  const int64_t K = src_c.numel() / index_b.numel();
+  const int64_t N = out.size(dim);
+
+  // Count storage: shape `index_b.shape` with last dim replaced by `N`. This
+  // is `B*N` flat per the `dim` axis — no trailing K. Allocate as float to
+  // match `out`'s scalar type at division time, but use the same dtype as
+  // `out` so we can re-use the dispatcher branch.
+  auto count_sizes = index_b.sizes().vec();
+  count_sizes[dim] = N;
+  auto count = at::zeros(count_sizes, src_c.options());
+
+  AT_DISPATCH_FLOATING_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_mean_coo_cpu", [&] {
+        using opmath_t = at::opmath_type<scalar_t>;
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        auto* count_data = count.data_ptr<scalar_t>();
+        const auto* index_data = index_b.data_ptr<int64_t>();
+
+        at::parallel_for(
+            0, B, at::internal::GRAIN_SIZE, [&](int64_t b_beg, int64_t b_end) {
+              for (int64_t b = b_beg; b < b_end; ++b) {
+                const int64_t src_off = b * E * K;
+                const int64_t out_off = b * N * K;
+                const int64_t idx_off = b * E;
+                const int64_t cnt_off = b * N;
+
+                if (E == 0)
+                  continue;
+
+                int64_t cur_idx = index_data[idx_off];
+                int64_t run_start = 0;
+
+                if (K == 1) {
+                  opmath_t acc = static_cast<opmath_t>(0);
+                  for (int64_t e = 0; e < E; ++e) {
+                    acc += static_cast<opmath_t>(src_data[src_off + e]);
+                    const bool last = (e == E - 1);
+                    const int64_t next_idx =
+                        last ? cur_idx : index_data[idx_off + e + 1];
+                    if (last || next_idx != cur_idx) {
+                      out_data[out_off + cur_idx] = static_cast<scalar_t>(acc);
+                      count_data[cnt_off + cur_idx] =
+                          static_cast<scalar_t>(e + 1 - run_start);
+                      if (!last) {
+                        cur_idx = next_idx;
+                        acc = static_cast<opmath_t>(0);
+                        run_start = e + 1;
+                      }
+                    }
+                  }
+                } else {
+                  std::vector<opmath_t> acc(K, static_cast<opmath_t>(0));
+                  for (int64_t e = 0; e < E; ++e) {
+                    for (int64_t k = 0; k < K; ++k)
+                      acc[k] +=
+                          static_cast<opmath_t>(src_data[src_off + e * K + k]);
+                    const bool last = (e == E - 1);
+                    const int64_t next_idx =
+                        last ? cur_idx : index_data[idx_off + e + 1];
+                    if (last || next_idx != cur_idx) {
+                      for (int64_t k = 0; k < K; ++k)
+                        out_data[out_off + cur_idx * K + k] =
+                            static_cast<scalar_t>(acc[k]);
+                      count_data[cnt_off + cur_idx] =
+                          static_cast<scalar_t>(e + 1 - run_start);
+                      if (!last) {
+                        cur_idx = next_idx;
+                        for (int64_t k = 0; k < K; ++k)
+                          acc[k] = static_cast<opmath_t>(0);
+                        run_start = e + 1;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+      });
+
+  // Buckets that received no entries have count == 0; clamp to 1 to avoid
+  // division by zero (the corresponding `out` slot is already 0 or
+  // user-supplied and untouched).
+  count.masked_fill_(count < static_cast<int64_t>(1), 1);
+
+  // Broadcast count along trailing K dims by unsqueezing once per trailing
+  // dim of `src` past `index.dim()`.
+  auto count_b = count;
+  for (int64_t i = 0; i < src_c.dim() - index_b.dim(); ++i)
+    count_b = count_b.unsqueeze(-1);
+  out.div_(count_b);
+
+  return out;
+}
+
 // CPU implementation of `pyg::gather_coo`.
 //
 // COO ops fix the gather axis at `dim = index.dim() - 1`. Per element:
@@ -269,6 +430,8 @@ at::Tensor gather_coo_kernel(const at::Tensor& src,
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_sum_coo"),
          TORCH_FN(segment_sum_coo_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_coo"),
+         TORCH_FN(segment_mean_coo_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_coo"), TORCH_FN(gather_coo_kernel));
 }
 

@@ -27,6 +27,26 @@ PYG_API at::Tensor segment_sum_coo(
     const std::optional<at::Tensor>& out = std::nullopt,
     std::optional<int64_t> dim_size = std::nullopt);
 
+// Computes the mean of all values from `src` at the segment positions
+// specified in `index` along the implicit axis `dim = index.dim() - 1`. The
+// per-bucket count is computed internally during the sequential pass and
+// applied as a final division.
+//
+// COO ops do **not** take a `dim` argument: upstream `pytorch_scatter` fixes
+// the reduction axis at `index.dim() - 1`. The `index` tensor must be
+// **sorted ascending** along that axis.
+//
+// `out=` contract: unlike `segment_sum_coo` (which accumulates), the mean
+// kernel **overwrites** `out` at every bucket touched by `index` (matches
+// upstream `segment_coo_cpu.cpp` for the MEAN reducer). Buckets not visited
+// by any `index` entry are left at their original value when `out=` is
+// supplied, or zero-initialized otherwise.
+PYG_API at::Tensor segment_mean_coo(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    const std::optional<at::Tensor>& out = std::nullopt,
+    std::optional<int64_t> dim_size = std::nullopt);
+
 // Gathers values from `src` at positions specified in `index`, along the
 // implicit axis `dim = index.dim() - 1`. Concretely:
 //
