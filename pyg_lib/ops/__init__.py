@@ -411,6 +411,34 @@ def scatter_mul(
     return torch.ops.pyg.scatter_mul(src, index, dim, out, dim_size)
 
 
+def scatter_mean(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` at the
+    indices specified in the :obj:`index` tensor along a given axis
+    :obj:`dim`, using ``mean`` as the reduction. Empty buckets yield zero.
+
+    For floating-point inputs, division is exact. For integer inputs,
+    floor-division is used (matching upstream ``pytorch_scatter``).
+
+    Args:
+        src: The source tensor.
+        index: The indices of elements to scatter.
+        dim: The axis along which to index.
+        out: The destination tensor.
+        dim_size: If :obj:`out` is not given, automatically create output with
+            size :obj:`dim_size` at dimension :obj:`dim`.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.scatter_mean(src, index, dim, out, dim_size)
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -652,6 +680,7 @@ __all__ = [
     'scatter_sum',
     'scatter_add',
     'scatter_mul',
+    'scatter_mean',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
