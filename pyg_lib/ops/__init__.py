@@ -439,6 +439,36 @@ def scatter_mean(
     return torch.ops.pyg.scatter_mean(src, index, dim, out, dim_size)
 
 
+def scatter_min(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tuple[Tensor, Tensor]:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` at the
+    indices specified in the :obj:`index` tensor along a given axis
+    :obj:`dim`, using ``min`` as the reduction.
+
+    Returns a tuple ``(values, argindex)`` where ``argindex[i]`` is the index
+    along ``dim`` of the source element that contributed to ``values[i]``.
+    Empty buckets yield value ``0`` and argindex ``src.size(dim)`` (sentinel).
+    Only ``values`` is differentiable.
+
+    Args:
+        src: The source tensor.
+        index: The indices of elements to scatter.
+        dim: The axis along which to index.
+        out: The destination tensor for the values.
+        dim_size: If :obj:`out` is not given, automatically create output with
+            size :obj:`dim_size` at dimension :obj:`dim`.
+
+    Returns:
+        Tuple ``(values, argindex)``.
+    """
+    return torch.ops.pyg.scatter_min(src, index, dim, out, dim_size)
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -681,6 +711,7 @@ __all__ = [
     'scatter_add',
     'scatter_mul',
     'scatter_mean',
+    'scatter_min',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',

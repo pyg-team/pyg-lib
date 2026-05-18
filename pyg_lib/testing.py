@@ -1,3 +1,4 @@
+import functools
 import os
 import os.path as osp
 from importlib.util import find_spec
@@ -12,6 +13,7 @@ from pyg_lib import get_home_dir
 
 
 def withSeed(func: Callable) -> Callable:
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         torch.manual_seed(12345)
         func(*args, **kwargs)

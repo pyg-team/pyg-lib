@@ -324,3 +324,187 @@ static inline __device__ double atomicMul(double* address, double val) {
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+
+// -----------------------------------------------------------------------------
+// `atomicMin` — Commit 4 (`scatter_min`).
+//
+// CUDA provides a native `atomicMin` for `int`, `unsigned int`, `long long
+// int`, and `unsigned long long int` only — none of the narrow ints, neither
+// floating-point dtype, and not `at::Half` / `at::BFloat16`. For uniform
+// overload resolution at the kernel call site (where `scalar_t` ranges over
+// the `AT_DISPATCH_ALL_TYPES_AND2(Half, BFloat16, ...)` instantiation set),
+// we provide CAS-loop overloads for every dtype below — even where a native
+// `atomicMin` exists — so that `atomicMin(out_data + j, src[i])` resolves
+// without an integer-promotion ambiguity inside the kernel.
+//
+// Storage strategy mirrors the `atomicMul` block above:
+//   * 1-byte ints (uint8_t / int8_t)            -> CAS on 32-bit word, byte
+//                                                  selector `(addr & 3) * 8`.
+//   * 2-byte ints + at::Half + at::BFloat16     -> CAS on 32-bit word,
+//                                                  halfword selector
+//                                                  `addr & 2`. Floating-point
+//                                                  half/bfloat16 use a
+//                                                  dedicated helper that
+//                                                  preserves the IEEE bit
+//                                                  pattern via `scalar_t::x`.
+//   * int32_t                                   -> forwards to CUDA's
+//                                                  native `atomicMin`.
+//   * float                                     -> CAS on 32-bit word via
+//                                                  `__float_as_int` /
+//                                                  `__int_as_float`.
+//   * int64_t                                   -> CAS on 64-bit word
+//                                                  (signed comparison done
+//                                                  on the reinterpreted
+//                                                  signed value).
+//   * double                                    -> CAS on 64-bit word via
+//                                                  `__double_as_longlong` /
+//                                                  `__longlong_as_double`.
+
+namespace pyg_atomics_detail {
+
+// 1-byte CAS-loop min (uint8_t / int8_t).
+template <typename scalar_t>
+static inline __device__ scalar_t atomicMin1B(scalar_t* address, scalar_t val) {
+  uint32_t* address_as_ui = (uint32_t*)((char*)address - ((size_t)address & 3));
+  const uint32_t shift = ((size_t)address & 3) * 8;
+  uint32_t old = *address_as_ui;
+  uint32_t assumed;
+  uint32_t result;
+
+  do {
+    assumed = old;
+    const scalar_t cur = (scalar_t)((old >> shift) & 0xff);
+    const scalar_t new_val = val < cur ? val : cur;
+    result = (assumed & ~(0x000000ff << shift)) |
+             (((uint32_t)new_val & 0xff) << shift);
+    old = atomicCAS(address_as_ui, assumed, result);
+  } while (assumed != old);
+  return (scalar_t)((old >> shift) & 0xff);
+}
+
+// 2-byte CAS-loop min (int16_t).
+template <typename scalar_t>
+static inline __device__ scalar_t atomicMin2B(scalar_t* address, scalar_t val) {
+  uint32_t* address_as_ui = (uint32_t*)((char*)address - ((size_t)address & 2));
+  uint32_t old = *address_as_ui;
+  uint32_t assumed;
+  uint32_t newval;
+
+  do {
+    assumed = old;
+    const scalar_t cur =
+        (size_t)address & 2 ? (scalar_t)(old >> 16) : (scalar_t)(old & 0xffff);
+    const scalar_t new_val = val < cur ? val : cur;
+    const uint32_t lo = (uint32_t)new_val & 0xffff;
+    newval = (size_t)address & 2 ? (old & 0xffff) | (lo << 16)
+                                 : (old & 0xffff0000) | lo;
+    old = atomicCAS(address_as_ui, assumed, newval);
+  } while (assumed != old);
+  return (size_t)address & 2 ? (scalar_t)(old >> 16) : (scalar_t)(old & 0xffff);
+}
+
+// 2-byte CAS-loop min for `at::Half` / `at::BFloat16`. The integer-flavored
+// template above would clobber the IEEE 754 bit pattern because it casts the
+// half-word to/from `scalar_t` directly; here we stash the bits into
+// `scalar_t::x` (the underlying `unsigned short`), compare *as float*
+// (avoiding the `c10::Half`/`__half` operator overload ambiguity that
+// `cuda_fp16.hpp` introduces when both `__half::operator<` and the
+// built-in arithmetic `<` are visible), then write the chosen value's bit
+// pattern back.
+template <typename scalar_t>
+static inline __device__ scalar_t atomicMinHalf(scalar_t* address,
+                                                scalar_t val) {
+  unsigned int* address_as_ui =
+      (unsigned int*)((char*)address - ((size_t)address & 2));
+  unsigned int old = *address_as_ui;
+  unsigned int assumed;
+  const float val_f = static_cast<float>(val);
+
+  do {
+    assumed = old;
+    scalar_t cur;
+    cur.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+    const scalar_t chosen = val_f < static_cast<float>(cur) ? val : cur;
+    old = (size_t)address & 2 ? (old & 0xffff) | ((unsigned int)chosen.x << 16)
+                              : (old & 0xffff0000) | (unsigned int)chosen.x;
+    old = atomicCAS(address_as_ui, assumed, old);
+  } while (assumed != old);
+
+  scalar_t ret;
+  ret.x = (size_t)address & 2 ? (old >> 16) : (old & 0xffff);
+  return ret;
+}
+
+}  // namespace pyg_atomics_detail
+
+// Integer overloads.
+static inline __device__ uint8_t atomicMin(uint8_t* address, uint8_t val) {
+  return pyg_atomics_detail::atomicMin1B<uint8_t>(address, val);
+}
+static inline __device__ int8_t atomicMin(int8_t* address, int8_t val) {
+  return pyg_atomics_detail::atomicMin1B<int8_t>(address, val);
+}
+static inline __device__ int16_t atomicMin(int16_t* address, int16_t val) {
+  return pyg_atomics_detail::atomicMin2B<int16_t>(address, val);
+}
+// `int32_t` (== `int` on every platform we target) — CUDA's native
+// `atomicMin(int*, int)` already participates in overload resolution, so we
+// do *not* define a wrapper here. (Doing so would collide on Linux x86_64
+// where `int32_t` is `int`.)
+//
+// `int64_t` is `long int` on Linux x86_64 (LP64); CUDA's native
+// `atomicMin(long long int*, long long int)` covers a *different* type, so
+// we provide our own CAS loop. The comparison is done in signed space on the
+// reinterpreted 64-bit word.
+static inline __device__ int64_t atomicMin(int64_t* address, int64_t val) {
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+
+  do {
+    assumed = old;
+    const int64_t cur = (int64_t)assumed;
+    const int64_t new_val = val < cur ? val : cur;
+    old = atomicCAS(address_as_ull, assumed, (unsigned long long int)new_val);
+  } while (assumed != old);
+  return (int64_t)old;
+}
+
+// Floating-point overloads.
+static inline __device__ at::Half atomicMin(at::Half* address, at::Half val) {
+  return pyg_atomics_detail::atomicMinHalf<at::Half>(address, val);
+}
+static inline __device__ at::BFloat16 atomicMin(at::BFloat16* address,
+                                                at::BFloat16 val) {
+  return pyg_atomics_detail::atomicMinHalf<at::BFloat16>(address, val);
+}
+// float — CAS on the bit pattern. Safe for non-NaN inputs: IEEE 754 binary32
+// is monotone w.r.t. integer ordering for nonnegative values, but signed
+// comparison via `__int_as_float` then real `<` handles both signs correctly
+// (we compare floats, not the integer bit pattern).
+static inline __device__ float atomicMin(float* address, float val) {
+  int* address_as_i = (int*)address;
+  int old = *address_as_i;
+  int assumed;
+
+  do {
+    assumed = old;
+    const float cur = __int_as_float(assumed);
+    const float new_val = val < cur ? val : cur;
+    old = atomicCAS(address_as_i, assumed, __float_as_int(new_val));
+  } while (assumed != old);
+  return __int_as_float(old);
+}
+static inline __device__ double atomicMin(double* address, double val) {
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+
+  do {
+    assumed = old;
+    const double cur = __longlong_as_double(assumed);
+    const double new_val = val < cur ? val : cur;
+    old = atomicCAS(address_as_ull, assumed, __double_as_longlong(new_val));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}

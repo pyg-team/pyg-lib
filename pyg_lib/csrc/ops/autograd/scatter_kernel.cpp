@@ -3,6 +3,8 @@
 
 #include <torch/autograd.h>
 
+#include <tuple>
+
 namespace pyg {
 namespace ops {
 
@@ -238,6 +240,99 @@ at::Tensor scatter_mean_autograd(const at::Tensor& src,
   return ScatterMean::apply(src, index, dim, optional_out, dim_size)[0];
 }
 
+// Autograd Function for `pyg::scatter_min`.
+//
+// Forward returns `(out, arg_out)`. Only `out` is differentiable; `arg_out`
+// is marked non-differentiable via `ctx->mark_non_differentiable({arg_out})`
+// so PyTorch will not error when callers try to take gradients through it
+// and so gradcheck only probes the value output (convention 8).
+//
+// Backward formula (upstream `pytorch_scatter/csrc/scatter.cpp:184-196`):
+//
+//   src_shape_plus = src_shape; src_shape_plus[dim] += 1
+//   grad_in = zeros(src_shape_plus)
+//   grad_in.scatter_(dim, arg_out, grad_out)   // sentinel lands in +1 slot
+//   grad_in = grad_in.narrow(dim, 0, src_shape[dim])  // drop sentinel
+//
+// The `+1`/`narrow` trick routes gradient only to the source positions
+// that produced the per-bucket min and silently drops any contribution
+// from buckets whose `arg_out` is still at the sentinel (empty buckets).
+class ScatterMin : public torch::autograd::Function<ScatterMin> {
+ public:
+  static variable_list forward(torch::autograd::AutogradContext* ctx,
+                               const at::Tensor& src,
+                               const at::Tensor& index,
+                               int64_t dim,
+                               const std::optional<at::Tensor>& optional_out,
+                               std::optional<int64_t> dim_size) {
+    at::AutoDispatchBelowADInplaceOrView g;
+
+    const int64_t dim_norm = dim < 0 ? src.dim() + dim : dim;
+
+    // Broadcast `index` up to `src.shape` so the kernel can index per-K
+    // and so the saved `src_shape` aligns with the (per-position) backward
+    // scatter. Recording this on the autograd graph keeps the broadcast
+    // visible to any upstream graph rewriting, though `index` itself is
+    // non-differentiable.
+    auto index_b = broadcast(index, src, dim_norm);
+
+    auto result = scatter_min(src, index_b, dim_norm, optional_out, dim_size);
+    auto out = std::get<0>(result);
+    auto arg_out = std::get<1>(result);
+
+    // Backward needs `arg_out` (where to deposit each `grad_out`), the
+    // normalized `dim`, and the original `src.sizes()` (so the +1/narrow
+    // trick reconstructs the right shape).
+    ctx->save_for_backward({arg_out});
+    ctx->saved_data["dim"] = dim_norm;
+    ctx->saved_data["src_shape"] = src.sizes();
+
+    // `arg_out` is integer / non-differentiable; mark it so PyTorch will
+    // not attempt to propagate gradients through it.
+    ctx->mark_non_differentiable({arg_out});
+
+    if (optional_out.has_value()) {
+      ctx->mark_dirty({optional_out.value()});
+    }
+
+    return {out, arg_out};
+  }
+
+  static variable_list backward(torch::autograd::AutogradContext* ctx,
+                                variable_list grad_outs) {
+    // `grad_outs[0]` is the gradient w.r.t. `out`; `grad_outs[1]` is the
+    // gradient w.r.t. `arg_out` and is ignored (non-differentiable).
+    const auto grad_out = grad_outs[0];
+    const auto saved = ctx->get_saved_variables();
+    const auto arg_out = saved[0];
+    const auto dim = ctx->saved_data["dim"].toInt();
+    auto src_shape = ctx->saved_data["src_shape"].toIntList().vec();
+
+    // `+1`/`narrow` trick: extend `src_shape` along `dim` by one extra
+    // sentinel slot, scatter `grad_out` into the extended buffer using
+    // `arg_out` (sentinel entries land in the trailing slot and are
+    // dropped by the subsequent `narrow`).
+    src_shape[dim] += 1;
+    auto grad_in = at::zeros(src_shape, grad_out.options());
+    grad_in.scatter_(dim, arg_out, grad_out);
+    grad_in = grad_in.narrow(dim, 0, src_shape[dim] - 1);
+
+    // 5 input slots: (src, index, dim, out, dim_size). Only `src` is a
+    // real differentiable tensor; the rest get undefined-Tensor grads.
+    return {grad_in, at::Tensor(), at::Tensor(), at::Tensor(), at::Tensor()};
+  }
+};
+
+std::tuple<at::Tensor, at::Tensor> scatter_min_autograd(
+    const at::Tensor& src,
+    const at::Tensor& index,
+    int64_t dim,
+    const std::optional<at::Tensor>& optional_out,
+    std::optional<int64_t> dim_size) {
+  auto result = ScatterMin::apply(src, index, dim, optional_out, dim_size);
+  return std::make_tuple(result[0], result[1]);
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
@@ -251,6 +346,8 @@ TORCH_LIBRARY_IMPL(pyg, Autograd, m) {
   // the not-implemented sentinel; the same wrapper handles both paths.
   m.impl(TORCH_SELECTIVE_NAME("pyg::scatter_mean"),
          TORCH_FN(scatter_mean_autograd));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::scatter_min"),
+         TORCH_FN(scatter_min_autograd));
 }
 
 // `scatter_mean` has no dedicated CPU/CUDA kernel; it is fully composed of
