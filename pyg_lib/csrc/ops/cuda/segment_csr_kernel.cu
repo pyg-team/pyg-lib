@@ -8,10 +8,40 @@
 #include <ATen/cuda/detail/IndexUtils.cuh>
 #include <ATen/cuda/detail/TensorInfo.cuh>
 
+#include "shuffle.cuh"
+
 namespace pyg {
 namespace ops {
 
 namespace {
+
+// Convention 13: WARP_SIZE is fixed at 32 on every NVIDIA architecture pyg-lib
+// targets (sm_60+). Already defined in `segment_coo_kernel.cu` /
+// `scatter_kernel.cu` in their own TUs; we redefine guarded here so the TUs
+// stay independent.
+#ifndef WARP_SIZE
+#define WARP_SIZE 32
+#endif
+
+// Full-warp mask for `__shfl_*_sync` — every lane participates.
+#ifndef FULL_MASK
+#define FULL_MASK 0xffffffff
+#endif
+
+// Strict less-than predicate used by the min reductions below. Half-precision
+// routes through `float` to avoid an ambiguous overload between
+// `c10::Half::operator<` and the built-in `arithmetic <` (nvcc rejects the
+// direct comparison; same reason `device_min` in `segment_coo_kernel.cu`
+// uses a `static_cast<float>` route).
+template <typename scalar_t>
+static inline __device__ bool device_lt(scalar_t a, scalar_t b) {
+  if constexpr (std::is_same_v<scalar_t, at::Half> ||
+                std::is_same_v<scalar_t, at::BFloat16>) {
+    return static_cast<float>(a) < static_cast<float>(b);
+  } else {
+    return a < b;
+  }
+}
 
 // Convention 12: dynamic block sizing — replicates the inline `threads()` /
 // `blocks()` pattern used in `segment_coo_kernel.cu` / `scatter_kernel.cu`.
@@ -579,6 +609,329 @@ at::Tensor gather_csr_kernel(const at::Tensor& src,
   return out;
 }
 
+// ============================================================================
+// `segment_min_csr` — Commit 12.
+//
+// First CSR op to use `TB > 1`: each warp lane (one of 32) collaborates on a
+// single row, then a warp-tree `SHFL_DOWN_SYNC` reduction halves the active
+// lane count five times to land the row's `(min_value, argindex)` in lane 0.
+//
+// Why `TB == 1` is wrong for min/max (and was fine for sum/mean):
+// sum/mean's inner loop is `+=` and a single thread per row was already fast
+// enough — adding TB warp lanes would just waste them on the tail of short
+// rows. Min/max, however, has no early-exit and benefits more from
+// parallelism over long rows. Upstream `segment_csr_cuda.cu:157` launches
+// `<<<BLOCKS(32, N), THREADS>>>` for min/max (32 lanes per row), versus
+// `<<<BLOCKS(1, N), THREADS>>>` (TB == 1) for sum.
+//
+// TB choice: we mirror upstream and fix `TB == 32` (one warp per row). Long
+// rows benefit from the parallelism; short rows just leave the trailing
+// lanes holding `(numeric_limits::max(), E_dim)` which contributes nothing.
+// Picking TB == warp size also lets us drive the reduction with the existing
+// `SHFL_DOWN_SYNC` macro without involving shared memory.
+//
+// Pair propagation through `SHFL_DOWN_SYNC`:
+//
+//   Each lane holds a local `(val, arg)`. At reduction step `i` (i = 16, 8,
+//   4, 2, 1):
+//
+//     tmp_val = SHFL_DOWN_SYNC(FULL_MASK, val, i);
+//     tmp_arg = SHFL_DOWN_SYNC(FULL_MASK, arg, i);
+//     if (device_lt(tmp_val, val)) { val = tmp_val; arg = tmp_arg; }
+//
+//   We perform two independent shuffles — one carrying `val`, one carrying
+//   `arg` — and then choose between the **pair members together**, so the
+//   surviving `arg` always matches the surviving `val`. After 5 steps (32
+//   -> 16 -> 8 -> 4 -> 2 -> 1) lane 0 holds the row's min and corresponding
+//   argindex. Mirrors upstream `segment_csr_cuda.cu:46-52`. The comparison
+//   is strict `<` (via `device_lt`): on ties, the **lower-lane** value wins,
+//   which matches the upstream first-match convention for the argindex.
+//
+// No shared memory: upstream comment at `segment_csr_cuda.cu:68-70`
+// explicitly notes that shared memory was tried and rejected — the
+// `__syncthreads` overhead exceeded the benefit. We mirror that decision;
+// the warp shuffle is sufficient because TB == warp size.
+//
+// Argindex semantics: stored as `int64_t` (matches `arg_out` dtype), tracks
+// the absolute `src_idx` along the reduction axis (NOT relative to the
+// row), which makes it directly indexable into the per-batch slice of `src`
+// along `dim`. Upstream stores the same absolute index.
+//
+// Empty-row post-pass: `out.masked_fill_(arg_out == src.size(dim), 0)`.
+// Initial `arg_out` is filled with the sentinel `E_dim = src.size(dim)`;
+// any row that ran zero iterations keeps that sentinel, and we reset the
+// corresponding `out` slot (still at `numeric_limits::max()`) to 0. Matches
+// `segment_min_coo`'s empty-bucket policy and the CPU min kernel contract.
+
+// K==1 kernel — one warp per row, lanes stride through the row by `TB == 32`.
+template <typename scalar_t>
+__global__ void segment_min_csr_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> indptr_info,
+    scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t N,
+    size_t E) {
+  // `TB == WARP_SIZE` (32): one warp processes one row. `lane_idx` selects
+  // the slot within the row.
+  constexpr int TB = WARP_SIZE;
+
+  const int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int row_idx = thread_idx / TB;
+  const int lane_idx = thread_idx & (TB - 1);
+
+  if (row_idx >= static_cast<int>(N))
+    return;
+
+  // Strided indptr offset for this row.
+  int ip_offset = IndexPtrToOffset::get(row_idx, indptr_info);
+  int64_t row_start = __ldg(indptr_info.data + ip_offset);
+  int64_t row_end = __ldg(indptr_info.data + ip_offset +
+                          indptr_info.strides[indptr_info.dims - 1]);
+
+  // Per-batch slice offset into `src` along the reduction axis. Same as the
+  // sum kernel above.
+  const int batch_offset =
+      (row_idx / (indptr_info.sizes[indptr_info.dims - 1] - 1)) *
+      static_cast<int>(E);
+
+  // Per-lane sentinel pair. The sentinel argindex `E` (== `src.size(dim)`)
+  // matches the host-side `at::full` init of `arg_out`; the host post-pass
+  // checks `arg_out == E` to identify empty rows. The sentinel value
+  // `numeric_limits<scalar_t>::max()` matches the host-side `out.fill_`.
+  scalar_t val = std::numeric_limits<scalar_t>::max();
+  int64_t arg = static_cast<int64_t>(E);
+
+  // Lane-strided scan: each lane handles `ceil(row_len / TB)` elements at
+  // stride `TB`. Mirrors upstream `segment_csr_cuda.cu:39-43`.
+  //
+  // On ties (`cand == val`), we keep the **earlier** (lower `src_idx`)
+  // winner via strict `<` — matches the CPU kernel's first-match argindex
+  // convention. Pathological case: if every element in a row equals
+  // `numeric_limits::max()`, `arg` stays at sentinel `E`, and the host
+  // post-pass will `masked_fill_` `out` to 0 (matches upstream's behaviour
+  // for the same edge case).
+  for (int64_t src_idx = row_start + lane_idx; src_idx < row_end;
+       src_idx += TB) {
+    scalar_t cand = src_data[batch_offset + src_idx];
+    if (device_lt(cand, val)) {
+      val = cand;
+      arg = src_idx;
+    }
+  }
+
+  // Warp-tree min reduction over `(val, arg)` pairs. Two independent
+  // shuffles transport the pair members across lanes; we then choose
+  // between them as a unit so the surviving `arg` always matches the
+  // surviving `val`. Mirrors upstream `segment_csr_cuda.cu:45-52`.
+#pragma unroll
+  for (int i = TB / 2; i > 0; i /= 2) {
+    scalar_t tmp_val = SHFL_DOWN_SYNC(FULL_MASK, val, i);
+    int64_t tmp_arg = SHFL_DOWN_SYNC(FULL_MASK, arg, i);
+    // Strict `<`: on ties, keep the existing (lower-lane) value/arg, which
+    // matches the first-match convention for the argindex.
+    if (device_lt(tmp_val, val)) {
+      val = tmp_val;
+      arg = tmp_arg;
+    }
+  }
+
+  // Lane 0 writes the row's `(min, argmin)` pair. Other lanes contribute
+  // nothing past this point. No `atomicMin` needed — the warp-tree
+  // reduction has already aggregated all of row `r`'s contributions, and
+  // each warp owns exactly one row.
+  //
+  // For empty rows (`row_start == row_end`), the inner loop ran zero
+  // iterations, `val` is still `numeric_limits::max()`, and `arg` is still
+  // the sentinel `E`. The host post-pass resets such slots to 0.
+  if (lane_idx == 0) {
+    out_data[row_idx] = val;
+    arg_out_data[row_idx] = arg;
+  }
+}
+
+// K>1 broadcast kernel — one thread per (row, col) pair. Sequential row scan
+// with running `(val, arg)`; no shuffle (each thread already owns its full
+// reduction). Mirrors upstream `segment_csr_cuda.cu:62-95`.
+template <typename scalar_t>
+__global__ void segment_min_csr_broadcast_cuda_kernel(
+    const scalar_t* __restrict__ src_data,
+    const at::cuda::detail::TensorInfo<int64_t, int> indptr_info,
+    scalar_t* __restrict__ out_data,
+    int64_t* __restrict__ arg_out_data,
+    size_t N,
+    size_t K,
+    size_t E) {
+  const int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int row_idx = thread_idx / static_cast<int>(K);
+  const int col_idx = thread_idx % static_cast<int>(K);
+
+  if (thread_idx >= static_cast<int>(N * K))
+    return;
+
+  int ip_offset = IndexPtrToOffset::get(row_idx, indptr_info);
+  int64_t row_start = __ldg(indptr_info.data + ip_offset);
+  int64_t row_end = __ldg(indptr_info.data + ip_offset +
+                          indptr_info.strides[indptr_info.dims - 1]);
+
+  const int batch_offset =
+      (row_idx / (indptr_info.sizes[indptr_info.dims - 1] - 1)) *
+      static_cast<int>(E) * static_cast<int>(K);
+
+  scalar_t val = std::numeric_limits<scalar_t>::max();
+  int64_t arg = static_cast<int64_t>(E);
+
+  for (int64_t src_idx = row_start; src_idx < row_end; ++src_idx) {
+    scalar_t cand =
+        src_data[batch_offset + static_cast<int>(K) * src_idx + col_idx];
+    // Same strict-`<` first-match logic as the K==1 kernel above.
+    if (device_lt(cand, val)) {
+      val = cand;
+      arg = src_idx;
+    }
+  }
+
+  out_data[thread_idx] = val;
+  arg_out_data[thread_idx] = arg;
+}
+
+std::tuple<at::Tensor, at::Tensor> segment_min_csr_kernel(
+    const at::Tensor& src,
+    const at::Tensor& indptr,
+    const std::optional<at::Tensor>& optional_out) {
+  TORCH_CHECK(src.is_cuda(),
+              "segment_min_csr (CUDA): src must be a CUDA tensor");
+  TORCH_CHECK(indptr.is_cuda(),
+              "segment_min_csr (CUDA): indptr must be a CUDA tensor");
+  TORCH_CHECK(src.device() == indptr.device(),
+              "segment_min_csr (CUDA): src and indptr must be on the same "
+              "device");
+  TORCH_CHECK(src.dim() >= indptr.dim(),
+              "segment_min_csr (CUDA): src.dim() must be >= indptr.dim() (got ",
+              src.dim(), " vs ", indptr.dim(), ")");
+  TORCH_CHECK(indptr.dim() >= 1,
+              "segment_min_csr (CUDA): indptr must have at least 1 dimension");
+
+  const c10::cuda::OptionalCUDAGuard device_guard(device_of(src));
+
+  // Same broadcast rule as `segment_sum_csr`: leading dims of `indptr`
+  // expand to `src.shape[:indptr.dim()-1]`; last `indptr` dim is the row
+  // pointer itself (kept native).
+  auto sizes = indptr.sizes().vec();
+  for (int64_t i = 0; i < indptr.dim() - 1; ++i) {
+    sizes[i] = src.size(i);
+  }
+  auto indptr_b = indptr.expand(sizes);
+
+  const auto dim = indptr_b.dim() - 1;
+
+  auto src_c = src.contiguous();
+  auto indptr_c = indptr_b.contiguous();
+
+  // `E_dim = src.size(dim)` is the sentinel argindex value for `arg_out`
+  // (matches `segment_min_coo` and `scatter_min`).
+  const int64_t E_dim = src_c.size(dim);
+
+  at::Tensor out;
+  const bool out_was_provided = optional_out.has_value();
+  if (out_was_provided) {
+    // Caller owns the buffer; no max-init. With `out=` supplied, the kernel
+    // **overwrites** the per-row slot with the computed row min — there is
+    // no atomicMin path here (the warp-tree fully reduces the row before
+    // the single write), so any prior value in `out` is discarded for
+    // non-empty rows. This matches upstream's "out= as scratch buffer"
+    // contract: the caller is expected to pre-initialize if they want a
+    // running min across calls.
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim) {
+        TORCH_CHECK(src_c.size(i) == out.size(i),
+                    "segment_min_csr (CUDA): out.size(", i,
+                    ") must match src.size(", i, ")");
+      }
+    }
+    TORCH_CHECK(src_c.numel() == 0 || out.size(dim) == indptr_c.size(dim) - 1,
+                "segment_min_csr (CUDA): out.size(", dim,
+                ") must equal indptr.size(-1) - 1 (got ", out.size(dim), " vs ",
+                indptr_c.size(dim) - 1, ")");
+  } else {
+    auto out_sizes = src_c.sizes().vec();
+    out_sizes[dim] = std::max<int64_t>(indptr_c.size(dim) - 1, 0);
+    // Allocate uninit then fill with per-dtype `max()`. Same rationale as
+    // `segment_min_coo`: `at::full` with a single host `Scalar` cannot
+    // represent each dtype's max correctly, so we route through
+    // `AT_DISPATCH_*` + `numeric_limits<scalar_t>::max()`.
+    out = at::empty(out_sizes, src_c.options());
+    AT_DISPATCH_ALL_TYPES_AND2(
+        at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+        "segment_min_csr_cuda_init_out",
+        [&] { out.fill_(std::numeric_limits<scalar_t>::max()); });
+  }
+
+  // `arg_out` is always freshly allocated and filled with the sentinel
+  // `E_dim`. The kernel either overwrites it with a real argindex (non-empty
+  // row) or leaves it at the sentinel (empty row); the host post-pass below
+  // uses `arg_out == E_dim` to identify empty rows.
+  auto arg_out = at::full(out.sizes(), E_dim,
+                          indptr_c.options().dtype(at::ScalarType::Long));
+
+  if (src_c.numel() == 0) {
+    // No contributors at all; every row is empty. Reset to 0 (matching the
+    // CPU kernel) when we own `out`. With `out=` supplied, the caller's
+    // values are preserved.
+    if (!out_was_provided) {
+      out.zero_();
+    }
+    return std::make_tuple(out, arg_out);
+  }
+
+  const auto N = out.size(dim) * (indptr_c.numel() / indptr_c.size(-1));
+  const auto K = out.numel() / N;
+  const auto E = src_c.size(dim);
+
+  auto indptr_info = at::cuda::detail::getTensorInfo<int64_t, int>(indptr_c);
+  const auto stream = at::cuda::getCurrentCUDAStream();
+
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "segment_min_csr_cuda", [&] {
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        auto* arg_out_data = arg_out.data_ptr<int64_t>();
+
+        if (K == 1) {
+          // 32 lanes per row (TB == warp size). Total threads = `32 * N`;
+          // block size from the dynamic `threads()` helper (always a
+          // multiple of 32 for sm_60+).
+          constexpr int TB = WARP_SIZE;
+          const int T = threads();
+          const int B =
+              std::max<int>(1, static_cast<int>((TB * N + T - 1) / T));
+          segment_min_csr_cuda_kernel<scalar_t><<<B, T, 0, stream>>>(
+              src_data, indptr_info, out_data, arg_out_data, N, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        } else {
+          // One thread per (row, col) pair; sequential row scan inside the
+          // thread, no shuffle.
+          const int T = threads();
+          const int B = blocks(static_cast<int>(N * K));
+          segment_min_csr_broadcast_cuda_kernel<scalar_t><<<B, T, 0, stream>>>(
+              src_data, indptr_info, out_data, arg_out_data, N, K, E);
+          C10_CUDA_KERNEL_LAUNCH_CHECK();
+        }
+      });
+
+  // Empty-row cleanup: where `arg_out == E_dim`, no contributor wrote to
+  // that row, so `out` still holds `numeric_limits::max()`. Reset to `0` to
+  // match the CPU kernel's contract. Skipped when `out=` is supplied — the
+  // caller's pre-existing values in empty rows must be preserved.
+  if (!out_was_provided) {
+    out.masked_fill_(arg_out == E_dim, 0);
+  }
+
+  return std::make_tuple(out, arg_out);
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
@@ -586,6 +939,8 @@ TORCH_LIBRARY_IMPL(pyg, CUDA, m) {
          TORCH_FN(segment_sum_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::segment_mean_csr"),
          TORCH_FN(segment_mean_csr_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::segment_min_csr"),
+         TORCH_FN(segment_min_csr_kernel));
   m.impl(TORCH_SELECTIVE_NAME("pyg::gather_csr"), TORCH_FN(gather_csr_kernel));
 }
 
