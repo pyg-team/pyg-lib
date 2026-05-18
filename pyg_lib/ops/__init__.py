@@ -499,6 +499,59 @@ def scatter_max(
     return torch.ops.pyg.scatter_max(src, index, dim, out, dim_size)
 
 
+def segment_sum_coo(
+    src: Tensor,
+    index: Tensor,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Reduces all values from the :obj:`src` tensor into :obj:`out` according
+    to a sorted COO :obj:`index`, using ``sum`` as the reduction.
+
+    Unlike :func:`scatter_sum`, the reduction axis is always
+    ``index.dim() - 1`` (so no :obj:`dim` argument is exposed). The
+    :obj:`index` must be sorted in ascending order along that axis.
+
+    If :obj:`out` is not given, a new zero-initialized tensor is allocated.
+    If :obj:`out` is given, values are **accumulated** into it (no zero-init).
+
+    Args:
+        src: The source tensor.
+        index: Sorted COO indices.
+        out: The destination tensor.
+        dim_size: If :obj:`out` is not given, the output size along the
+            reduction axis. Auto-inferred from :obj:`index.max() + 1` if
+            :obj:`None`.
+
+    Returns:
+        The reduced tensor.
+    """
+    return torch.ops.pyg.segment_sum_coo(src, index, out, dim_size)
+
+
+segment_add_coo = segment_sum_coo
+
+
+def gather_coo(
+    src: Tensor,
+    index: Tensor,
+    out: Optional[Tensor] = None,
+) -> Tensor:
+    r"""Gathers values from :obj:`src` at positions specified by :obj:`index`
+    along axis ``index.dim() - 1``. This is the symmetric inverse of
+    :func:`segment_sum_coo`.
+
+    Args:
+        src: The source tensor.
+        index: The COO indices to gather.
+        out: The destination tensor (overwritten if given).
+
+    Returns:
+        ``out[i] = src[index[i]]`` along the gather axis.
+    """
+    return torch.ops.pyg.gather_coo(src, index, out)
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -743,6 +796,9 @@ __all__ = [
     'scatter_mean',
     'scatter_min',
     'scatter_max',
+    'segment_sum_coo',
+    'segment_add_coo',
+    'gather_coo',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
