@@ -123,11 +123,113 @@ at::Tensor scatter_sum_kernel(const at::Tensor& src,
   return out;
 }
 
+// CPU implementation of `pyg::scatter_mul`.
+//
+// Same (B, E, K) layout as `scatter_sum_kernel`. The only differences:
+//   * The reduction is multiplicative.
+//   * When `out=None`, the freshly allocated buffer is initialized with
+//     **ones** (the multiplicative identity), not zeros.
+//
+// `out=` contract: when the caller supplies `optional_out`, we **multiply
+// into** it (no ones-init). The caller is responsible for any non-default
+// starting state. This matches upstream pytorch_scatter.
+at::Tensor scatter_mul_kernel(const at::Tensor& src,
+                              const at::Tensor& index,
+                              int64_t dim,
+                              const std::optional<at::Tensor>& optional_out,
+                              std::optional<int64_t> dim_size) {
+  TORCH_CHECK(src.dim() == index.dim(),
+              "scatter_mul: src.dim() must equal index.dim() "
+              "after broadcasting (got src.dim()=",
+              src.dim(), ", index.dim()=", index.dim(), ")");
+
+  // Normalize `dim` to a non-negative value relative to `src.dim()`.
+  dim = dim < 0 ? src.dim() + dim : dim;
+  TORCH_CHECK(dim >= 0 && dim < src.dim(), "scatter_mul: dim out of range");
+
+  auto src_c = src.contiguous();
+  auto index_c = index.contiguous();
+
+  at::Tensor out;
+  if (optional_out.has_value()) {
+    out = optional_out.value().contiguous();
+    for (int64_t i = 0; i < out.dim(); ++i) {
+      if (i != dim)
+        TORCH_CHECK(src_c.size(i) == out.size(i), "scatter_mul: out.size(", i,
+                    ") must match src.size(", i, ")");
+    }
+  } else {
+    auto sizes = src_c.sizes().vec();
+    if (dim_size.has_value()) {
+      sizes[dim] = dim_size.value();
+    } else if (index_c.numel() == 0) {
+      sizes[dim] = 0;
+    } else {
+      sizes[dim] = 1 + *index_c.max().data_ptr<int64_t>();
+    }
+    // Ones-init the freshly allocated buffer so that the multiplicative
+    // reduction starts from the multiplicative identity.
+    out = at::ones(sizes, src_c.options());
+  }
+
+  if (src_c.numel() == 0) {
+    return out;
+  }
+
+  int64_t B = 1;
+  for (int64_t i = 0; i < dim; ++i)
+    B *= src_c.size(i);
+  const int64_t E = src_c.size(dim);
+  const int64_t K = src_c.numel() / (B * E);
+  const int64_t N = out.size(dim);
+
+  AT_DISPATCH_ALL_TYPES_AND2(
+      at::ScalarType::Half, at::ScalarType::BFloat16, src_c.scalar_type(),
+      "scatter_mul_cpu", [&] {
+        using opmath_t = at::opmath_type<scalar_t>;
+        const auto* src_data = src_c.data_ptr<scalar_t>();
+        auto* out_data = out.data_ptr<scalar_t>();
+        const auto* index_data = index_c.data_ptr<int64_t>();
+
+        // Parallelize over the leading (B) dimension. Each `b` slice writes
+        // to a disjoint sub-region of `out`, so no atomics are needed.
+        at::parallel_for(
+            0, B, at::internal::GRAIN_SIZE, [&](int64_t b_beg, int64_t b_end) {
+              for (int64_t b = b_beg; b < b_end; ++b) {
+                const int64_t src_off = b * E * K;
+                const int64_t out_off = b * N * K;
+                for (int64_t e = 0; e < E; ++e) {
+                  if (K == 1) {
+                    const int64_t idx = index_data[src_off + e];
+                    const opmath_t v =
+                        static_cast<opmath_t>(src_data[src_off + e]);
+                    out_data[out_off + idx] = static_cast<scalar_t>(
+                        static_cast<opmath_t>(out_data[out_off + idx]) * v);
+                  } else {
+                    for (int64_t k = 0; k < K; ++k) {
+                      const int64_t j = src_off + e * K + k;
+                      const int64_t i = index_data[j];
+                      const opmath_t v = static_cast<opmath_t>(src_data[j]);
+                      out_data[out_off + i * K + k] = static_cast<scalar_t>(
+                          static_cast<opmath_t>(out_data[out_off + i * K + k]) *
+                          v);
+                    }
+                  }
+                }
+              }
+            });
+      });
+
+  return out;
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(pyg, CPU, m) {
   m.impl(TORCH_SELECTIVE_NAME("pyg::scatter_sum"),
          TORCH_FN(scatter_sum_kernel));
+  m.impl(TORCH_SELECTIVE_NAME("pyg::scatter_mul"),
+         TORCH_FN(scatter_mul_kernel));
 }
 
 }  // namespace ops
