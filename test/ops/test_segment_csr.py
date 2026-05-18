@@ -1299,3 +1299,63 @@ def test_segment_max_csr_backward_gradcheck_empty_rows(device):
         return pyg_lib.ops.segment_max_csr(s, indptr)[0]
 
     assert torch.autograd.gradcheck(fn, (src,))
+
+
+# ---------------------------------------------------------------------------
+# segment_csr dispatcher (commit 14 — Python layer)
+# ---------------------------------------------------------------------------
+
+
+@withCUDA
+@pytest.mark.parametrize(
+    'reduce',
+    ['sum', 'add', 'mean', 'min', 'max'],
+)
+def test_segment_csr_dispatcher(reduce, device):
+    """``segment_csr(src, indptr, out, reduce=...)`` must route to the
+    corresponding typed op. For ``min``/``max`` the dispatcher returns
+    ``[0]`` (value only), not the ``(value, argindex)`` tuple.
+
+    Note: there is no ``segment_mul_csr``, so ``mul`` is not part of the
+    valid reduce set for this dispatcher.
+    """
+    torch.manual_seed(0)
+    # Unique values -> deterministic argindex tie-break across devices.
+    src = (torch.randperm(8 * 3, device=device).to(torch.float64) - 12).view(
+        8,
+        3,
+    )
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    out = pyg_lib.ops.segment_csr(src, indptr, reduce=reduce)
+    if reduce in ('sum', 'add'):
+        expected = pyg_lib.ops.segment_sum_csr(src, indptr)
+    elif reduce == 'mean':
+        expected = pyg_lib.ops.segment_mean_csr(src, indptr)
+    elif reduce == 'min':
+        expected = pyg_lib.ops.segment_min_csr(src, indptr)[0]
+    elif reduce == 'max':
+        expected = pyg_lib.ops.segment_max_csr(src, indptr)[0]
+    assert isinstance(out, torch.Tensor)
+    torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+def test_segment_csr_dispatcher_unknown_reduce_raises(device):
+    """The dispatcher must reject unknown reduce strings with a clear error."""
+    src = torch.randn(8, device=device)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+    with pytest.raises(ValueError):
+        pyg_lib.ops.segment_csr(src, indptr, reduce='unsupported')
+
+
+@withCUDA
+def test_segment_csr_dispatcher_default_reduce_is_sum(device):
+    """Default ``reduce`` is ``"sum"`` (upstream convention)."""
+    torch.manual_seed(0)
+    src = torch.randn(8, 3, device=device)
+    indptr = torch.tensor([0, 3, 5, 6, 8], device=device)
+
+    out = pyg_lib.ops.segment_csr(src, indptr)
+    expected = pyg_lib.ops.segment_sum_csr(src, indptr)
+    torch.testing.assert_close(out, expected)

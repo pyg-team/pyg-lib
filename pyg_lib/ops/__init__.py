@@ -745,6 +745,245 @@ def gather_csr(
     return torch.ops.pyg.gather_csr(src, indptr, out)
 
 
+def _broadcast(src: Tensor, other: Tensor, dim: int) -> Tensor:
+    r"""Broadcasts a 1-D :obj:`src` to the shape of :obj:`other` along
+    :obj:`dim`. Used by the Python composites that need to lift a 1-D
+    per-bucket result back to per-element positions for ``gather`` /
+    arithmetic broadcasting.
+
+    Ports ``torch_scatter/utils.py:broadcast``.
+    """
+    if src.dim() == 1:
+        for _ in range(dim if dim >= 0 else other.dim() + dim):
+            src = src.unsqueeze(0)
+    while src.dim() < other.dim():
+        src = src.unsqueeze(-1)
+    return src.expand_as(other)
+
+
+def scatter(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+    reduce: str = 'sum',
+) -> Tensor:
+    r"""Polymorphic scatter dispatcher.
+
+    Routes to the typed scatter op based on :obj:`reduce`:
+    ``"sum"``/``"add"`` -> :func:`scatter_sum`,
+    ``"mul"`` -> :func:`scatter_mul`, ``"mean"`` -> :func:`scatter_mean`,
+    ``"min"`` -> :func:`scatter_min`, ``"max"`` -> :func:`scatter_max`.
+    Min/max return only the values.
+    """
+    if reduce == 'sum' or reduce == 'add':
+        return scatter_sum(src, index, dim, out, dim_size)
+    if reduce == 'mul':
+        return scatter_mul(src, index, dim, out, dim_size)
+    if reduce == 'mean':
+        return scatter_mean(src, index, dim, out, dim_size)
+    if reduce == 'min':
+        return scatter_min(src, index, dim, out, dim_size)[0]
+    if reduce == 'max':
+        return scatter_max(src, index, dim, out, dim_size)[0]
+    raise ValueError(f'Unknown reduce: {reduce!r}')
+
+
+def segment_coo(
+    src: Tensor,
+    index: Tensor,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+    reduce: str = 'sum',
+) -> Tensor:
+    r"""Polymorphic COO segment dispatcher.
+
+    Routes by :obj:`reduce` to the typed ``segment_*_coo`` op.
+    Min/max return only the value tensor.
+    """
+    if reduce == 'sum' or reduce == 'add':
+        return segment_sum_coo(src, index, out, dim_size)
+    if reduce == 'mean':
+        return segment_mean_coo(src, index, out, dim_size)
+    if reduce == 'min':
+        return segment_min_coo(src, index, out, dim_size)[0]
+    if reduce == 'max':
+        return segment_max_coo(src, index, out, dim_size)[0]
+    raise ValueError(f'Unknown reduce: {reduce!r}')
+
+
+def segment_csr(
+    src: Tensor,
+    indptr: Tensor,
+    out: Optional[Tensor] = None,
+    reduce: str = 'sum',
+) -> Tensor:
+    r"""Polymorphic CSR segment dispatcher.
+
+    Routes by :obj:`reduce` to the typed ``segment_*_csr`` op.
+    Min/max return only the value tensor.
+    """
+    if reduce == 'sum' or reduce == 'add':
+        return segment_sum_csr(src, indptr, out)
+    if reduce == 'mean':
+        return segment_mean_csr(src, indptr, out)
+    if reduce == 'min':
+        return segment_min_csr(src, indptr, out)[0]
+    if reduce == 'max':
+        return segment_max_csr(src, indptr, out)[0]
+    raise ValueError(f'Unknown reduce: {reduce!r}')
+
+
+def scatter_softmax(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    dim_size: Optional[int] = None,
+) -> Tensor:
+    r"""Per-bucket softmax composite. Float inputs only."""
+    if not src.is_floating_point():
+        raise ValueError(
+            'scatter_softmax requires a floating-point src tensor (got '
+            f'{src.dtype})',
+        )
+    max_per_idx = scatter_max(src, index, dim, dim_size=dim_size)[0]
+    max_per_src = max_per_idx.gather(dim, _broadcast(index, src, dim))
+    recentered_exp = (src - max_per_src).exp()
+    sum_per_idx = scatter_sum(recentered_exp, index, dim, dim_size=dim_size)
+    sum_per_src = sum_per_idx.gather(dim, _broadcast(index, src, dim))
+    return recentered_exp / sum_per_src
+
+
+def scatter_log_softmax(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    dim_size: Optional[int] = None,
+    eps: float = 1e-12,
+) -> Tensor:
+    r"""Per-bucket log-softmax composite. Float inputs only."""
+    if not src.is_floating_point():
+        raise ValueError(
+            'scatter_log_softmax requires a floating-point src tensor (got '
+            f'{src.dtype})',
+        )
+    max_per_idx = scatter_max(src, index, dim, dim_size=dim_size)[0]
+    max_per_src = max_per_idx.gather(dim, _broadcast(index, src, dim))
+    recentered = src - max_per_src
+    sum_per_idx = scatter_sum(recentered.exp(), index, dim, dim_size=dim_size)
+    sum_per_src = sum_per_idx.gather(dim, _broadcast(index, src, dim))
+    return recentered - torch.log(sum_per_src + eps)
+
+
+def scatter_std(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+    unbiased: bool = True,
+) -> Tensor:
+    r"""Per-bucket standard deviation composite. Float inputs only.
+
+    Ports ``torch_scatter.composite.scatter_std``: uses :func:`scatter_sum`
+    for both passes (avoids integer floor-division coupling that would
+    appear if :func:`scatter_mean` were used). Applies Bessel's correction
+    ``N / (N - 1)`` when :obj:`unbiased` is :obj:`True`.
+    """
+    if not src.is_floating_point():
+        raise ValueError(
+            'scatter_std requires a floating-point src tensor (got '
+            f'{src.dtype})',
+        )
+    if out is not None:
+        dim_size = out.size(dim)
+
+    bcast_index = _broadcast(index, src, dim)
+    ones = torch.ones_like(src)
+    count = scatter_sum(ones, bcast_index, dim, dim_size=dim_size)
+    sum_per_idx = scatter_sum(src, bcast_index, dim, dim_size=dim_size)
+    count_safe = count.clamp(min=1)
+    mean = sum_per_idx / count_safe
+
+    var = src - mean.gather(dim, bcast_index)
+    var = var * var
+    result = scatter_sum(var, bcast_index, dim, out, dim_size)
+    if unbiased:
+        denom = (count - 1).clamp(min=1)
+    else:
+        denom = count_safe
+    result = result / denom
+    return result.sqrt()
+
+
+def scatter_logsumexp(
+    src: Tensor,
+    index: Tensor,
+    dim: int = -1,
+    out: Optional[Tensor] = None,
+    dim_size: Optional[int] = None,
+    eps: float = 1e-12,
+) -> Tensor:
+    r"""Per-bucket log-sum-exp composite. Float inputs only.
+
+    Numerically stable: recenter by the per-bucket max before exponentiating.
+    When :obj:`out` is supplied, positions that ended up non-finite (empty
+    buckets that produced ``-inf``) are restored from the caller-supplied
+    ``out`` to preserve any caller-provided initial values.
+    """
+    if not src.is_floating_point():
+        raise ValueError(
+            'scatter_logsumexp requires a floating-point src tensor (got '
+            f'{src.dtype})',
+        )
+    if out is not None:
+        dim_size = out.size(dim)
+
+    # Allocate `max_value_per_index` filled with -inf so empty buckets stay
+    # at -inf and get masked back to 0 below.
+    size = list(src.size())
+    if dim_size is not None:
+        size[dim] = dim_size
+    elif index.numel() == 0:
+        size[dim] = 0
+    else:
+        size[dim] = int(index.max().item()) + 1
+    max_value_per_index = torch.full(
+        size,
+        float('-inf'),
+        dtype=src.dtype,
+        device=src.device,
+    )
+    scatter_max(src, index, dim, max_value_per_index, dim_size)
+
+    # `gather` only reads positions that appear in `index`, so empty-bucket
+    # slots in `max_value_per_index` (still -inf) are never read here.
+    max_per_src = max_value_per_index.gather(dim, _broadcast(index, src, dim))
+    recentered = src - max_per_src
+    # If src had inf or both src and max are -inf, recentered may be NaN.
+    recentered = torch.where(
+        torch.isnan(recentered),
+        torch.full_like(recentered, float('-inf')),
+        recentered,
+    )
+    sum_per_idx = scatter_sum(recentered.exp(), index, dim, dim_size=dim_size)
+
+    result = max_value_per_index + (sum_per_idx + eps).log()
+
+    if out is None:
+        # Empty buckets had max=-inf and sum=0, producing -inf + log(eps) =
+        # -inf. Map any non-finite output to 0 to match the upstream contract.
+        return result.nan_to_num(nan=0.0, posinf=0.0, neginf=0.0)
+
+    # `out=`: restore caller's value at positions that produced non-finite
+    # results (e.g. empty buckets).
+    orig_out = out.clone()
+    mask = ~torch.isfinite(result)
+    out.copy_(torch.where(mask, orig_out, result))
+    return out
+
+
 def spline_basis(
     pseudo: Tensor,
     kernel_size: Tensor,
@@ -1001,6 +1240,13 @@ __all__ = [
     'segment_min_csr',
     'segment_max_csr',
     'gather_csr',
+    'scatter',
+    'segment_coo',
+    'segment_csr',
+    'scatter_softmax',
+    'scatter_log_softmax',
+    'scatter_std',
+    'scatter_logsumexp',
     'spline_basis',
     'spline_weighting',
     'grid_cluster',
