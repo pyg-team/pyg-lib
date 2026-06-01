@@ -34,6 +34,8 @@
 // `atomicAdd(float*, float)`, etc. Defining them inside `pyg::ops` would
 // shadow the built-ins for any unqualified call site inside that namespace.
 
+#include <type_traits>
+
 #include <ATen/ATen.h>
 #include <cuda_runtime.h>
 
@@ -453,21 +455,27 @@ static inline __device__ int16_t atomicMin(int16_t* address, int16_t val) {
 // where `int32_t` is `int`.)
 //
 // `int64_t` is `long int` on Linux x86_64 (LP64); CUDA's native
-// `atomicMin(long long int*, long long int)` covers a *different* type, so
-// we provide our own CAS loop. The comparison is done in signed space on the
-// reinterpreted 64-bit word.
-static inline __device__ int64_t atomicMin(int64_t* address, int64_t val) {
+// `atomicMin(long long int*, long long int)` covers a *different* type there,
+// so we provide our own CAS loop. On Windows MSVC (LLP64), `int64_t` *is*
+// `long long int`, so the same CUDA intrinsic already participates in
+// overload resolution and defining a wrapper here would be a redefinition.
+// The SFINAE constraint keys directly on the *type relationship* rather than
+// a platform macro, so it stays correct under any future ABI change.
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, int64_t> &&
+                                      !std::is_same_v<T, long long>>>
+static inline __device__ T atomicMin(T* address, T val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
 
   do {
     assumed = old;
-    const int64_t cur = (int64_t)assumed;
-    const int64_t new_val = val < cur ? val : cur;
+    const T cur = (T)assumed;
+    const T new_val = val < cur ? val : cur;
     old = atomicCAS(address_as_ull, assumed, (unsigned long long int)new_val);
   } while (assumed != old);
-  return (int64_t)old;
+  return (T)old;
 }
 
 // Floating-point overloads.
@@ -607,21 +615,27 @@ static inline __device__ int16_t atomicMax(int16_t* address, int16_t val) {
 // Linux x86_64 where `int32_t` is `int`).
 //
 // `int64_t` is `long int` on Linux x86_64 (LP64); CUDA's native
-// `atomicMax(long long int*, long long int)` covers a *different* type, so
-// we provide our own CAS loop. The comparison is done in signed space on the
-// reinterpreted 64-bit word.
-static inline __device__ int64_t atomicMax(int64_t* address, int64_t val) {
+// `atomicMax(long long int*, long long int)` covers a *different* type there,
+// so we provide our own CAS loop. On Windows MSVC (LLP64), `int64_t` *is*
+// `long long int`, so the same CUDA intrinsic already participates in
+// overload resolution and defining a wrapper here would be a redefinition.
+// The SFINAE constraint keys directly on the *type relationship* rather than
+// a platform macro, so it stays correct under any future ABI change.
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, int64_t> &&
+                                      !std::is_same_v<T, long long>>>
+static inline __device__ T atomicMax(T* address, T val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
 
   do {
     assumed = old;
-    const int64_t cur = (int64_t)assumed;
-    const int64_t new_val = val > cur ? val : cur;
+    const T cur = (T)assumed;
+    const T new_val = val > cur ? val : cur;
     old = atomicCAS(address_as_ull, assumed, (unsigned long long int)new_val);
   } while (assumed != old);
-  return (int64_t)old;
+  return (T)old;
 }
 
 // Floating-point overloads.
