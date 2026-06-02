@@ -5,26 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-06-02
 
 ### Added
 
-- Added CUDA 13.2 support to `manylinux` Dockerfile ([#614](https://github.com/pyg-team/pyg-lib/pull/614))
-- Added support for PyTorch `2.12.0` wheels in nightly releases ([#615](https://github.com/pyg-team/pyg-lib/pull/615), [#629](https://github.com/pyg-team/pyg-lib/pull/629), [#630](https://github.com/pyg-team/pyg-lib/pull/630))
+- Added CUDA 13.2 support to `manylinux` Dockerfile ([#610](https://github.com/pyg-team/pyg-lib/pull/610))
+- Add PyTorch 2.12 support ([#629](https://github.com/pyg-team/pyg-lib/pull/629), [#630](https://github.com/pyg-team/pyg-lib/pull/630), [#637](https://github.com/pyg-team/pyg-lib/pull/637), [#647](https://github.com/pyg-team/pyg-lib/pull/647))
+- Migrated `rusty1s/pytorch_scatter` to `pyg-lib` ([#649](https://github.com/pyg-team/pyg-lib/pull/649), [#650](https://github.com/pyg-team/pyg-lib/pull/650), [#651](https://github.com/pyg-team/pyg-lib/pull/651), [#652](https://github.com/pyg-team/pyg-lib/pull/652), [#653](https://github.com/pyg-team/pyg-lib/pull/653), [#654](https://github.com/pyg-team/pyg-lib/pull/654), [#655](https://github.com/pyg-team/pyg-lib/pull/655))
 
 ### Changed
 
 - Upgraded C++ standard from C++17 to C++20 required by PyTorch ([#639](https://github.com/pyg-team/pyg-lib/pull/639))
 - Auto-detect CUDA architectures from PyTorch via `torch.cuda.get_arch_list()` at build time instead of hardcoding them in CMake, overridable via `TORCH_CUDA_ARCH_LIST` env var ([#616](https://github.com/pyg-team/pyg-lib/pull/616))
-- Added `--compress-mode=size` to CUDA compiler flags to reduce binary size
+- Added `--compress-mode=size` to CUDA compiler flags to reduce binary size ([#624](https://github.com/pyg-team/pyg-lib/pull/624))
 - Moved `libpyg.so` from `site-packages/` to `site-packages/pyg_lib/` ([#635](https://github.com/pyg-team/pyg-lib/pull/635))
+- Excluded `libcudart` and `libnvrtc` from wheels ([#648](https://github.com/pyg-team/pyg-lib/pull/648))
 
 ### Deprecated
 
 ### Removed
 
 - Dropped support for PyTorch 2.8 ([#628](https://github.com/pyg-team/pyg-lib/pull/628))
-- Dropped support for CUDA architectures below `sm_60` (required by cuCollections)
+- Dropped support for CUDA architectures below `sm_60` (required by cuCollections) ([#624](https://github.com/pyg-team/pyg-lib/pull/624))
 
 ### Fixed
 
