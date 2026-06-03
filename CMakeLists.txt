@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.18)
 project(pyg)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(WIN32)
+  # The Windows SDK's <rpcndr.h> (pulled in by <windows.h>) does
+  # `#define small char`, which collides with the parameter named `small` in
+  # PyTorch 2.10/2.11's c10/cuda/CUDACachingAllocator.h::StreamSegmentSize ctor
+  # (renamed to `small_` in 2.12). CUDA 13's headers newly drag <windows.h> into
+  # our .cu translation units, so nvcc 13 sees `bool char` and fails to parse the
+  # header. WIN32_LEAN_AND_MEAN stops <windows.h> from pulling in the RPC headers
+  # that define `small`, fixing the cu130 build for PyTorch 2.10/2.11.
+  add_compile_definitions(WIN32_LEAN_AND_MEAN)
+endif()
+
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
 set(PYG_VERSION 0.7.0)
 set(NO_METIS 0)
