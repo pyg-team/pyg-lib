@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed the Windows + CUDA 13.0 (`cu130`) build for PyTorch 2.10/2.11 by defining `WIN32_LEAN_AND_MEAN`, which prevents the Windows `#define small char` macro from colliding with PyTorch's `CUDACachingAllocator.h` ([#672](https://github.com/pyg-team/pyg-lib/pull/672))
 - Fixed build with `clang++` by upgrading `cuCollections` and `cccl` submodules ([#645](https://github.com/pyg-team/pyg-lib/pull/645))
 
 ### Security
