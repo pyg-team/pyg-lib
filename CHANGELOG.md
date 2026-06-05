@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Migrated Python type checking from `mypy` to `ty` ([#678](https://github.com/pyg-team/pyg-lib/pull/678))
+
 ### Deprecated
 
 ### Removed
