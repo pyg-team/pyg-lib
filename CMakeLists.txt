@@ -15,7 +15,7 @@ if(WIN32)
 endif()
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
-set(PYG_VERSION 0.7.0)
+set(PYG_VERSION 0.8.0)
 set(NO_METIS 0)
 
 option(BUILD_TEST "Enable testing" OFF)
