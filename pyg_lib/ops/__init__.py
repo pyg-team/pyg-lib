@@ -59,7 +59,7 @@ def _pytreeify(cls):
 @_pytreeify
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
+    def forward(ctx, args: Tuple[Tensor, ...]) -> Tuple[Tensor, ...]:
         ctx.save_for_backward(*args)
 
         inputs: List[Tensor] = [x for x in args[: int(len(args) / 2)]]
@@ -74,24 +74,24 @@ class GroupedMatmul(torch.autograd.Function):
         return tuple(outs)
 
     @staticmethod
-    def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
+    def backward(ctx, *outs_grad: Tensor) -> Tuple[Optional[Tensor], ...]:
         args = ctx.saved_tensors
         inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
         others: List[Tensor] = [other for other in args[int(len(outs_grad)) :]]
 
-        inputs_grad = []
+        inputs_grad: List[Optional[Tensor]] = []
         if any([x.requires_grad for x in inputs]):
             others = [other.t() for other in others]
-            inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
+            inputs_grad = list(torch.ops.pyg.grouped_matmul(outs_grad, others))
         else:
-            inputs_grad = [None for i in range(len(outs_grad))]
+            inputs_grad = [None for _ in range(len(outs_grad))]
 
-        others_grad = []
+        others_grad: List[Optional[Tensor]] = []
         if any([other.requires_grad for other in others]):
             inputs = [x.t() for x in inputs]
-            others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
+            others_grad = list(torch.ops.pyg.grouped_matmul(inputs, outs_grad))
         else:
-            others_grad = [None for i in range(len(outs_grad))]
+            others_grad = [None for _ in range(len(outs_grad))]
 
         return tuple(inputs_grad + others_grad)
 

@@ -1,10 +1,10 @@
 from typing import Any
 
 try:
-    import triton
-    import triton.language as tl
+    import triton as _triton
+    import triton.language as _tl
 
-    major_triton_version = int(triton.__version__.split('.')[0])
+    major_triton_version = int(_triton.__version__.split('.')[0])
     if major_triton_version < 2:
         raise ImportError("'triton>=2.0.0' required")
 
@@ -28,8 +28,20 @@ except ImportError:
         def __getitem__(self, *args, **kwargs):
             self.report_error()
 
-    triton = type('triton', (object,), {})()
-    triton.jit = lambda func: TritonJit(func.__name__)
+    class Triton:
+        @staticmethod
+        def jit(func):
+            return TritonJit(func.__name__)
 
-    tl = type('tl', (object,), {})()
-    tl.constexpr = Any
+        @staticmethod
+        def cdiv(*args, **kwargs):
+            raise ValueError("'triton>=2.0.0' required")
+
+    class TL:
+        constexpr = Any
+
+    _triton = Triton()
+    _tl = TL()
+
+triton: Any = _triton
+tl: Any = _tl

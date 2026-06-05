@@ -43,6 +43,8 @@ test = [
 ]
 dev = [
     "pre-commit",
+    "pytest",
+    "ty",
 ]
 
 [tool.cibuildwheel]
@@ -81,6 +83,16 @@ delocate-wheel \
 [tool.uv]
 exclude-newer = "7 days"
 exclude-newer-package = { torch = "2099-01-01" }
+
+[tool.ty.analysis]
+replace-imports-with-any = [
+    "scipy.**",
+    "torch_geometric.**",
+    "triton.**",
+]
+
+[tool.ty.src]
+include = ["pyg_lib"]
 
 [tool.pytest.ini_options]
 addopts=[

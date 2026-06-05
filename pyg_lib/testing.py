@@ -9,6 +9,8 @@ from torch import Tensor
 
 from pyg_lib import get_home_dir
 
+EdgeType = Tuple[str, str, str]
+
 # Decorators ##################################################################
 
 
@@ -100,7 +102,7 @@ def get_sparse_matrix(
     if not osp.exists(path):
         os.makedirs(get_home_dir(), exist_ok=True)
 
-        import urllib
+        import urllib.request
 
         url = f'https://sparse.tamu.edu/mat/{group}/{name}.mat'
         print(f'Downloading {url}...', end='')
@@ -122,7 +124,7 @@ def get_sparse_matrix(
 def get_ogb_mag_hetero_sparse_matrix(
     dtype: torch.dtype = torch.long,
     device: Optional[torch.device] = None,
-) -> Tuple[Tensor, Tensor]:
+) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor]]:
     r"""Returns a heterogeneous graph :obj:`(colptr_dict, row_dict)`
     from the `OGB <https://ogb.stanford.edu/>`_ benchmark suite.
 
@@ -146,7 +148,8 @@ def get_ogb_mag_hetero_sparse_matrix(
     transform = T.Compose([T.ToUndirected(), T.ToSparseTensor()])
     data = OGB_MAG(path, pre_transform=transform)[0]
 
-    colptr_dict, row_dict = {}, {}
+    colptr_dict: Dict[EdgeType, Tensor] = {}
+    row_dict: Dict[EdgeType, Tensor] = {}
     for edge_type in data.edge_types:
         colptr, row, _ = data[edge_type].adj_t.csr()
         colptr_dict[edge_type] = colptr.to(device, dtype)

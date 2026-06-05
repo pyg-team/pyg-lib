@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
 
-  mypy:
+  ty:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,9 +26,11 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv pip install mypy
+        run: |
+          uv pip install ty pytest
+          uv pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Check type hints
         continue-on-error: true
         run: |
-          mypy --install-types --non-interactive
+          ty check --output-format github
