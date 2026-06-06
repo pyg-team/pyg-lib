@@ -85,7 +85,7 @@ exclude-newer = "7 days"
 exclude-newer-package = { torch = "2099-01-01" }
 
 [tool.ty.analysis]
-replace-imports-with-any = [
+allowed-unresolved-imports = [
     "scipy.**",
     "torch_geometric.**",
     "triton.**",

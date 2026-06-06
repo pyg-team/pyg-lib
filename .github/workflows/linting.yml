@@ -31,6 +31,5 @@ jobs:
           uv pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Check type hints
-        continue-on-error: true
         run: |
           ty check --output-format github

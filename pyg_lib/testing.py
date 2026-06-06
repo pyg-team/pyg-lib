@@ -136,10 +136,8 @@ def get_ogb_mag_hetero_sparse_matrix(
 
     Returns:
         (Dict[Tuple[str, str, str], torch.Tensor],
-        Dict[Tuple[str, str, str], torch.Tensor], int, List,
-        List[Tuple[str, str, str]]): Compressed source node indices and target
-        node indices of the hetero sparse matrix, number of paper nodes,
-        all node types and all edge types.
+        Dict[Tuple[str, str, str], torch.Tensor]): Compressed source node
+        indices and target node indices of the hetero sparse matrix.
     """
     import torch_geometric.transforms as T
     from torch_geometric.datasets import OGB_MAG
