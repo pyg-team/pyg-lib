@@ -2,7 +2,7 @@ import functools
 import os
 import os.path as osp
 from importlib.util import find_spec
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
@@ -140,11 +140,12 @@ def get_ogb_mag_hetero_sparse_matrix(
         indices and target node indices of the hetero sparse matrix.
     """
     import torch_geometric.transforms as T
+    from torch_geometric.data import HeteroData
     from torch_geometric.datasets import OGB_MAG
 
     path = osp.join(get_home_dir(), 'ogb-mag')
     transform = T.Compose([T.ToUndirected(), T.ToSparseTensor()])
-    data = OGB_MAG(path, pre_transform=transform)[0]
+    data = cast(HeteroData, OGB_MAG(path, pre_transform=transform)[0])
 
     colptr_dict: Dict[EdgeType, Tensor] = {}
     row_dict: Dict[EdgeType, Tensor] = {}

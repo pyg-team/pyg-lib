@@ -29,6 +29,7 @@ jobs:
         run: |
           uv pip install ty pytest
           uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+          uv pip install scipy torch-geometric triton
 
       - name: Check type hints
         run: |
