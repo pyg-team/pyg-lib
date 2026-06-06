@@ -1,5 +1,8 @@
 from typing import Any
 
+triton: Any
+tl: Any
+
 try:
     import triton as _triton
     import triton.language as _tl
@@ -40,8 +43,9 @@ except ImportError:
     class TL:
         constexpr = Any
 
-    _triton = Triton()
-    _tl = TL()
+    triton = Triton()
+    tl = TL()
 
-triton: Any = _triton
-tl: Any = _tl
+else:
+    triton = _triton
+    tl = _tl
