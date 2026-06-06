@@ -33,4 +33,4 @@ jobs:
 
       - name: Check type hints
         run: |
-          ty check --output-format github
+          ty check --output-format github --error all
