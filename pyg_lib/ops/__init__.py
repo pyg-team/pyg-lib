@@ -29,7 +29,7 @@ def _pytreeify(cls):
         return pytree.tree_unflatten(flat_out, out_struct_holder[0])
 
     def new_forward(ctx, struct, out_struct_holder, *flat_inputs):
-        inputs = pytree.tree_unflatten(flat_inputs, struct)
+        inputs = pytree.tree_unflatten(list(flat_inputs), struct)
 
         out = orig_fw(ctx, *inputs)
 
@@ -40,7 +40,10 @@ def _pytreeify(cls):
         return tuple(flat_out)
 
     def new_backward(ctx, *flat_grad_outputs):
-        outs_grad = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
+        outs_grad = pytree.tree_unflatten(
+            list(flat_grad_outputs),
+            ctx._out_struct,
+        )
         if not isinstance(outs_grad, tuple):
             outs_grad = (outs_grad,)
 
@@ -316,7 +319,7 @@ def index_sort(
         A tuple containing sorted values and indices of the elements in the
         original :obj:`input` tensor.
     """
-    if not inputs.is_cpu:
+    if inputs.device.type != 'cpu':
         return torch.sort(inputs)
     return torch.ops.pyg.index_sort(inputs, max_value)
 
