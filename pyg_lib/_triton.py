@@ -4,8 +4,8 @@ triton: Any
 tl: Any
 
 try:
-    import triton as _triton
-    import triton.language as _tl
+    import triton as _triton  # ty: ignore[unresolved-import]
+    import triton.language as _tl  # ty: ignore[unresolved-import]
 
     major_triton_version = int(_triton.__version__.split('.')[0])
     if major_triton_version < 2:

@@ -1,8 +1,15 @@
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import torch
 import torch.utils._pytree as pytree
 from torch import Tensor
+
+if TYPE_CHECKING:
+    from typing_extensions import override
+else:
+
+    def override(func):
+        return func
 
 
 def _pytreeify(cls):
@@ -62,6 +69,7 @@ def _pytreeify(cls):
 @_pytreeify
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
+    @override
     def forward(ctx, args: Tuple[Tensor, ...]) -> Tuple[Tensor, ...]:
         ctx.save_for_backward(*args)
 
@@ -77,6 +85,7 @@ class GroupedMatmul(torch.autograd.Function):
         return tuple(outs)
 
     @staticmethod
+    @override
     def backward(ctx, *outs_grad: Tensor) -> Tuple[Optional[Tensor], ...]:
         args = ctx.saved_tensors
         inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
