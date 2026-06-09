@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added Linux `aarch64` manylinux wheel and CUDA Docker image builds ([#683](https://github.com/pyg-team/pyg-lib/pull/683))
+
 ### Changed
 
 ### Deprecated

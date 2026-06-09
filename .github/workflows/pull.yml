@@ -57,7 +57,7 @@ jobs:
           # Set Linux matrix
           echo ::group::Set Linux matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_linux.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][], "arch": .["arch"][] }]' $filename)
           echo "matrix-linux=$matrix" >> $GITHUB_OUTPUT
           echo "matrix-linux=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
