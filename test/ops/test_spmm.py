@@ -35,6 +35,8 @@ def _spmm_sum_ref(
     value: torch.Tensor,
     mat: torch.Tensor,
 ) -> torch.Tensor:
+    if value is not None:
+        value = value.to(mat.dtype)
     row = _row_from_rowptr(rowptr, col)
     out_size = list(mat.size())
     out_size[-2] = rowptr.numel() - 1
@@ -65,6 +67,8 @@ def _spmm_minmax_ref(
     mat: torch.Tensor,
     reduce: str,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    if value is not None:
+        value = value.to(mat.dtype)
     out_size = list(mat.size())
     out_size[-2] = rowptr.numel() - 1
     if reduce == 'min':
@@ -174,6 +178,37 @@ def test_spmm_sum_backward_mat_gradcheck_without_value():
         return pyg_lib.ops.spmm_sum(rowptr, col, None, x)
 
     assert torch.autograd.gradcheck(func, (mat,))
+
+
+@pytest.mark.parametrize('reduce', ['sum', 'add', 'mean', 'min', 'max'])
+def test_spmm_mixed_value_dtype_casts_to_mat_dtype(reduce):
+    rowptr = torch.tensor([0, 2, 3])
+    col = torch.tensor([0, 1, 1])
+    value = torch.tensor([1, 2, 3], dtype=torch.int64)
+    mat = torch.tensor([[1, 10], [2, 20]], dtype=torch.float32)
+
+    out = pyg_lib.ops.spmm(rowptr, col, value, mat, reduce=reduce)
+    expected = (
+        _spmm_minmax_ref(rowptr, col, value, mat, reduce)[0]
+        if reduce in {'min', 'max'}
+        else _spmm_mean_ref(rowptr, col, value, mat)
+        if reduce == 'mean'
+        else _spmm_sum_ref(rowptr, col, value, mat)
+    )
+    assert out.dtype == mat.dtype
+    torch.testing.assert_close(out, expected)
+
+
+def test_spmm_sum_mixed_floating_value_dtype_casts_to_mat_dtype():
+    rowptr = torch.tensor([0, 2, 3])
+    col = torch.tensor([0, 1, 1])
+    value = torch.tensor([1, 2, 3], dtype=torch.float64)
+    mat = torch.tensor([[1, 10], [2, 20]], dtype=torch.float32)
+
+    out = pyg_lib.ops.spmm_sum(rowptr, col, value, mat)
+    expected = _spmm_sum_ref(rowptr, col, value, mat)
+    assert out.dtype == mat.dtype
+    torch.testing.assert_close(out, expected)
 
 
 @withSeed

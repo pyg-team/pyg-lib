@@ -835,6 +835,10 @@ def segment_csr(
     raise ValueError(f'Unknown reduce: {reduce!r}')
 
 
+def _cast_spmm_value(value: Optional[Tensor], mat: Tensor) -> Optional[Tensor]:
+    return None if value is None else value.to(mat.dtype)
+
+
 def spmm_sum(
     rowptr: Tensor,
     col: Tensor,
@@ -853,6 +857,7 @@ def spmm_sum(
     Returns:
         Dense output of shape :obj:`[..., M, K]`.
     """
+    value = _cast_spmm_value(value, mat)
     return torch.ops.pyg.spmm_sum(rowptr, col, value, mat)
 
 
@@ -869,6 +874,7 @@ def spmm_mean(
 
     Empty rows yield zero.
     """
+    value = _cast_spmm_value(value, mat)
     return torch.ops.pyg.spmm_mean(rowptr, col, value, mat)
 
 
@@ -884,6 +890,7 @@ def spmm_min(
     position that contributed to each output element. Empty rows yield value
     ``0`` and argindex ``col.numel()``.
     """
+    value = _cast_spmm_value(value, mat)
     return torch.ops.pyg.spmm_min(rowptr, col, value, mat)
 
 
@@ -899,6 +906,7 @@ def spmm_max(
     position that contributed to each output element. Empty rows yield value
     ``0`` and argindex ``col.numel()``.
     """
+    value = _cast_spmm_value(value, mat)
     return torch.ops.pyg.spmm_max(rowptr, col, value, mat)
 
 
