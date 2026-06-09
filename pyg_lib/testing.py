@@ -1,13 +1,14 @@
 import functools
 import os
 import os.path as osp
-from importlib.util import find_spec
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
 
 from pyg_lib import get_home_dir
+
+EdgeType = Tuple[str, str, str]
 
 # Decorators ##################################################################
 
@@ -33,8 +34,10 @@ def onlyCUDA(func: Callable) -> Callable:
 def onlyTriton(func: Callable) -> Callable:
     import pytest
 
+    from pyg_lib._triton import has_triton
+
     return pytest.mark.skipif(
-        find_spec('triton') is None,
+        not has_triton(),
         reason="'triton' not installed",
     )(func)
 
@@ -100,7 +103,7 @@ def get_sparse_matrix(
     if not osp.exists(path):
         os.makedirs(get_home_dir(), exist_ok=True)
 
-        import urllib
+        import urllib.request
 
         url = f'https://sparse.tamu.edu/mat/{group}/{name}.mat'
         print(f'Downloading {url}...', end='')
@@ -122,7 +125,7 @@ def get_sparse_matrix(
 def get_ogb_mag_hetero_sparse_matrix(
     dtype: torch.dtype = torch.long,
     device: Optional[torch.device] = None,
-) -> Tuple[Tensor, Tensor]:
+) -> Tuple[Dict[EdgeType, Tensor], Dict[EdgeType, Tensor]]:
     r"""Returns a heterogeneous graph :obj:`(colptr_dict, row_dict)`
     from the `OGB <https://ogb.stanford.edu/>`_ benchmark suite.
 
@@ -134,19 +137,19 @@ def get_ogb_mag_hetero_sparse_matrix(
 
     Returns:
         (Dict[Tuple[str, str, str], torch.Tensor],
-        Dict[Tuple[str, str, str], torch.Tensor], int, List,
-        List[Tuple[str, str, str]]): Compressed source node indices and target
-        node indices of the hetero sparse matrix, number of paper nodes,
-        all node types and all edge types.
+        Dict[Tuple[str, str, str], torch.Tensor]): Compressed source node
+        indices and target node indices of the hetero sparse matrix.
     """
     import torch_geometric.transforms as T
+    from torch_geometric.data import HeteroData
     from torch_geometric.datasets import OGB_MAG
 
     path = osp.join(get_home_dir(), 'ogb-mag')
     transform = T.Compose([T.ToUndirected(), T.ToSparseTensor()])
-    data = OGB_MAG(path, pre_transform=transform)[0]
+    data = cast(HeteroData, OGB_MAG(path, pre_transform=transform)[0])
 
-    colptr_dict, row_dict = {}, {}
+    colptr_dict: Dict[EdgeType, Tensor] = {}
+    row_dict: Dict[EdgeType, Tensor] = {}
     for edge_type in data.edge_types:
         colptr, row, _ = data[edge_type].adj_t.csr()
         colptr_dict[edge_type] = colptr.to(device, dtype)

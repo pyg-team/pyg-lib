@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
 
-  mypy:
+  ty:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,9 +26,10 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv pip install mypy
+        run: |
+          uv pip install ty pytest scipy torch-geometric
+          uv pip install torch==2.12.0 --torch-backend cpu
 
       - name: Check type hints
-        continue-on-error: true
         run: |
-          mypy --install-types --non-interactive
+          ty check --output-format github --error all

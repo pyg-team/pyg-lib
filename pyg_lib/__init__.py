@@ -1,4 +1,4 @@
-import importlib
+import importlib.machinery
 import os
 import os.path as osp
 import warnings

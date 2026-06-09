@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import torch
 from torch import Tensor
@@ -140,54 +140,75 @@ def hetero_neighbor_sample(
     TO_REL_TYPE = {key: '__'.join(key) for key in edge_types}
     TO_EDGE_TYPE = {'__'.join(key): key for key in edge_types}
 
-    rowptr_dict = {TO_REL_TYPE[k]: v for k, v in rowptr_dict.items()}
-    col_dict = {TO_REL_TYPE[k]: v for k, v in col_dict.items()}
-    num_neighbors_dict = {
+    rel_rowptr_dict = {TO_REL_TYPE[k]: v for k, v in rowptr_dict.items()}
+    rel_col_dict = {TO_REL_TYPE[k]: v for k, v in col_dict.items()}
+    rel_num_neighbors_dict = {
         TO_REL_TYPE[k]: v for k, v in num_neighbors_dict.items()
     }
+    rel_edge_time_dict = None
     if edge_time_dict is not None:
-        edge_time_dict = {TO_REL_TYPE[k]: v for k, v in edge_time_dict.items()}
+        rel_edge_time_dict = {
+            TO_REL_TYPE[k]: v for k, v in edge_time_dict.items()
+        }
+    rel_edge_weight_dict = None
     if edge_weight_dict is not None:
-        edge_weight_dict = {
+        rel_edge_weight_dict = {
             TO_REL_TYPE[k]: v for k, v in edge_weight_dict.items()
         }
 
-    out = torch.ops.pyg.hetero_neighbor_sample(
-        node_types,
-        edge_types,
-        rowptr_dict,
-        col_dict,
-        seed_dict,
-        num_neighbors_dict,
-        node_time_dict,
-        edge_time_dict,
-        seed_time_dict,
-        edge_weight_dict,
-        csc,
-        replace,
-        directed,
-        disjoint,
-        temporal_strategy,
-        return_edge_id,
+    out = cast(
+        Tuple[
+            Dict[RelType, Tensor],
+            Dict[RelType, Tensor],
+            Dict[NodeType, Tensor],
+            Optional[Dict[RelType, Tensor]],
+            Dict[NodeType, List[int]],
+            Dict[RelType, List[int]],
+        ],
+        torch.ops.pyg.hetero_neighbor_sample(
+            node_types,
+            edge_types,
+            rel_rowptr_dict,
+            rel_col_dict,
+            seed_dict,
+            rel_num_neighbors_dict,
+            node_time_dict,
+            rel_edge_time_dict,
+            seed_time_dict,
+            rel_edge_weight_dict,
+            csc,
+            replace,
+            directed,
+            disjoint,
+            temporal_strategy,
+            return_edge_id,
+        ),
     )
 
     (
-        row_dict,
-        col_dict,
+        rel_row_dict,
+        rel_col_dict,
         node_id_dict,
-        edge_id_dict,
+        rel_edge_id_dict,
         num_nodes_per_hop_dict,
-        num_edges_per_hop_dict,
+        rel_num_edges_per_hop_dict,
     ) = out
 
-    row_dict = {TO_EDGE_TYPE[k]: v for k, v in row_dict.items()}
-    col_dict = {TO_EDGE_TYPE[k]: v for k, v in col_dict.items()}
+    row_dict: Dict[EdgeType, Tensor] = {
+        TO_EDGE_TYPE[k]: v for k, v in rel_row_dict.items()
+    }
+    col_dict: Dict[EdgeType, Tensor] = {
+        TO_EDGE_TYPE[k]: v for k, v in rel_col_dict.items()
+    }
 
-    if edge_id_dict is not None:
-        edge_id_dict = {TO_EDGE_TYPE[k]: v for k, v in edge_id_dict.items()}
+    edge_id_dict = None
+    if rel_edge_id_dict is not None:
+        edge_id_dict = {
+            TO_EDGE_TYPE[k]: v for k, v in rel_edge_id_dict.items()
+        }
 
-    num_edges_per_hop_dict = {
-        TO_EDGE_TYPE[k]: v for k, v in num_edges_per_hop_dict.items()
+    num_edges_per_hop_dict: Dict[EdgeType, List[int]] = {
+        TO_EDGE_TYPE[k]: v for k, v in rel_num_edges_per_hop_dict.items()
     }
 
     return (

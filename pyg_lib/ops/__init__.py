@@ -1,8 +1,15 @@
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import torch
 import torch.utils._pytree as pytree
 from torch import Tensor
+
+if TYPE_CHECKING:
+    from typing_extensions import override
+else:
+
+    def override(func):
+        return func
 
 
 def _pytreeify(cls):
@@ -29,7 +36,7 @@ def _pytreeify(cls):
         return pytree.tree_unflatten(flat_out, out_struct_holder[0])
 
     def new_forward(ctx, struct, out_struct_holder, *flat_inputs):
-        inputs = pytree.tree_unflatten(flat_inputs, struct)
+        inputs = pytree.tree_unflatten(list(flat_inputs), struct)
 
         out = orig_fw(ctx, *inputs)
 
@@ -40,7 +47,10 @@ def _pytreeify(cls):
         return tuple(flat_out)
 
     def new_backward(ctx, *flat_grad_outputs):
-        outs_grad = pytree.tree_unflatten(flat_grad_outputs, ctx._out_struct)
+        outs_grad = pytree.tree_unflatten(
+            list(flat_grad_outputs),
+            ctx._out_struct,
+        )
         if not isinstance(outs_grad, tuple):
             outs_grad = (outs_grad,)
 
@@ -59,7 +69,8 @@ def _pytreeify(cls):
 @_pytreeify
 class GroupedMatmul(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
+    @override
+    def forward(ctx, args: Tuple[Tensor, ...]) -> Tuple[Tensor, ...]:
         ctx.save_for_backward(*args)
 
         inputs: List[Tensor] = [x for x in args[: int(len(args) / 2)]]
@@ -74,24 +85,25 @@ class GroupedMatmul(torch.autograd.Function):
         return tuple(outs)
 
     @staticmethod
-    def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
+    @override
+    def backward(ctx, *outs_grad: Tensor) -> Tuple[Optional[Tensor], ...]:
         args = ctx.saved_tensors
         inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
         others: List[Tensor] = [other for other in args[int(len(outs_grad)) :]]
 
-        inputs_grad = []
+        inputs_grad: List[Optional[Tensor]] = []
         if any([x.requires_grad for x in inputs]):
             others = [other.t() for other in others]
-            inputs_grad = torch.ops.pyg.grouped_matmul(outs_grad, others)
+            inputs_grad = list(torch.ops.pyg.grouped_matmul(outs_grad, others))
         else:
-            inputs_grad = [None for i in range(len(outs_grad))]
+            inputs_grad = [None for _ in range(len(outs_grad))]
 
-        others_grad = []
+        others_grad: List[Optional[Tensor]] = []
         if any([other.requires_grad for other in others]):
             inputs = [x.t() for x in inputs]
-            others_grad = torch.ops.pyg.grouped_matmul(inputs, outs_grad)
+            others_grad = list(torch.ops.pyg.grouped_matmul(inputs, outs_grad))
         else:
-            others_grad = [None for i in range(len(outs_grad))]
+            others_grad = [None for _ in range(len(outs_grad))]
 
         return tuple(inputs_grad + others_grad)
 
@@ -316,7 +328,7 @@ def index_sort(
         A tuple containing sorted values and indices of the elements in the
         original :obj:`input` tensor.
     """
-    if not inputs.is_cpu:
+    if inputs.device.type != 'cpu':
         return torch.sort(inputs)
     return torch.ops.pyg.index_sort(inputs, max_value)
 
