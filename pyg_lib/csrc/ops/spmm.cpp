@@ -66,10 +66,57 @@ PYG_API at::Tensor spmm_sum(const at::Tensor& rowptr,
   return op.call(rowptr, col, value, mat);
 }
 
+PYG_API at::Tensor spmm_mean(const at::Tensor& rowptr,
+                             const at::Tensor& col,
+                             const std::optional<at::Tensor>& value,
+                             const at::Tensor& mat) {
+  check_spmm_inputs("spmm_mean", rowptr, col, value, mat);
+
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::spmm_mean", "")
+                       .typed<decltype(spmm_mean)>();
+  return op.call(rowptr, col, value, mat);
+}
+
+PYG_API std::tuple<at::Tensor, at::Tensor> spmm_min(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const std::optional<at::Tensor>& value,
+    const at::Tensor& mat) {
+  check_spmm_inputs("spmm_min", rowptr, col, value, mat);
+
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::spmm_min", "")
+                       .typed<decltype(spmm_min)>();
+  return op.call(rowptr, col, value, mat);
+}
+
+PYG_API std::tuple<at::Tensor, at::Tensor> spmm_max(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const std::optional<at::Tensor>& value,
+    const at::Tensor& mat) {
+  check_spmm_inputs("spmm_max", rowptr, col, value, mat);
+
+  static auto op = c10::Dispatcher::singleton()
+                       .findSchemaOrThrow("pyg::spmm_max", "")
+                       .typed<decltype(spmm_max)>();
+  return op.call(rowptr, col, value, mat);
+}
+
 TORCH_LIBRARY_FRAGMENT(pyg, m) {
   m.def(
       TORCH_SELECTIVE_SCHEMA("pyg::spmm_sum(Tensor rowptr, Tensor col, "
                              "Tensor? value, Tensor mat) -> Tensor"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::spmm_mean(Tensor rowptr, Tensor col, "
+                             "Tensor? value, Tensor mat) -> Tensor"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::spmm_min(Tensor rowptr, Tensor col, "
+                             "Tensor? value, Tensor mat) -> (Tensor, Tensor)"));
+  m.def(
+      TORCH_SELECTIVE_SCHEMA("pyg::spmm_max(Tensor rowptr, Tensor col, "
+                             "Tensor? value, Tensor mat) -> (Tensor, Tensor)"));
 }
 
 }  // namespace ops

@@ -859,6 +859,49 @@ def spmm_sum(
 spmm_add = spmm_sum
 
 
+def spmm_mean(
+    rowptr: Tensor,
+    col: Tensor,
+    value: Optional[Tensor],
+    mat: Tensor,
+) -> Tensor:
+    r"""Computes CSR sparse-dense matrix multiplication using mean reduction.
+
+    Empty rows yield zero.
+    """
+    return torch.ops.pyg.spmm_mean(rowptr, col, value, mat)
+
+
+def spmm_min(
+    rowptr: Tensor,
+    col: Tensor,
+    value: Optional[Tensor],
+    mat: Tensor,
+) -> Tuple[Tensor, Tensor]:
+    r"""Computes CSR sparse-dense matrix multiplication using min reduction.
+
+    Returns a tuple ``(values, argindex)`` where ``argindex`` stores the edge
+    position that contributed to each output element. Empty rows yield value
+    ``0`` and argindex ``col.numel()``.
+    """
+    return torch.ops.pyg.spmm_min(rowptr, col, value, mat)
+
+
+def spmm_max(
+    rowptr: Tensor,
+    col: Tensor,
+    value: Optional[Tensor],
+    mat: Tensor,
+) -> Tuple[Tensor, Tensor]:
+    r"""Computes CSR sparse-dense matrix multiplication using max reduction.
+
+    Returns a tuple ``(values, argindex)`` where ``argindex`` stores the edge
+    position that contributed to each output element. Empty rows yield value
+    ``0`` and argindex ``col.numel()``.
+    """
+    return torch.ops.pyg.spmm_max(rowptr, col, value, mat)
+
+
 def spmm(
     rowptr: Tensor,
     col: Tensor,
@@ -873,6 +916,12 @@ def spmm(
     """
     if reduce == 'sum' or reduce == 'add':
         return spmm_sum(rowptr, col, value, mat)
+    if reduce == 'mean':
+        return spmm_mean(rowptr, col, value, mat)
+    if reduce == 'min':
+        return spmm_min(rowptr, col, value, mat)[0]
+    if reduce == 'max':
+        return spmm_max(rowptr, col, value, mat)[0]
     raise ValueError(f'Unknown reduce: {reduce!r}')
 
 
@@ -1286,6 +1335,9 @@ __all__ = [
     'segment_csr',
     'spmm_sum',
     'spmm_add',
+    'spmm_mean',
+    'spmm_min',
+    'spmm_max',
     'spmm',
     'scatter_softmax',
     'scatter_log_softmax',

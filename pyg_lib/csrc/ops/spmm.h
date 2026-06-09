@@ -2,6 +2,7 @@
 
 #include <ATen/ATen.h>
 #include <optional>
+#include <tuple>
 #include "pyg_lib/csrc/macros.h"
 
 namespace pyg {
@@ -20,6 +21,23 @@ PYG_API at::Tensor spmm_sum(const at::Tensor& rowptr,
                             const at::Tensor& col,
                             const std::optional<at::Tensor>& value,
                             const at::Tensor& mat);
+
+PYG_API at::Tensor spmm_mean(const at::Tensor& rowptr,
+                             const at::Tensor& col,
+                             const std::optional<at::Tensor>& value,
+                             const at::Tensor& mat);
+
+PYG_API std::tuple<at::Tensor, at::Tensor> spmm_min(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const std::optional<at::Tensor>& value,
+    const at::Tensor& mat);
+
+PYG_API std::tuple<at::Tensor, at::Tensor> spmm_max(
+    const at::Tensor& rowptr,
+    const at::Tensor& col,
+    const std::optional<at::Tensor>& value,
+    const at::Tensor& mat);
 
 }  // namespace ops
 }  // namespace pyg
