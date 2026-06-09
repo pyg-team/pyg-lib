@@ -835,6 +835,47 @@ def segment_csr(
     raise ValueError(f'Unknown reduce: {reduce!r}')
 
 
+def spmm_sum(
+    rowptr: Tensor,
+    col: Tensor,
+    value: Optional[Tensor],
+    mat: Tensor,
+) -> Tensor:
+    r"""Computes CSR sparse-dense matrix multiplication using sum reduction.
+
+    Args:
+        rowptr: CSR row pointer of shape :obj:`[M + 1]`.
+        col: Column indices of shape :obj:`[E]`.
+        value: Optional sparse values of shape :obj:`[E]`. If omitted, all
+            entries are treated as one.
+        mat: Dense matrix of shape :obj:`[..., N, K]`.
+
+    Returns:
+        Dense output of shape :obj:`[..., M, K]`.
+    """
+    return torch.ops.pyg.spmm_sum(rowptr, col, value, mat)
+
+
+spmm_add = spmm_sum
+
+
+def spmm(
+    rowptr: Tensor,
+    col: Tensor,
+    value: Optional[Tensor],
+    mat: Tensor,
+    reduce: str = 'sum',
+) -> Tensor:
+    r"""Computes CSR sparse-dense matrix multiplication.
+
+    Routes by :obj:`reduce` to the typed ``spmm_*`` op. ``"add"`` is an alias
+    for ``"sum"``.
+    """
+    if reduce == 'sum' or reduce == 'add':
+        return spmm_sum(rowptr, col, value, mat)
+    raise ValueError(f'Unknown reduce: {reduce!r}')
+
+
 def scatter_softmax(
     src: Tensor,
     index: Tensor,
@@ -1243,6 +1284,9 @@ __all__ = [
     'scatter',
     'segment_coo',
     'segment_csr',
+    'spmm_sum',
+    'spmm_add',
+    'spmm',
     'scatter_softmax',
     'scatter_log_softmax',
     'scatter_std',
