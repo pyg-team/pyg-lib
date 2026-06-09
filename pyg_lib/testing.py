@@ -1,7 +1,6 @@
 import functools
 import os
 import os.path as osp
-from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 import torch
@@ -35,8 +34,10 @@ def onlyCUDA(func: Callable) -> Callable:
 def onlyTriton(func: Callable) -> Callable:
     import pytest
 
+    from pyg_lib._triton import has_triton
+
     return pytest.mark.skipif(
-        find_spec('triton') is None,
+        not has_triton(),
         reason="'triton' not installed",
     )(func)
 

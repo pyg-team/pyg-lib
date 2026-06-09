@@ -1,51 +1,24 @@
 from typing import Any
 
-triton: Any
-tl: Any
+TRITON_ERROR = (
+    "'triton' required. Please install the missing dependency via "
+    '`pip install -U triton`.'
+)
 
-try:
-    import triton as _triton  # ty: ignore[unresolved-import]
-    import triton.language as _tl  # ty: ignore[unresolved-import]
 
-    major_triton_version = int(_triton.__version__.split('.')[0])
-    if major_triton_version < 2:
-        raise ImportError("'triton>=2.0.0' required")
+def load_triton() -> tuple[Any, Any]:
+    try:
+        import triton  # ty: ignore[unresolved-import]
+        import triton.language as tl  # ty: ignore[unresolved-import]
+    except ImportError as e:
+        raise ImportError(TRITON_ERROR) from e
 
-except ImportError:
+    return triton, tl
 
-    class TritonJit:
-        def __init__(self, func_name: str):
-            self.func_name = func_name
 
-        def report_error(self):
-            raise ValueError(
-                f"Could not compile function '{self.func_name}' "
-                f"since 'triton>=2.0.0' dependency was not "
-                f'found. Please install the missing dependency '
-                f'via `pip install -U -pre triton`.',
-            )
-
-        def __call__(self, *args, **kwargs):
-            self.report_error()
-
-        def __getitem__(self, *args, **kwargs):
-            self.report_error()
-
-    class Triton:
-        @staticmethod
-        def jit(func):
-            return TritonJit(func.__name__)
-
-        @staticmethod
-        def cdiv(*args, **kwargs):
-            raise ValueError("'triton>=2.0.0' required")
-
-    class TL:
-        constexpr = Any
-
-    triton = Triton()
-    tl = TL()
-
-else:
-    triton = _triton
-    tl = _tl
+def has_triton() -> bool:
+    try:
+        load_triton()
+    except ImportError:
+        return False
+    return True
