@@ -159,6 +159,41 @@ class NeighborSampler {
     }
   }
 
+  std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>>
+  get_subgraph_edges(pyg::sampler::Mapper<node_t, scalar_t>& dst_mapper,
+                     std::vector<node_t>& out_global_dst_nodes,
+                     bool csc = false) {
+    std::vector<scalar_t> out_row, out_col, out_edge_id;
+    if (save_edge_ids) {
+      out_edge_id = std::vector<scalar_t>{};
+    }
+    for (size_t i = 0; i < out_global_dst_nodes.size(); ++i) {
+      const auto global_src_node = out_global_dst_nodes[i];
+      const auto row_start = rowptr_[to_scalar_t(global_src_node)];
+      const auto row_end = rowptr_[to_scalar_t(global_src_node) + 1];
+
+      for (auto edge_id = row_start; edge_id < row_end; ++edge_id) {
+        const auto v = to_node_t(col_[edge_id], global_src_node);
+        const auto local_idx = dst_mapper.map(v);
+        if (local_idx >= 0) {
+          out_row.push_back(i);
+          out_col.push_back(local_idx);
+          out_edge_id.push_back(edge_id);
+        }
+      }
+    }
+    const auto row = pyg::utils::from_vector(out_row);
+    const auto col = pyg::utils::from_vector(out_col);
+    c10::optional<at::Tensor> edge_id =
+      save_edge_ids ? c10::optional<at::Tensor>(pyg::utils::from_vector(out_edge_id))
+                    : c10::nullopt;
+    if (!csc) {
+      return std::make_tuple(row, col, edge_id);
+    } else {
+      return std::make_tuple(col, row, edge_id);
+    }
+  }
+
  private:
   inline scalar_t to_scalar_t(const scalar_t& node) { return node; }
   inline scalar_t to_scalar_t(const std::pair<scalar_t, scalar_t>& node) {
@@ -498,11 +533,15 @@ sample(const at::Tensor& rowptr,
     }
 
     out_node_id = pyg::utils::from_vector(sampled_nodes);
-    TORCH_CHECK(directed, "Undirected subgraphs not yet supported");
     if (directed) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
     } else {
+      TORCH_CHECK(!distributed, "Induced subgraph sampling not yet supported in distributed mode");
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
+      if constexpr (!disjoint) {
+        std::tie(out_row, out_col, out_edge_id) =
+          sampler.get_subgraph_edges(mapper, sampled_nodes,csc);
+      }
     }
 
     num_sampled_edges_per_hop = sampler.num_sampled_edges_per_hop;

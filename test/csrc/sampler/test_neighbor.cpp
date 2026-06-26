@@ -375,3 +375,111 @@ TEST(HeteroBiasedNeighborTest, BasicAssertions) {
   auto expected_edges = at::tensor({0, 2}, options);
   EXPECT_TRUE(at::equal(std::get<3>(out).value().at(rel_key), expected_edges));
 }
+
+TEST(NeighborSamplerTest, InducedSubgraphHasMoreEdgesThanDirected) {
+  const int64_t num_nodes = 5;
+  const auto options = at::TensorOptions().dtype(at::kLong);
+  at::Tensor rowptr, col;
+  std::tie(rowptr, col) = cycle_graph(num_nodes, options);
+
+  const auto seed = at::tensor({0}, options);
+  std::vector<int64_t> num_neighbors = {2, 2};
+
+  const auto directed_out = pyg::sampler::neighbor_sample(
+      /*rowptr = */rowptr,
+      /*col = */col,
+      /*seed = */seed,
+      /*num_neighbors = */num_neighbors,
+      /*node_time = */c10::nullopt,
+      /*edge_time = */c10::nullopt,
+      /*seed_time = */c10::nullopt,
+      /*edge_weight = */c10::nullopt,
+      /*csc =*/false,
+      /*replace =*/false,
+      /*directed =*/true,
+      /*disjoint =*/false,
+      /*temporal_strategy =*/"uniform",
+      /*return_edge_id =*/false);
+
+  const auto undirected_out = pyg::sampler::neighbor_sample(
+      /*rowptr = */rowptr,
+      /*col = */col,
+      /*seed = */seed,
+      /*num_neighbors = */num_neighbors,
+      /*node_time = */c10::nullopt,
+      /*edge_time = */c10::nullopt,
+      /*seed_time = */c10::nullopt,
+      /*edge_weight = */c10::nullopt,
+      /*csc = */false,
+      /*replace = */false,
+      /*directed = */false,
+      /*disjoint = */false,
+      /*temporal_strategy =*/"uniform",
+      /*return_edge_id=*/false);
+
+  const auto& d_row = std::get<0>(directed_out);
+  const auto& u_row = std::get<0>(undirected_out);
+  const auto& u_node = std::get<2>(undirected_out);
+
+  EXPECT_EQ(u_node.numel(), num_nodes);
+  EXPECT_EQ(u_row.numel(), 2 * num_nodes);
+  EXPECT_LT(d_row.numel(), u_row.numel());
+}
+
+TEST(NeighborSamplerTest, InducedSubgraphRejectsDisjoint) {
+  const int64_t num_nodes = 5;
+  const auto options = at::TensorOptions().dtype(at::kLong);
+  at::Tensor rowptr, col;
+  std::tie(rowptr, col) = cycle_graph(num_nodes, options);
+
+  const auto seed = at::tensor({0, 1}, options);
+  std::vector<int64_t> num_neighbors = {2};
+
+  EXPECT_THROW(
+      pyg::sampler::neighbor_sample(
+        /*rowptr = */rowptr,
+        /*col = */col,
+        /*seed = */seed,
+        /*num_neighbors = */num_neighbors,
+        /*node_time = */c10::nullopt,
+        /*edge_time = */c10::nullopt,
+        /*seed_time = */c10::nullopt,
+        /*edge_weight = */c10::nullopt,
+        /*csc =*/false,
+        /*replace =*/false,
+        /*directed =*/false,
+        /*disjoint =*/true,
+        /*temporal_strategy =*/"uniform",
+        /*return_edge_id =*/false),
+        c10::Error);
+}
+
+TEST(NeighborSamplerTest, InducedSubgraphReturnsEdgeIds) {
+  const int64_t num_nodes = 5;
+  const auto options = at::TensorOptions().dtype(at::kLong);
+  at::Tensor rowptr, col;
+  std::tie(rowptr, col) = cycle_graph(num_nodes, options);
+  const auto seed = at::tensor({0}, options);
+  std::vector<int64_t> num_neighbors = {2, 2};
+
+  const auto out = pyg::sampler::neighbor_sample(
+      /*rowptr = */rowptr,
+      /*col = */col,
+      /*seed = */seed,
+      /*num_neighbors = */num_neighbors,
+      /*node_time = */c10::nullopt,
+      /*edge_time = */c10::nullopt,
+      /*seed_time = */c10::nullopt,
+      /*edge_weight = */c10::nullopt,
+      /*csc = */false,
+      /*replace = */false,
+      /*directed = */false,
+      /*disjoint = */false,
+      /*temporal_strategy = */"uniform",
+      /*return_edge_id=*/true);
+
+  const auto& out_row = std::get<0>(out);
+  const auto& out_edge_id = std::get<3>(out);
+  ASSERT_TRUE(out_edge_id.has_value());
+  EXPECT_EQ(out_edge_id.value().numel(), out_row.numel());
+}
