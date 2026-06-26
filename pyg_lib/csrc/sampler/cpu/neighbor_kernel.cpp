@@ -185,8 +185,9 @@ class NeighborSampler {
     const auto row = pyg::utils::from_vector(out_row);
     const auto col = pyg::utils::from_vector(out_col);
     c10::optional<at::Tensor> edge_id =
-      save_edge_ids ? c10::optional<at::Tensor>(pyg::utils::from_vector(out_edge_id))
-                    : c10::nullopt;
+        save_edge_ids
+            ? c10::optional<at::Tensor>(pyg::utils::from_vector(out_edge_id))
+            : c10::nullopt;
     if (!csc) {
       return std::make_tuple(row, col, edge_id);
     } else {
@@ -536,11 +537,13 @@ sample(const at::Tensor& rowptr,
     if (directed) {
       std::tie(out_row, out_col, out_edge_id) = sampler.get_sampled_edges(csc);
     } else {
-      TORCH_CHECK(!distributed, "Induced subgraph sampling not yet supported in distributed mode");
+      TORCH_CHECK(
+          !distributed,
+          "Induced subgraph sampling not yet supported in distributed mode");
       TORCH_CHECK(!disjoint, "Disjoint subgraphs not yet supported");
       if constexpr (!disjoint) {
         std::tie(out_row, out_col, out_edge_id) =
-          sampler.get_subgraph_edges(mapper, sampled_nodes,csc);
+            sampler.get_subgraph_edges(mapper, sampled_nodes, csc);
       }
     }
 

@@ -386,14 +386,14 @@ TEST(NeighborSamplerTest, InducedSubgraphHasMoreEdgesThanDirected) {
   std::vector<int64_t> num_neighbors = {2, 2};
 
   const auto directed_out = pyg::sampler::neighbor_sample(
-      /*rowptr = */rowptr,
-      /*col = */col,
-      /*seed = */seed,
-      /*num_neighbors = */num_neighbors,
-      /*node_time = */c10::nullopt,
-      /*edge_time = */c10::nullopt,
-      /*seed_time = */c10::nullopt,
-      /*edge_weight = */c10::nullopt,
+      /*rowptr = */ rowptr,
+      /*col = */ col,
+      /*seed = */ seed,
+      /*num_neighbors = */ num_neighbors,
+      /*node_time = */ c10::nullopt,
+      /*edge_time = */ c10::nullopt,
+      /*seed_time = */ c10::nullopt,
+      /*edge_weight = */ c10::nullopt,
       /*csc =*/false,
       /*replace =*/false,
       /*directed =*/true,
@@ -402,18 +402,18 @@ TEST(NeighborSamplerTest, InducedSubgraphHasMoreEdgesThanDirected) {
       /*return_edge_id =*/false);
 
   const auto undirected_out = pyg::sampler::neighbor_sample(
-      /*rowptr = */rowptr,
-      /*col = */col,
-      /*seed = */seed,
-      /*num_neighbors = */num_neighbors,
-      /*node_time = */c10::nullopt,
-      /*edge_time = */c10::nullopt,
-      /*seed_time = */c10::nullopt,
-      /*edge_weight = */c10::nullopt,
-      /*csc = */false,
-      /*replace = */false,
-      /*directed = */false,
-      /*disjoint = */false,
+      /*rowptr = */ rowptr,
+      /*col = */ col,
+      /*seed = */ seed,
+      /*num_neighbors = */ num_neighbors,
+      /*node_time = */ c10::nullopt,
+      /*edge_time = */ c10::nullopt,
+      /*seed_time = */ c10::nullopt,
+      /*edge_weight = */ c10::nullopt,
+      /*csc = */ false,
+      /*replace = */ false,
+      /*directed = */ false,
+      /*disjoint = */ false,
       /*temporal_strategy =*/"uniform",
       /*return_edge_id=*/false);
 
@@ -435,23 +435,22 @@ TEST(NeighborSamplerTest, InducedSubgraphRejectsDisjoint) {
   const auto seed = at::tensor({0, 1}, options);
   std::vector<int64_t> num_neighbors = {2};
 
-  EXPECT_THROW(
-      pyg::sampler::neighbor_sample(
-        /*rowptr = */rowptr,
-        /*col = */col,
-        /*seed = */seed,
-        /*num_neighbors = */num_neighbors,
-        /*node_time = */c10::nullopt,
-        /*edge_time = */c10::nullopt,
-        /*seed_time = */c10::nullopt,
-        /*edge_weight = */c10::nullopt,
-        /*csc =*/false,
-        /*replace =*/false,
-        /*directed =*/false,
-        /*disjoint =*/true,
-        /*temporal_strategy =*/"uniform",
-        /*return_edge_id =*/false),
-        c10::Error);
+  EXPECT_THROW(pyg::sampler::neighbor_sample(
+                   /*rowptr = */ rowptr,
+                   /*col = */ col,
+                   /*seed = */ seed,
+                   /*num_neighbors = */ num_neighbors,
+                   /*node_time = */ c10::nullopt,
+                   /*edge_time = */ c10::nullopt,
+                   /*seed_time = */ c10::nullopt,
+                   /*edge_weight = */ c10::nullopt,
+                   /*csc =*/false,
+                   /*replace =*/false,
+                   /*directed =*/false,
+                   /*disjoint =*/true,
+                   /*temporal_strategy =*/"uniform",
+                   /*return_edge_id =*/false),
+               c10::Error);
 }
 
 TEST(NeighborSamplerTest, InducedSubgraphReturnsEdgeIds) {
@@ -463,19 +462,19 @@ TEST(NeighborSamplerTest, InducedSubgraphReturnsEdgeIds) {
   std::vector<int64_t> num_neighbors = {2, 2};
 
   const auto out = pyg::sampler::neighbor_sample(
-      /*rowptr = */rowptr,
-      /*col = */col,
-      /*seed = */seed,
-      /*num_neighbors = */num_neighbors,
-      /*node_time = */c10::nullopt,
-      /*edge_time = */c10::nullopt,
-      /*seed_time = */c10::nullopt,
-      /*edge_weight = */c10::nullopt,
-      /*csc = */false,
-      /*replace = */false,
-      /*directed = */false,
-      /*disjoint = */false,
-      /*temporal_strategy = */"uniform",
+      /*rowptr = */ rowptr,
+      /*col = */ col,
+      /*seed = */ seed,
+      /*num_neighbors = */ num_neighbors,
+      /*node_time = */ c10::nullopt,
+      /*edge_time = */ c10::nullopt,
+      /*seed_time = */ c10::nullopt,
+      /*edge_weight = */ c10::nullopt,
+      /*csc = */ false,
+      /*replace = */ false,
+      /*directed = */ false,
+      /*disjoint = */ false,
+      /*temporal_strategy = */ "uniform",
       /*return_edge_id=*/true);
 
   const auto& out_row = std::get<0>(out);
