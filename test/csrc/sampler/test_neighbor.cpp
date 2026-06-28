@@ -503,18 +503,18 @@ TEST(NeighborSamplerTest, InducedSubgraphCscSwapsRowCol) {
       /*csc=*/false,
       /*replace=*/false,
       /*directed=*/false,
-      /*disjoint=*/false, 
+      /*disjoint=*/false,
       /*temporal_strategy=*/"uniform",
       /*return_edge_id=*/false);
 
   const auto csc_out = pyg::sampler::neighbor_sample(
       /*rowptr=*/rowptr,
       /*col=*/col,
-      /*seed=*/ seed,
+      /*seed=*/seed,
       /*num_neighbors=*/num_neighbors,
       /*node_time=*/c10::nullopt,
       /*edge_time=*/c10::nullopt,
-      /*seed_time=*/ c10::nullopt,
+      /*seed_time=*/c10::nullopt,
       /*edge_weight=*/c10::nullopt,
       /*csc=*/true,
       /*replace=*/false,
