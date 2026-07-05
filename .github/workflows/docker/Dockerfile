@@ -3,7 +3,7 @@ FROM quay.io/pypa/manylinux_2_28_${ARCH}:2026.05.02-2 AS builder
 ARG CUDA_VERSION
 COPY install_cuda.sh /tmp/
 RUN dnf --setopt=install_weak_deps=False install -y aria2
-RUN bash /tmp/install_cuda.sh ${CUDA_VERSION}
+RUN bash /tmp/install_cuda.sh ${CUDA_VERSION} ${ARCH}
 
 FROM quay.io/pypa/manylinux_2_28_${ARCH}:2026.05.02-2
 ARG CUDA_VERSION

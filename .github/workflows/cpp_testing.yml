@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repostiory
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -65,7 +65,7 @@ jobs:
           lcov --remove .coverage.info '*/test/*' --output-file .coverage.info
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: .coverage.info
           fail_ci_if_error: false
