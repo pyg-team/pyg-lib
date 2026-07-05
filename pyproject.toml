@@ -70,6 +70,8 @@ auditwheel repair \
   --exclude 'libc10*.so' \
   --exclude 'libgomp*.so*' \
   --exclude 'libcuda.so*' \
+  --exclude 'libcudart*.so*' \
+  --exclude 'libnvrtc*.so*' \
   --exclude 'libamdhip64.so*' \
   --exclude 'libhsa-runtime64.so*' \
   --exclude 'librocblas*.so*' \
