@@ -80,7 +80,7 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
 
   const auto out = left.new_empty({dim_size, num_feats});
 
-  auto stream = at::cuda::getCurrentHIPStream();
+  auto stream = at::cuda::getCurrentCUDAStream();
   AT_DISPATCH_ALL_TYPES(left.scalar_type(), "sampled_kernel_impl", [&] {
     const auto left_data = left.data_ptr<scalar_t>();
     const auto right_data = right.data_ptr<scalar_t>();
@@ -101,7 +101,7 @@ at::Tensor sampled_op_kernel(const at::Tensor& left,
             to_fn_type.at(fn), left_index.has_value(), right_index.has_value(),
             num_feats, numel);
 
-    C10_HIP_KERNEL_LAUNCH_CHECK();
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
   });
   return out;
 }

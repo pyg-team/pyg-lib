@@ -76,6 +76,8 @@ class CMakeBuild(build_ext):
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
         ]
 
+        prefix_list = [torch.utils.cmake_prefix_path]
+
         if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
             # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
             # so that torch's cmake uses the correct gencode flags.
@@ -110,11 +112,17 @@ class CMakeBuild(build_ext):
             rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
                 'AMDGPU_TARGETS',
             )
+            if not rocm_arch:
+                # Default to the architectures PyTorch itself was built for,
+                # so the extension is compatible with the same GPUs and can be
+                # distributed alongside the PyTorch ROCm wheel.
+                rocm_arch = ';'.join(torch.cuda.get_arch_list())
             if rocm_arch:
                 rocm_arch = ';'.join(
                     [x for x in re.split(r'[;,\s]+', rocm_arch) if x],
                 )
                 cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
+                print(f'CMAKE_HIP_ARCHITECTURES={rocm_arch}')
 
         cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 

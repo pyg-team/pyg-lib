@@ -62,7 +62,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
   TORCH_CHECK(seed.is_cuda(), "'seed' must be a CUDA tensor");
   TORCH_CHECK(p == 1 && q == 1, "Uniform sampling required for now");
 
-  const auto stream = at::cuda::getCurrentHIPStream();
+  const auto stream = at::cuda::getCurrentCUDAStream();
   // Ensure contiguous access by transposing `out` matrix:
   const auto out = rowptr.new_empty({walk_length + 1, seed.size(0)});
   const auto rand =
@@ -79,7 +79,7 @@ at::Tensor random_walk_kernel(const at::Tensor& rowptr,
         rowptr_data, col_data, seed_data, rand_data, out_data, seed.size(0),
         walk_length);
 
-    C10_HIP_KERNEL_LAUNCH_CHECK();
+    C10_CUDA_KERNEL_LAUNCH_CHECK();
   });
 
   return out.t().contiguous();
