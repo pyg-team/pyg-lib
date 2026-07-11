@@ -45,13 +45,13 @@ asking the user anything. Collect unavoidable judgment calls in an
 
 Trust the stage stated in the request. Keyword mapping:
 
-| Request says                                            | Stage |
-|----------------------------------------------------------|-------|
-| "nightly", "start building against X.Y nightlies"        | 1     |
-| "RC", "release candidate", "test index"                   | 2     |
-| "X.Y (was) released", "final", or just "support PyTorch X.Y" | 3 |
-| a patch version `X.Y.z` with z ≥ 1, "add the X.Y.z index" | 4     |
-| "drop", "remove", "deprecate" an old version              | 5     |
+| Request says                                                 | Stage |
+| ------------------------------------------------------------ | ----- |
+| "nightly", "start building against X.Y nightlies"            | 1     |
+| "RC", "release candidate", "test index"                      | 2     |
+| "X.Y (was) released", "final", or just "support PyTorch X.Y" | 3     |
+| a patch version `X.Y.z` with z ≥ 1, "add the X.Y.z index"    | 4     |
+| "drop", "remove", "deprecate" an old version                 | 5     |
 
 Only if the request genuinely does not say: check
 https://pypi.org/project/torch/#history (final versions appear there;
@@ -76,17 +76,17 @@ The **highest** torch version referenced in CI is a placeholder meaning
    `_build_windows.yml`, `cpp_testing.yml`, `documentation.yml`). Also holds
    the default `torch-version` input, which must equal the current stable.
    Uses `uv pip install --no-config` style.
-2. `.github/workflows/utils/build_linux.sh` — sets `CIBW_BEFORE_BUILD` /
+1. `.github/workflows/utils/build_linux.sh` — sets `CIBW_BEFORE_BUILD` /
    `CIBW_BEFORE_TEST` for cibuildwheel. Uses plain `pip install` inside the
    quoted CIBW variables.
-3. `.github/workflows/utils/build_macos.sh` — same for macOS (CUDA index is
+1. `.github/workflows/utils/build_macos.sh` — same for macOS (CUDA index is
    always `cpu` there).
 
 The special-cased branch installs from a different PyTorch index per stage:
 
 - nightly: `--pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA}`
-- RC:      `torch==X.Y.0 --index-url https://download.pytorch.org/whl/test/${CUDA}`
-- stable:  `torch==X.Y.0 --index-url https://download.pytorch.org/whl/${CUDA}`
+- RC: `torch==X.Y.0 --index-url https://download.pytorch.org/whl/test/${CUDA}`
+- stable: `torch==X.Y.0 --index-url https://download.pytorch.org/whl/${CUDA}`
   (this is the plain `else` branch — a stable version needs NO special case)
 
 When `X.Y` goes final, the placeholder version in the `if` conditions rolls
@@ -127,12 +127,10 @@ predecessor, roll them forward first.
    If the request explicitly asks for Windows or macOS nightly support, edit
    those matrix files the same way (Windows may first need the "New CUDA
    version" steps).
-2. `README.md`: add a "PyTorch Nightly" support table above the newest stable
+1. `README.md`: add a "PyTorch Nightly" support table above the newest stable
    table, same column/row format, ticking only the built combinations.
-3. `CHANGELOG.md`: add a line under `## [Unreleased]` → `### Added`, e.g.
-   `- Added support for PyTorch \`X.Y.0+cuNNN\` wheels in nightly releases ([#N](https://github.com/pyg-team/pyg-lib/pull/N))`.
-   (CI enforces a CHANGELOG entry on every PR unless it has the
-   `skip-changelog` label.)
+1. `CHANGELOG.md`: add a line under `## [Unreleased]` → `### Added`, e.g.
+   `- Added support for PyTorch \`X.Y.0+cuNNN\` wheels in nightly releases ([#N](https://github.com/pyg-team/pyg-lib/pull/N))`. (CI enforces a CHANGELOG entry on every PR unless it has the `skip-changelog\` label.)
 
 Nightly pyg-lib wheels then appear under
 https://data.pyg.org/whl/nightly/torch-X.Y.0+${CUDA}.html after the next
@@ -145,13 +143,13 @@ Example: PR #641. In all three install sites, in this order:
 1. Change the nightly `if` condition from `X.Y.0` to `X.(Y+1).0` (the
    placeholder rolls forward; PyTorch nightlies are now versioned
    `X.(Y+1).0.dev*`).
-2. Add an `elif` for `X.Y.0` that installs from the test index, mirroring the
+1. Add an `elif` for `X.Y.0` that installs from the test index, mirroring the
    file's style, with a comment like
    `# X.Y.0 is currently a release candidate; install from the test index.`:
    - `action.yml`: `uv pip install --no-config torch==${{ inputs.torch-version }} --index-url https://download.pytorch.org/whl/test/${{ inputs.cuda-version }}`
    - `build_linux.sh`: both CIBW vars get `pip install torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/test/${CUDA_VERSION}`
    - `build_macos.sh`: same with the literal `cpu` index.
-3. `CHANGELOG.md` entry under `### Changed` (or reuse/extend the existing
+1. `CHANGELOG.md` entry under `### Changed` (or reuse/extend the existing
    `X.Y` line if one is already in `[Unreleased]`).
 
 No matrix changes — the `X.Y.0` entries added in Stage 1 now resolve to the
@@ -169,18 +167,18 @@ already in place.
    - If an `X.Y.0` test-index `elif` exists (Stage 2 ran): delete it.
    - If the nightly `if` still points at `X.Y.0` (Stages 1–2 skipped): change
      it to `X.(Y+1).0`.
-2. `.github/actions/setup/action.yml`: set the default `torch-version` input
+1. `.github/actions/setup/action.yml`: set the default `torch-version` input
    to `X.Y.0`.
-3. Full matrices: ensure `X.Y.0` is the top entry in ALL THREE
+1. Full matrices: ensure `X.Y.0` is the top entry in ALL THREE
    `full_matrix_*.json`, copying the previous newest entry's Python list;
    CUDA list per the defaults rule (macOS is always `["cpu"]`; Linux keeps its
    `arch` key). Drop CUDA variants only if the request says PyTorch dropped
    them.
-4. Minimal matrices: in all three `minimal_matrix_*.json`, set the newest
+1. Minimal matrices: in all three `minimal_matrix_*.json`, set the newest
    entry's `torch-version` to `X.Y.0` (keep its narrow CUDA list, updating it
    only if a new newest CUDA version was introduced). Leave the oldest entry
    alone.
-5. `README.md`:
+1. `README.md`:
    - Add `X.Y.0` to the `${TORCH}` bullet list (keep existing versions; do
      not remove any).
    - Update the `${CUDA}` bullet list if the CUDA set changed (it is the
@@ -190,18 +188,18 @@ already in place.
      otherwise insert a new `PyTorch X.Y` table above the previous newest
      one, copied from it, with columns matching the new CUDA list. Keep the
      older versions' tables.
-6. `docs/requirements.txt`: bump the pinned torch CPU wheel URL to
+1. `docs/requirements.txt`: bump the pinned torch CPU wheel URL to
    `https://download.pytorch.org/whl/cpu/torch-X.Y.0%2Bcpu-cp310-cp310-manylinux_2_28_x86_64.whl`
    (substitute the version; keep the rest of the pattern; adjust `cp310` only
    if the repo's minimum Python changed).
-7. Sweep for stray stable-version pins: `grep -rn "torch==" .github/workflows/ docs/`
+1. Sweep for stray stable-version pins: `grep -rn "torch==" .github/workflows/ docs/`
    and bump any pinned stable torch version outside the three install sites
    (e.g. a type-check job in `linting.yml` has carried a pin on some
    branches). If the grep only matches the install sites and
    `docs/requirements.txt`, there is nothing extra to do.
-8. `CHANGELOG.md`: `- Added PyTorch X.Y support ([#N](https://github.com/pyg-team/pyg-lib/pull/N))`
+1. `CHANGELOG.md`: `- Added PyTorch X.Y support ([#N](https://github.com/pyg-team/pyg-lib/pull/N))`
    under `## [Unreleased]` → `### Added`.
-9. Optional (matches past PRs, do it): refresh the example versions in the
+1. Optional (matches past PRs, do it): refresh the example versions in the
    `:?Specify torch version, e.g. ...` usage strings of `build_linux.sh` /
    `build_macos.sh` to `X.Y.0`.
 
@@ -236,14 +234,14 @@ Examples: PR #681, #628, #557. Keep roughly the 3 newest stable versions.
 Only do this when explicitly asked.
 
 1. Remove the version's entries from all three `full_matrix_*.json`.
-2. If the dropped version was the oldest entry in any `minimal_matrix_*.json`,
+1. If the dropped version was the oldest entry in any `minimal_matrix_*.json`,
    replace that entry's `torch-version` with the now-oldest supported stable
    (keep the narrow CUDA list, adjusting to a CUDA version that oldest
    supports).
-3. `README.md`: delete its support table and remove it from the `${TORCH}`
+1. `README.md`: delete its support table and remove it from the `${TORCH}`
    bullet list; shrink the `${CUDA}` list if a CUDA version is no longer used
    by any remaining table.
-4. `CHANGELOG.md`: `- Dropped support for PyTorch X.Y` under `### Removed`.
+1. `CHANGELOG.md`: `- Dropped support for PyTorch X.Y` under `### Removed`.
 
 Do NOT touch the alias chains in `upload_*_index.py` — already-published
 wheels stay served for users on old versions.
@@ -302,10 +300,10 @@ PR").
 
 1. Branch, commit, push, `gh pr create`; then fix the CHANGELOG PR number to
    the real one and push again.
-2. Add labels for the platforms touched (`os: linux`, `os: macos`,
+1. Add labels for the platforms touched (`os: linux`, `os: macos`,
    `os: windows`) plus `ci: full` when the change warrants the full matrix:
    `gh pr edit <num> --add-label "os: linux" --add-label "ci: full"`
-3. Builds can also be triggered without labels:
+1. Builds can also be triggered without labels:
    `gh workflow run pull.yml --ref <branch> -f trigger-linux=true -f full-matrix=true`
-4. After merge, the next nightly `release.yml` run should be green and new
+1. After merge, the next nightly `release.yml` run should be green and new
    `torch-X.Y.0+*.html` indices appear under https://data.pyg.org/whl/nightly/.
