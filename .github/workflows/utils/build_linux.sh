@@ -3,7 +3,7 @@ set -ex
 
 CUDA_VERSION="${1:?Specify cuda version, e.g. cpu, cu130}"
 PYTHON_VERSION="${2:?Specify python version, e.g. 3.14}"
-TORCH_VERSION="${3:?Specify torch version, e.g. 2.11.0}"
+TORCH_VERSION="${3:?Specify torch version, e.g. 2.13.0}"
 ARCH="${4:-x86_64}"
 case "${ARCH}" in
   x86_64 | aarch64)
@@ -29,7 +29,7 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 export CIBW_BUILD="cp${PYTHON_VERSION//./}-manylinux_${ARCH}"
 export CIBW_ARCHS_LINUX="${ARCH}"
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-if [[ "${TORCH_VERSION}" == "2.13.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.14.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools MarkupSafe && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest MarkupSafe && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
 else
