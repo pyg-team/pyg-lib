@@ -33,7 +33,8 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/setup
         with:
-          python-version: ${{ matrix.python-version }}
+          # NOTE: This is used to run cibuildwheel, not to build the wheel.
+          python-version: '3.14'
           torch-version: ${{ matrix.torch-version }}
           cuda-version: ${{ matrix.cuda-version }}
 
@@ -60,26 +61,8 @@ jobs:
 
       - name: Build wheel
         run: |
-          source ./.github/workflows/cuda/Windows-env.sh ${{ matrix.cuda-version }}
-          echo $TORCH_CUDA_ARCH_LIST
-          uv pip install build
-          python -m build --wheel --no-isolation --outdir dist
-
-      - name: Install wheel
-        run: |
-          cd dist
-          ls -lah
-          uv pip install *.whl
-          python -c "import pyg_lib; print('pyg-lib:', pyg_lib.__version__)"
-          python -c "import pyg_lib; print('CUDA:', pyg_lib.cuda_version())"
-          python -c "import pyg_lib.ops"
-          python -c "import pyg_lib.sampler"
-          cd ..
-
-      - name: Test wheel
-        run: |
-          uv pip install pytest pytest-cov
-          pytest --cov --cov-report=xml
+          uv pip install 'cibuildwheel>=4.0'
+          bash ./.github/workflows/utils/build_windows.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}

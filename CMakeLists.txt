@@ -99,6 +99,7 @@ if (WITH_CUDA)
 endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(${PROJECT_NAME} PRIVATE Py_LIMITED_API=0x030A0000)
 if(MKL_INCLUDE_FOUND)
     target_include_directories(${PROJECT_NAME} PRIVATE ${BLAS_INCLUDE_DIR})
 endif()
@@ -187,9 +188,18 @@ if(BUILD_BENCHMARK)
   include(cmake/benchmark.cmake)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-  EXPORT_NAME PyG
-  INSTALL_RPATH ${TORCH_INSTALL_PREFIX}/lib)
+if(APPLE)
+  set(PYG_INSTALL_RPATH "@loader_path/../torch/lib")
+elseif(UNIX)
+  set(PYG_INSTALL_RPATH "$ORIGIN/../torch/lib")
+endif()
+
+set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME PyG)
+if(PYG_INSTALL_RPATH)
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH ON
+    INSTALL_RPATH "${PYG_INSTALL_RPATH}")
+endif()
 
 # Cmake creates *.dylib by default, but python expects *.so by default
 if (APPLE)

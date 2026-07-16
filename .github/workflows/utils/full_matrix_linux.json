@@ -1,25 +1,21 @@
 [
   {
     "torch-version": "2.13.0",
-    "python-version": ["3.10", "3.11", "3.12", "3.13", "3.14"],
     "cuda-version": ["cpu", "cu126", "cu130", "cu132"],
     "arch": ["x86_64", "aarch64"]
   },
   {
     "torch-version": "2.12.0",
-    "python-version": ["3.10", "3.11", "3.12", "3.13", "3.14"],
     "cuda-version": ["cpu", "cu126", "cu130", "cu132"],
     "arch": ["x86_64", "aarch64"]
   },
   {
     "torch-version": "2.11.0",
-    "python-version": ["3.10", "3.11", "3.12", "3.13", "3.14"],
     "cuda-version": ["cpu", "cu126", "cu128", "cu130"],
     "arch": ["x86_64", "aarch64"]
   },
   {
     "torch-version": "2.10.0",
-    "python-version": ["3.10", "3.11", "3.12", "3.13", "3.14"],
     "cuda-version": ["cpu", "cu126", "cu128", "cu130"],
     "arch": ["x86_64", "aarch64"]
   }

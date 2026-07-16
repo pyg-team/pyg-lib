@@ -11,7 +11,10 @@
 
 ## Installation
 
-We provide pre-built Python wheels for all major OS/PyTorch/CUDA combinations from Python 3.10 till 3.14, see [here](https://data.pyg.org/whl).
+We provide pre-built Python wheels for all major OS/PyTorch/CUDA
+combinations, see [here](https://data.pyg.org/whl). Each wheel supports CPython
+3.10 through 3.14 via CPython's stable ABI. CI checks every repaired wheel with
+`abi3audit --strict` and tests it on each supported CPython version.
 
 To install the wheels, simply run
 
@@ -52,7 +55,7 @@ The following combinations are supported:
 
 ### From nightly
 
-Nightly wheels are provided for Linux from Python 3.10 till 3.14:
+Nightly wheels are provided for Linux and support CPython 3.10 through 3.14:
 
 ```
 pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.html

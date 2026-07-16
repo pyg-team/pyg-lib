@@ -67,7 +67,7 @@ jobs:
           tool-cache: true
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@f98e06938123ccabd21905ea5d0069192241f9f1  # v8.3.1
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
           python-version: '3.14'
@@ -75,7 +75,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install cibuildwheel auditwheel
+          uv pip install 'cibuildwheel>=4.0' auditwheel
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -101,7 +101,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
