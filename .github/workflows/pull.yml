@@ -50,14 +50,16 @@ jobs:
             else
               matrix_type="minimal"
             fi
-          else
+          elif [ ${{ inputs.full-matrix }} == 'true' ]; then
             matrix_type="full"
+          else
+            matrix_type="minimal"
           fi
 
           # Set Linux matrix
           echo ::group::Set Linux matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_linux.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][], "arch": .["arch"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][], "arch": .["arch"][] }]' $filename)
           echo "matrix-linux=$matrix" >> $GITHUB_OUTPUT
           echo "matrix-linux=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: linux') }}
@@ -68,7 +70,7 @@ jobs:
           # Set macOS matrix
           echo ::group::Set macOS matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_macos.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "matrix-macos=$matrix" >> $GITHUB_OUTPUT
           echo "matrix-macos=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: macos') }}
@@ -79,7 +81,7 @@ jobs:
           # Set Windows matrix
           echo ::group::Set Windows matrix
           filename=".github/workflows/utils/${matrix_type}_matrix_windows.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "python-version": .["python-version"][], "cuda-version": .["cuda-version"][] }]' $filename)
+          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][] }]' $filename)
           echo "matrix-windows=$matrix" >> $GITHUB_OUTPUT
           echo "matrix-windows=$matrix"
           trigger=${{ contains(github.event.pull_request.labels.*.name, 'os: windows') }}

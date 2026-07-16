@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install cibuildwheel delocate
+          uv pip install 'cibuildwheel>=4.0' delocate
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -74,7 +74,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -90,5 +90,5 @@ jobs:
         if: ${{ inputs.release-type == '' }}
         uses: actions/upload-artifact@v7
         with:
-          name: wheel-macos-${{ matrix.python-version }}-${{ matrix.torch-version }}
+          name: wheel-macos-${{ matrix.torch-version }}
           path: dist/*.whl
