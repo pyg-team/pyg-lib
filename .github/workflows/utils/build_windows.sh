@@ -7,6 +7,8 @@ TORCH_VERSION="${2:?Specify torch version, e.g. 2.13.0}"
 echo "CUDA_VERSION: ${CUDA_VERSION}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"
 
+export CIBW_ARCHS_WINDOWS=AMD64
+
 source ./.github/workflows/cuda/Windows-env.sh "${CUDA_VERSION}"
 echo "FORCE_CUDA: ${FORCE_CUDA:-0}"
 echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-}"
