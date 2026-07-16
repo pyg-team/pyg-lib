@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install cibuildwheel delocate
+          uv pip install 'cibuildwheel>=4.0' delocate
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}

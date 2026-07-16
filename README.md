@@ -13,7 +13,8 @@
 
 We provide pre-built Python wheels for all major OS/PyTorch/CUDA
 combinations, see [here](https://data.pyg.org/whl). Each wheel supports CPython
-3.10 through 3.14 via CPython's stable ABI.
+3.10 through 3.14 via CPython's stable ABI. CI checks every repaired wheel with
+`abi3audit --strict` and tests it on each supported CPython version.
 
 To install the wheels, simply run
 

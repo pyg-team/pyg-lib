@@ -61,7 +61,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          uv pip install cibuildwheel
+          uv pip install 'cibuildwheel>=4.0'
           bash ./.github/workflows/utils/build_windows.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)

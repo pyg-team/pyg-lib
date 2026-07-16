@@ -49,6 +49,9 @@ dev = [
 build = "cp3{10,11,12,13,14}-*"
 skip = "*-musllinux_*"
 build-frontend = {name = "build", args = ["--no-isolation"] }
+# Check the repaired native wheel, not just its abi3 filename tag.
+audit-requires = ["abi3audit"]
+audit-command = "abi3audit --strict --report {abi3_wheel}"
 test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
