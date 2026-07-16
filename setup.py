@@ -19,7 +19,12 @@ URL = 'https://github.com/pyg-team/pyg-lib'
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
-        Extension.__init__(self, name, sources=[])
+        Extension.__init__(
+            self,
+            name,
+            sources=[],
+            py_limited_api=True,
+        )
         self.sourcedir = osp.abspath(sourcedir)
 
 
@@ -161,4 +166,5 @@ setup(
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,
+    options={'bdist_wheel': {'py_limited_api': 'cp310'}},
 )

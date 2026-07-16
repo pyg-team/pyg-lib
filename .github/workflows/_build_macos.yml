@@ -74,7 +74,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -90,5 +90,5 @@ jobs:
         if: ${{ inputs.release-type == '' }}
         uses: actions/upload-artifact@v7
         with:
-          name: wheel-macos-${{ matrix.python-version }}-${{ matrix.torch-version }}
+          name: wheel-macos-${{ matrix.torch-version }}
           path: dist/*.whl

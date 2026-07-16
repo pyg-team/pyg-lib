@@ -101,7 +101,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
