@@ -71,7 +71,8 @@ auditwheel repair \
 
 [tool.cibuildwheel.macos]
 repair-wheel-command = """
-delocate-wheel \
+DYLD_LIBRARY_PATH="$(python -c 'import os, torch; print(os.path.join(os.path.dirname(torch.__file__), "lib"))')" \
+  delocate-wheel \
   --require-archs {delocate_archs} \
   --wheel-dir {dest_dir} {wheel} \
   --exclude libtorch.dylib \
