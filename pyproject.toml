@@ -81,6 +81,18 @@ DYLD_LIBRARY_PATH="$(python -c 'import os, torch; print(os.path.join(os.path.dir
   --exclude libomp.dylib
 """
 
+[tool.cibuildwheel.windows]
+repair-wheel-command = """
+delvewheel repair \
+  --wheel-dir {dest_dir} {wheel} \
+  --exclude "torch*.dll" \
+  --exclude "c10*.dll" \
+  --exclude "caffe2*.dll" \
+  --exclude "libomp*.dll" \
+  --exclude "cuda*.dll" \
+  --exclude "nvrtc*.dll"
+"""
+
 [tool.uv]
 exclude-newer = "7 days"
 exclude-newer-package = { torch = "2099-01-01" }
