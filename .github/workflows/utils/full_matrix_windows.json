@@ -10,9 +10,5 @@
   {
     "torch-version": "2.11.0",
     "cuda-version": ["cpu", "cu126", "cu128", "cu130"]
-  },
-  {
-    "torch-version": "2.10.0",
-    "cuda-version": ["cpu", "cu126", "cu128", "cu130"]
   }
 ]

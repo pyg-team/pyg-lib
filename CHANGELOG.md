@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Dropped support for PyTorch 2.10 ([#706](https://github.com/pyg-team/pyg-lib/pull/706))
+
 ### Fixed
 
 ### Security
