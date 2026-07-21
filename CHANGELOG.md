@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
 ## [0.8.0] - 2026-07-21
 
 ### Added
@@ -18,15 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3.10 through 3.14 for each platform/PyTorch/CUDA/architecture combination
   ([#700](https://github.com/pyg-team/pyg-lib/pull/700))
 
-### Deprecated
-
 ### Removed
 
 - Dropped support for PyTorch 2.9 ([#681](https://github.com/pyg-team/pyg-lib/pull/681))
-
-### Fixed
-
-### Security
 
 ## [0.7.0] - 2026-06-05
 

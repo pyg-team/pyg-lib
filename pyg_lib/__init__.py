@@ -7,7 +7,7 @@ import torch
 
 from pyg_lib.home import get_home_dir, set_home_dir
 
-__version__ = '0.8.0'
+__version__ = '0.9.0'
 
 # * `libpyg.so`: The name of the shared library file.
 # * `torch.ops.pyg`: The used namespace.
