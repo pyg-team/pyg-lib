@@ -13,7 +13,7 @@ import warnings
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.8.0'
+__version__ = '0.9.0'
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
