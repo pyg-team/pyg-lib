@@ -61,7 +61,7 @@ Nightly wheels are provided for Linux and support CPython 3.10 through 3.14:
 pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.html
 ```
 
-### From master
+### From source
 
 ```
 pip install ninja wheel
@@ -70,8 +70,8 @@ pip install --no-build-isolation git+https://github.com/pyg-team/pyg-lib.git
 
 [contributing-image]: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat&color=4B26A4
 [contributing-url]: https://github.com/pyg-team/pytorch_geometric/blob/master/.github/CONTRIBUTING.md
-[coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/master/graph/badge.svg
-[coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=master
+[coverage-image]: https://codecov.io/gh/pyg-team/pyg-lib/branch/main/graph/badge.svg
+[coverage-url]: https://codecov.io/github/pyg-team/pyg-lib?branch=main
 [docs-image]: https://readthedocs.org/projects/pyg-lib/badge/?version=latest
 [docs-url]: https://pyg-lib.readthedocs.io/en/latest/?badge=latest
 [slack-image]: https://img.shields.io/badge/slack-join-white.svg?logo=slack&color=4B26A4
