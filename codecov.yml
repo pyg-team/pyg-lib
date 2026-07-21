@@ -1,4 +1,7 @@
 # see https://docs.codecov.io/docs/codecov-yaml
+codecov:
+  branch: main
+
 coverage:
   range: 80..100
   round: down
