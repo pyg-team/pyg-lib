@@ -1359,3 +1359,40 @@ def test_segment_csr_dispatcher_default_reduce_is_sum(device):
     out = pyg_lib.ops.segment_csr(src, indptr)
     expected = pyg_lib.ops.segment_sum_csr(src, indptr)
     torch.testing.assert_close(out, expected)
+
+
+@withCUDA
+@withSeed
+def test_segment_csr_covers_all_rows_beyond_one_grid(device):
+    """Regression test: the CSR kernels are not grid-stride, so a grid sized
+    by occupancy rather than by the work silently drops every element past
+    ``gridDim.x * blockDim.x``.
+
+    The number of rows needed to trigger this depends on the device, so derive
+    it: the old cap was ``multiProcessorCount * (maxThreadsPerMultiProcessor /
+    256)`` blocks, and the broadcast kernel launches one thread per
+    ``(row, col)`` pair.
+    """
+    if device.type != 'cuda':
+        pytest.skip('needs a GPU grid')
+
+    props = torch.cuda.get_device_properties(device)
+    max_threads = min(props.max_threads_per_block, 1024)
+    capped_threads = (props.multi_processor_count *
+                      (props.max_threads_per_multi_processor // 256) *
+                      max_threads)
+
+    K = 32
+    # Two grids' worth of work, so the tail cannot fit in a capped launch.
+    num_rows = (2 * capped_threads) // K
+    rows_per_segment = 2
+
+    indptr = torch.arange(0, num_rows * rows_per_segment + 1, rows_per_segment,
+                          device=device)
+    src = torch.randn(num_rows * rows_per_segment, K, device=device)
+
+    out = pyg_lib.ops.segment_sum_csr(src, indptr)
+    expected = src.view(num_rows, rows_per_segment, K).sum(dim=1)
+
+    assert out.size() == (num_rows, K)
+    torch.testing.assert_close(out, expected, atol=1e-4, rtol=1e-4)
