@@ -1389,10 +1389,9 @@ def test_segment_csr_covers_all_rows_beyond_one_grid(device):
     num_rows = (2 * capped_threads) // K
     rows_per_segment = 2
 
-    indptr = torch.arange(
-        0, num_rows * rows_per_segment + 1, rows_per_segment, device=device
-    )
-    src = torch.randn(num_rows * rows_per_segment, K, device=device)
+    num_src = num_rows * rows_per_segment
+    indptr = torch.arange(0, num_src + 1, rows_per_segment, device=device)
+    src = torch.randn(num_src, K, device=device)
 
     out = pyg_lib.ops.segment_sum_csr(src, indptr)
     expected = src.view(num_rows, rows_per_segment, K).sum(dim=1)
