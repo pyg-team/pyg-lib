@@ -1378,17 +1378,20 @@ def test_segment_csr_covers_all_rows_beyond_one_grid(device):
 
     props = torch.cuda.get_device_properties(device)
     max_threads = min(props.max_threads_per_block, 1024)
-    capped_threads = (props.multi_processor_count *
-                      (props.max_threads_per_multi_processor // 256) *
-                      max_threads)
+    capped_threads = (
+        props.multi_processor_count
+        * (props.max_threads_per_multi_processor // 256)
+        * max_threads
+    )
 
     K = 32
     # Two grids' worth of work, so the tail cannot fit in a capped launch.
     num_rows = (2 * capped_threads) // K
     rows_per_segment = 2
 
-    indptr = torch.arange(0, num_rows * rows_per_segment + 1, rows_per_segment,
-                          device=device)
+    indptr = torch.arange(
+        0, num_rows * rows_per_segment + 1, rows_per_segment, device=device
+    )
     src = torch.randn(num_rows * rows_per_segment, K, device=device)
 
     out = pyg_lib.ops.segment_sum_csr(src, indptr)
