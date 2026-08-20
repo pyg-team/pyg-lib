@@ -9,19 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added Linux `aarch64` manylinux wheel and CUDA Docker image builds ([#683](https://github.com/pyg-team/pyg-lib/pull/683))
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
 
-- Dropped support for PyTorch 2.9
+- Dropped support for PyTorch 2.10 ([#706](https://github.com/pyg-team/pyg-lib/pull/706))
 
 ### Fixed
 
 ### Security
+
+## [0.8.0] - 2026-07-21
+
+### Added
+
+- Added PyTorch 2.13 support ([#697](https://github.com/pyg-team/pyg-lib/pull/697))
+- Added Linux `aarch64` manylinux wheel and CUDA Docker image builds ([#683](https://github.com/pyg-team/pyg-lib/pull/683))
+
+### Changed
+
+- Built wheels against CPython's stable ABI so that one wheel supports Python
+  3.10 through 3.14 for each platform/PyTorch/CUDA/architecture combination
+  ([#700](https://github.com/pyg-team/pyg-lib/pull/700))
+
+### Removed
+
+- Dropped support for PyTorch 2.9 ([#681](https://github.com/pyg-team/pyg-lib/pull/681))
 
 ## [0.7.0] - 2026-06-05
 

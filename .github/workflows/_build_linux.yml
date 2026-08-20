@@ -34,7 +34,7 @@ jobs:
 
     steps:
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -67,7 +67,7 @@ jobs:
           tool-cache: true
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
           python-version: '3.14'
@@ -75,7 +75,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install cibuildwheel auditwheel
+          uv pip install 'cibuildwheel>=4.0' auditwheel
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -101,7 +101,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
