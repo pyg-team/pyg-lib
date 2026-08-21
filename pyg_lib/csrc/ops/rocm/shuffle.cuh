@@ -40,8 +40,44 @@ __device__ __inline__ at::BFloat16 __shfl_down(const at::BFloat16 var,
       __shfl_down(static_cast<unsigned int>(var.x), delta));
   return ret;
 }
-#define SHFL_UP_SYNC(mask, var, delta) __shfl_up(var, delta)
-#define SHFL_DOWN_SYNC(mask, var, delta) __shfl_down(var, delta)
+// Width-parameterized overloads: CUDA's `__shfl_*_sync` default to a width of
+// `warpSize` (32), but HIP defaults to the wavefront size, which is 64 on
+// CDNA. The segment kernels assume 32-lane warps, so the width has to be
+// passed explicitly to preserve those semantics on wave64 hardware.
+__device__ __inline__ at::Half __shfl_up(const at::Half var,
+                                         const unsigned int delta,
+                                         const int width) {
+  at::Half ret;
+  ret.x = static_cast<unsigned short>(
+      __shfl_up(static_cast<unsigned int>(var.x), delta, width));
+  return ret;
+}
+__device__ __inline__ at::Half __shfl_down(const at::Half var,
+                                           const unsigned int delta,
+                                           const int width) {
+  at::Half ret;
+  ret.x = static_cast<unsigned short>(
+      __shfl_down(static_cast<unsigned int>(var.x), delta, width));
+  return ret;
+}
+__device__ __inline__ at::BFloat16 __shfl_up(const at::BFloat16 var,
+                                             const unsigned int delta,
+                                             const int width) {
+  at::BFloat16 ret;
+  ret.x = static_cast<unsigned short>(
+      __shfl_up(static_cast<unsigned int>(var.x), delta, width));
+  return ret;
+}
+__device__ __inline__ at::BFloat16 __shfl_down(const at::BFloat16 var,
+                                               const unsigned int delta,
+                                               const int width) {
+  at::BFloat16 ret;
+  ret.x = static_cast<unsigned short>(
+      __shfl_down(static_cast<unsigned int>(var.x), delta, width));
+  return ret;
+}
+#define SHFL_UP_SYNC(mask, var, delta) __shfl_up(var, delta, 32)
+#define SHFL_DOWN_SYNC(mask, var, delta) __shfl_down(var, delta, 32)
 #else
 // `warp_mask_t`: 32-bit on CUDA, 64-bit on ROCm.
 using warp_mask_t = unsigned int;

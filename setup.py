@@ -11,10 +11,29 @@ import re
 import subprocess
 import warnings
 
+os.environ.setdefault('MAX_JOBS', str(multiprocessing.cpu_count()))
+
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.9.0'
+
+def _post_tag():
+    # build.sh 已将普通库的 version_tag 减5后通过此变量传入。
+    tag = os.getenv('PYG_LIB_VERSION_TAG', '').strip().lstrip('.')
+    if tag and not re.fullmatch(r'post\d+', tag, re.IGNORECASE):
+        raise ValueError('PYG_LIB_VERSION_TAG must look like postN')
+    return tag.lower()
+
+
+def pyg_lib_version(base_version):
+    tag = _post_tag()
+    base_version = re.sub(r'\.post\d+$', '', base_version, flags=re.IGNORECASE)
+    if not tag:
+        return base_version
+    return f'{base_version}.{tag.lower()}'
+
+
+__version__ = pyg_lib_version('0.9.0')
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
@@ -71,6 +90,10 @@ class CMakeBuild(build_ext):
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
+            # CMake's execute_process() can misinterpret Python's ``True`` /
+            # ``False`` output as a variable name. Pass the ABI setting as an
+            # integer so libpyg uses the same C++ ABI as the installed Torch.
+            f'-DUSE_CXX11_ABI={int(torch.compiled_with_cxx11_abi())}',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             # Disable cmake's default CUDA architectures; torch's cmake
             # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
@@ -189,7 +212,7 @@ else:
     cmdclass = {}
 
 setup(
-    name='pyg_lib',
+    name='pyg_lib-rocm',
     version=__version__,
     install_requires=install_requires,
     packages=find_packages(),
