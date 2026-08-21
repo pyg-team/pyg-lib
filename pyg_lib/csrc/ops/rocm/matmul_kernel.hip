@@ -283,7 +283,7 @@ bool run_grouped_gemm_ck_xdl(const at::TensorList input,
     }
 
     auto invoker = gemm.MakeInvoker();
-    const hipStream_t stream = at::cuda::getCurrentHIPStream();
+    const hipStream_t stream = at::cuda::getCurrentCUDAStream();
     invoker.Run(argument, {stream, false});
 
     const hipError_t hip_err = hipGetLastError();

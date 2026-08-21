@@ -38,19 +38,20 @@ jobs:
           aws-region: us-west-1
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
-          python-version: 3.11
+          python-version: '3.11'
+          activate-environment: true
 
       - name: Install dependencies
         run: |
-          pip install cibuildwheel delocate
+          uv pip install 'cibuildwheel>=4.0' delocate
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -73,7 +74,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_macos.sh ${{ matrix.torch-version }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -87,7 +88,7 @@ jobs:
 
       - name: Upload wheel as GitHub artifact
         if: ${{ inputs.release-type == '' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
-          name: wheel-macos-${{ matrix.python-version }}-${{ matrix.torch-version }}
+          name: wheel-macos-${{ matrix.torch-version }}
           path: dist/*.whl

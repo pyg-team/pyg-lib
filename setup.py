@@ -14,21 +14,26 @@ import warnings
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.6.0'
+__version__ = '0.9.0'
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
-        Extension.__init__(self, name, sources=[])
+        Extension.__init__(
+            self,
+            name,
+            sources=[],
+            py_limited_api=True,
+        )
         self.sourcedir = osp.abspath(sourcedir)
 
 
 class CMakeBuild(build_ext):
     @staticmethod
-    def check_env_flag(name: str, default: str = "") -> bool:
+    def check_env_flag(name: str, default: str = '') -> bool:
         value = os.getenv(name, default).upper()
-        return value in ["1", "ON", "YES", "TRUE", "Y"]
+        return value in ['1', 'ON', 'YES', 'TRUE', 'Y']
 
     def get_ext_filename(self, ext_name):
         # Remove Python ABI suffix:
@@ -43,18 +48,21 @@ class CMakeBuild(build_ext):
         import torch
 
         extdir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
-        self.build_type = "DEBUG" if self.debug else "RELEASE"
+        self.build_type = 'DEBUG' if self.debug else 'RELEASE'
         if self.debug is None:
-            if CMakeBuild.check_env_flag("DEBUG"):
-                self.build_type = "DEBUG"
-            elif CMakeBuild.check_env_flag("REL_WITH_DEB_INFO"):
-                self.build_type = "RELWITHDEBINFO"
+            if CMakeBuild.check_env_flag('DEBUG'):
+                self.build_type = 'DEBUG'
+            elif CMakeBuild.check_env_flag('REL_WITH_DEB_INFO'):
+                self.build_type = 'RELWITHDEBINFO'
 
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
         WITH_CUDA = torch.cuda.is_available() and not getattr(
-            torch.version, 'hip', None)
+            torch.version,
+            'hip',
+            None,
+        )
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
 
         WITH_ROCM = torch.version.hip is not None
@@ -64,32 +72,67 @@ class CMakeBuild(build_ext):
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            # Disable cmake's default CUDA architectures; torch's cmake
+            # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
+            *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
             f'-DWITH_ROCM={"ON" if WITH_ROCM else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
         ]
 
-        prefix_list = []
-        if torch.utils.cmake_prefix_path:
-            prefix_list.append(torch.utils.cmake_prefix_path)
-        env_prefix = os.getenv('CMAKE_PREFIX_PATH')
-        if env_prefix:
-            prefix_list.append(env_prefix)
+        prefix_list = [torch.utils.cmake_prefix_path]
+
+        if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
+            # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
+            # so that torch's cmake uses the correct gencode flags.
+            # Note: torch.cuda.get_arch_list() returns [] without a GPU,
+            # so we call the underlying C function directly.
+            arch_flags = torch._C._cuda_getArchFlags()
+            if arch_flags:
+                arch_list = [
+                    x
+                    for x in arch_flags.split()
+                    if x.startswith('sm_') or x.startswith('compute_')
+                ]
+                # Convert 'sm_75' to '7.5', 'compute_120' to '12.0+PTX'
+                # Filter out archs < 6.0 (cuCollections requires sm_60+).
+                parts = []
+                for x in arch_list:
+                    prefix, d = x.split('_', 1)
+                    major = int(d[:-1])
+                    if major < 6:
+                        continue
+                    ver = f'{d[:-1]}.{d[-1]}'
+                    ver += '+PTX' if prefix == 'compute_' else ''
+                    parts.append(ver)
+
+                os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(parts)
+
+            assert os.environ['TORCH_CUDA_ARCH_LIST'] is not None
+            print(f'TORCH_CUDA_ARCH_LIST={os.environ["TORCH_CUDA_ARCH_LIST"]}')
         if WITH_ROCM:
             rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
             prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
             rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
-                'AMDGPU_TARGETS')
+                'AMDGPU_TARGETS',
+            )
+            if not rocm_arch:
+                # Default to the architectures PyTorch itself was built for,
+                # so the extension is compatible with the same GPUs and can be
+                # distributed alongside the PyTorch ROCm wheel.
+                rocm_arch = ';'.join(torch.cuda.get_arch_list())
             if rocm_arch:
                 rocm_arch = ';'.join(
-                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x])
+                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x],
+                )
                 cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
+                print(f'CMAKE_HIP_ARCHITECTURES={rocm_arch}')
 
         cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
-            include_dir = f"{sysconfig.get_path('data')}{os.sep}include"
+            include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
             cmake_args.append(f'-DBLAS_INCLUDE_DIR={include_dir}')
             cmake_args.append('-DUSE_MKL_BLAS=ON')
 
@@ -98,15 +141,21 @@ class CMakeBuild(build_ext):
         if with_ninja:
             cmake_args += ['-GNinja']
         else:
-            warnings.warn("Building times of 'pyg-lib' can be heavily improved"
-                          " by installing 'ninja': `pip install ninja`")
+            warnings.warn(
+                "Building times of 'pyg-lib' can be heavily improved"
+                " by installing 'ninja': `pip install ninja`",
+            )
 
         build_args = []
         num_jobs = os.getenv('MAX_JOBS', str(multiprocessing.cpu_count()))
-        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args,
-                              cwd=self.build_temp)
-        subprocess.check_call(['cmake', '--build', '.', f'-j{num_jobs}'] +
-                              build_args, cwd=self.build_temp)
+        subprocess.check_call(
+            ['cmake', ext.sourcedir] + cmake_args,
+            cwd=self.build_temp,
+        )
+        subprocess.check_call(
+            ['cmake', '--build', '.', f'-j{num_jobs}'] + build_args,
+            cwd=self.build_temp,
+        )
 
 
 def mkl_dependencies():
@@ -132,21 +181,8 @@ def mkl_dependencies():
 
 install_requires = [] + mkl_dependencies()
 
-triton_requires = [
-    'triton',
-]
-
-test_requires = [
-    'pytest',
-    'pytest-cov',
-]
-
-dev_requires = [
-    'pre-commit',
-]
-
 if not bool(os.getenv('BUILD_DOCS', 0)):
-    ext_modules = [CMakeExtension('libpyg')]
+    ext_modules = [CMakeExtension('pyg_lib.libpyg')]
     cmdclass = {'build_ext': CMakeBuild}
 else:
     ext_modules = None
@@ -156,12 +192,8 @@ setup(
     name='pyg_lib',
     version=__version__,
     install_requires=install_requires,
-    extras_require={
-        'triton': triton_requires,
-        'test': test_requires,
-        'dev': dev_requires,
-    },
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass=cmdclass,
+    options={'bdist_wheel': {'py_limited_api': 'cp310'}},
 )

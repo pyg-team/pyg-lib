@@ -3,7 +3,7 @@ name: Documentation
 on:  # yamllint disable-line rule:truthy
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 concurrency:
@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -27,8 +27,8 @@ jobs:
 
       - name: Install package
         run: |
-          pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
-          BUILD_DOCS=1 pip install --no-build-isolation --verbose -e .
+          uv pip install git+https://github.com/pyg-team/pyg_sphinx_theme.git
+          BUILD_DOCS=1 uv pip install --no-build-isolation --verbose -e .
 
       - name: Build documentation
         run: |

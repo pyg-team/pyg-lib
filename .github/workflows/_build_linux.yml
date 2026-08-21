@@ -11,12 +11,7 @@ on:  # yamllint disable-line rule:truthy
         required: false
         default: ''
         description: 'nightly or final'
-      docker-hub-username:
-        type: string
-        required: true
     secrets:
-      docker-hub-token:
-        required: true
       aws-access-key-id:
         required: true
       aws-secret-access-key:
@@ -28,28 +23,32 @@ defaults:
 
 jobs:
   wheel:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.test-matrix) }}
 
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
-          username: ${{ inputs.docker-hub-username }}
-          password: ${{ secrets.docker-hub-token }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
           aws-region: us-west-1
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -57,7 +56,7 @@ jobs:
         # Disk space required for CPU builds is usually small enough, so we
         # save a few minutes by skipping this step.
         if: ${{ matrix.cuda-version != 'cpu' }}
-        uses: jlumbroso/free-disk-space@v1.3.1
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
         with:
           android: true
           dotnet: true
@@ -67,15 +66,16 @@ jobs:
           swap-storage: true
           tool-cache: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
         with:
           # NOTE: This is a version used for cibuildwheel but not for wheels.
-          python-version: 3.11
+          python-version: '3.14'
+          activate-environment: true
 
       - name: Install dependencies
         run: |
-          pip install cibuildwheel auditwheel
+          uv pip install 'cibuildwheel>=4.0' auditwheel
 
       - name: Set version (final)
         if: ${{ inputs.release-type == 'final' }}
@@ -101,7 +101,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.python-version }} ${{ matrix.torch-version }}
+          bash ./.github/workflows/utils/build_linux.sh ${{ matrix.cuda-version }} ${{ matrix.torch-version }} ${{ matrix.arch }}
 
       - name: Upload wheel (final)
         if: ${{ inputs.release-type == 'final' }}

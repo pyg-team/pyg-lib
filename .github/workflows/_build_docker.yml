@@ -1,0 +1,70 @@
+name: Build Docker Image
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  docker:
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda-version: [cu126, cu128, cu130, cu132]
+        arch: [x86_64, aarch64]
+        include:
+          - cuda-version: cu126
+            cuda-number: "12.6"
+          - cuda-version: cu128
+            cuda-number: "12.8"
+          - cuda-version: cu130
+            cuda-number: "13.0"
+          - cuda-version: cu132
+            cuda-number: "13.2"
+          - arch: x86_64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          tool-cache: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
+        with:
+          context: .github/workflows/docker
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            CUDA_VERSION=${{ matrix.cuda-number }}
+            ARCH=${{ matrix.arch }}
+          tags: ghcr.io/pyg-team/pyg-lib/manylinux_2_28_${{ matrix.arch }}:${{ matrix.cuda-version }}
+          push: true

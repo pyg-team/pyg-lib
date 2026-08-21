@@ -7,7 +7,7 @@ name="pyg_lib"
 authors=[
     {name="PyG Team", email="team@pyg.org"},
 ]
-dynamic=["version", "dependencies", "optional-dependencies"]
+dynamic=["version", "dependencies"]
 description="Low-Level Graph Neural Network Operators for PyG"
 readme="README.md"
 requires-python=">=3.10"
@@ -26,6 +26,7 @@ classifiers=[
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
@@ -33,10 +34,24 @@ classifiers=[
 homepage="https://pyg.org"
 documentation="https://pyg-lib.readthedocs.io"
 repository="https://github.com/pyg-team/pyg-lib.git"
-changelog="https://github.com/pyg-team/pyg-lib/blob/master/CHANGELOG.md"
+changelog="https://github.com/pyg-team/pyg-lib/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+dev = [
+    "pre-commit",
+]
 
 [tool.cibuildwheel]
+build = "cp3{10,11,12,13,14}-*"
+skip = "*-musllinux_*"
 build-frontend = {name = "build", args = ["--no-isolation"] }
+# Check the repaired native wheel, not just its abi3 filename tag.
+audit-requires = ["abi3audit"]
+audit-command = "abi3audit --strict --report {abi3_wheel}"
 test-command = "pytest {project}/test"
 
 [tool.cibuildwheel.linux]
@@ -60,6 +75,8 @@ auditwheel repair \
   --exclude 'libc10*.so' \
   --exclude 'libgomp*.so*' \
   --exclude 'libcuda.so*' \
+  --exclude 'libcudart*.so*' \
+  --exclude 'libnvrtc*.so*' \
   --exclude 'libamdhip64.so*' \
   --exclude 'libhsa-runtime64.so*' \
   --exclude 'librocblas*.so*' \
@@ -69,7 +86,8 @@ auditwheel repair \
 
 [tool.cibuildwheel.macos]
 repair-wheel-command = """
-delocate-wheel \
+DYLD_LIBRARY_PATH="$(python -c 'import os, torch; print(os.path.join(os.path.dirname(torch.__file__), "lib"))')" \
+  delocate-wheel \
   --require-archs {delocate_archs} \
   --wheel-dir {dest_dir} {wheel} \
   --exclude libtorch.dylib \
@@ -77,6 +95,22 @@ delocate-wheel \
   --exclude libc10.dylib \
   --exclude libomp.dylib
 """
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = """
+delvewheel repair \
+  --wheel-dir {dest_dir} {wheel} \
+  --exclude "torch*.dll" \
+  --exclude "c10*.dll" \
+  --exclude "caffe2*.dll" \
+  --exclude "libomp*.dll" \
+  --exclude "cuda*.dll" \
+  --exclude "nvrtc*.dll"
+"""
+
+[tool.uv]
+exclude-newer = "7 days"
+exclude-newer-package = { torch = "2099-01-01" }
 
 [tool.pytest.ini_options]
 addopts=[
@@ -86,28 +120,27 @@ addopts=[
     "-vv",
 ]
 
-[tool.yapf]
-based_on_style="pep8"
-split_before_named_assigns=false
-blank_line_before_nested_class_or_def=false
-
 [tool.flake8]
 exclude=["third_party", "build"]
+extend-ignore = ["E203"]
 
 [tool.isort]
 multi_line_output=3
 include_trailing_comma=true
 skip=[".gitignore", "__init__.py"]
 
-[tool.ruff]  # https://docs.astral.sh/ruff/rules
+[tool.ruff]
 src=["pyg_lib"]
-line-length=80
+line-length=79
 indent-width=4
 target-version="py310"
 
 [tool.ruff.lint]
+# https://docs.astral.sh/ruff/rules
 select=[
     "D",  # pydocstyle
+    "I",  # isort
+    "COM812",  # missing-trailing-comma
 ]
 ignore=[
     "D100",  # TODO Don't ignore "Missing docstring in public module"
@@ -125,3 +158,6 @@ quote-style="single"
 
 [tool.ruff.lint.pydocstyle]
 convention="google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyg_lib"]

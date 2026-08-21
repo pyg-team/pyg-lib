@@ -30,15 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d  # v10.0.1
         with:
           python-version: '3.13'
+          activate-environment: true
 
       - name: Install boto3
-        run: pip install boto3
+        run: uv pip install boto3
 
       - name: Upload index files (${{ inputs.release-type }})
         run: |

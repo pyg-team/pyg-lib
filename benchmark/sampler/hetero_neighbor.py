@@ -14,32 +14,48 @@ import pyg_lib
 from pyg_lib.testing import remap_keys, withDataset, withSeed
 
 argparser = argparse.ArgumentParser('Hetero neighbor sample benchmark')
-argparser.add_argument('--batch-sizes', nargs='+', type=int, default=[
-    512,
-    1024,
-    2048,
-    4096,
-    8192,
-])
+argparser.add_argument(
+    '--batch-sizes',
+    nargs='+',
+    type=int,
+    default=[
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+    ],
+)
 
 # TODO (kgajdamo): Support undirected hetero graphs
 # argparser.add_argument('--directed', action='store_true')
 argparser.add_argument('--disjoint', action='store_true')
-argparser.add_argument('--num_neighbors', type=ast.literal_eval, default=[
-    [-1],
-    [15, 10, 5],
-    [20, 15, 10],
-])
+argparser.add_argument(
+    '--num_neighbors',
+    type=ast.literal_eval,
+    default=[
+        [-1],
+        [15, 10, 5],
+        [20, 15, 10],
+    ],
+)
 # TODO(kgajdamo): Enable sampling with replacement
 # argparser.add_argument('--replace', action='store_true')
 argparser.add_argument('--shuffle', action='store_true')
 argparser.add_argument('--biased', action='store_true')
 argparser.add_argument('--temporal', action='store_true')
-argparser.add_argument('--temporal-strategy', choices=['uniform', 'last'],
-                       default='uniform')
+argparser.add_argument(
+    '--temporal-strategy',
+    choices=['uniform', 'last'],
+    default='uniform',
+)
 argparser.add_argument('--write-csv', action='store_true')
-argparser.add_argument('--libraries', nargs="*", type=str,
-                       default=['pyg-lib', 'torch-sparse'])
+argparser.add_argument(
+    '--libraries',
+    nargs='*',
+    type=str,
+    default=['pyg-lib', 'torch-sparse'],
+)
 args = argparser.parse_args()
 
 
@@ -48,7 +64,8 @@ args = argparser.parse_args()
 def test_hetero_neighbor(dataset, **kwargs):
     if args.temporal and not args.disjoint:
         raise ValueError(
-            "Temporal sampling needs to create disjoint subgraphs")
+            'Temporal sampling needs to create disjoint subgraphs',
+        )
 
     colptr_dict, row_dict = dataset
     num_nodes_dict = {k[-1]: v.size(0) - 1 for k, v in colptr_dict.items()}
@@ -57,7 +74,8 @@ def test_hetero_neighbor(dataset, **kwargs):
     if args.temporal:
         # generate random timestamps
         node_time, _ = torch.sort(
-            torch.randint(0, 100000, (num_nodes_dict['paper'], )))
+            torch.randint(0, 100000, (num_nodes_dict['paper'],)),
+        )
         node_time_dict = {'paper': node_time}
     else:
         node_time_dict = None
@@ -75,9 +93,10 @@ def test_hetero_neighbor(dataset, **kwargs):
         node_perm = torch.arange(0, num_nodes_dict['paper'])
 
     data = defaultdict(list)
-    for num_neighbors, batch_size in product(args.num_neighbors,
-                                             args.batch_sizes):
-
+    for num_neighbors, batch_size in product(
+        args.num_neighbors,
+        args.batch_sizes,
+    ):
         print(f'batch_size={batch_size}, num_neighbors={num_neighbors}):')
         data['num_neighbors'].append(num_neighbors)
         data['batch-size'].append(batch_size)
