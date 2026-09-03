@@ -36,7 +36,7 @@ repos:
         args: [--py38-plus]
 
   - repo: https://github.com/PyCQA/autoflake
-    rev: v2.3.3
+    rev: v2.4.0
     hooks:
       - id: autoflake
         name: Remove unused imports and variables
@@ -49,7 +49,7 @@ repos:
         ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.0
+    rev: v0.16.5
     hooks:
       - id: ruff-check
         name: ruff check
@@ -65,7 +65,7 @@ repos:
         args: [--extend-ignore=E203]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.8
+    rev: v23.1.0
     hooks:
       - id: clang-format
         name: Format C++ code

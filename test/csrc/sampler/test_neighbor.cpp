@@ -65,7 +65,7 @@ TEST(WithoutReplacementNeighborTest, BasicAssertions) {
   auto out = pyg::sampler::neighbor_sample(
       /*rowptr=*/std::get<0>(graph),
       /*col=*/std::get<1>(graph),
-      /*seed=*/at ::arange(2, 4, options),
+      /*seed=*/at::arange(2, 4, options),
       /*num_neighbors=*/{1, 1},
       /*node_time=*/c10::nullopt,
       /*edge_time=*/c10::nullopt,
