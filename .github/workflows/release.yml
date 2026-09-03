@@ -10,80 +10,132 @@ on:  # yamllint disable-line rule:truthy
         options:
           - nightly
           - final
-        default: nightly
-  schedule:
-    - cron: "0 4 * * *"  # Everyday at 4:00am UTC/8:00pm PST
+        default: final
+
+permissions:
+  contents: write
 
 jobs:
-  trigger:
+  recover-release-assets:
     runs-on: ubuntu-latest
-    outputs:
-      matrix-linux: ${{ steps.set-matrix.outputs.matrix-linux }}
-      matrix-macos: ${{ steps.set-matrix.outputs.matrix-macos }}
-      matrix-windows: ${{ steps.set-matrix.outputs.matrix-windows }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
 
-      - name: Configure matrix
-        id: set-matrix
+      - name: Download pyg-lib 0.8.0 wheels
         run: |
-          # Set Linux matrix
-          echo ::group::Set Linux matrix
-          filename=".github/workflows/utils/full_matrix_linux.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][], "arch": .["arch"][] }]' $filename)
-          echo "matrix-linux=$matrix" >> $GITHUB_OUTPUT
-          echo "matrix-linux=$matrix"
-          echo ::endgroup::
+          aws s3 cp s3://data.pyg.org/whl/ wheels/ \
+            --recursive \
+            --exclude '*' \
+            --include 'torch-*/pyg_lib-0.8.0+*.whl'
 
-          # Set macOS matrix
-          echo ::group::Set macOS matrix
-          filename=".github/workflows/utils/full_matrix_macos.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][] }]' $filename)
-          echo "matrix-macos=$matrix" >> $GITHUB_OUTPUT
-          echo "matrix-macos=$matrix"
-          echo ::endgroup::
+      - name: Validate wheel set
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          # Set Windows matrix
-          echo ::group::Set Windows matrix
-          filename=".github/workflows/utils/full_matrix_windows.json"
-          matrix=$(jq -c '[.[] | { "torch-version": .["torch-version"], "cuda-version": .["cuda-version"][] }]' $filename)
-          echo "matrix-windows=$matrix" >> $GITHUB_OUTPUT
-          echo "matrix-windows=$matrix"
-          echo ::endgroup::
+          expected=()
+          add_wheels() {
+            local pt="$1"
+            shift
+            local accelerator
+            local arch
+            for accelerator in "$@"; do
+              for arch in x86_64 aarch64; do
+                expected+=("pyg_lib-0.8.0+pt${pt}${accelerator}-cp310-abi3-manylinux_2_27_${arch}.manylinux_2_28_${arch}.whl")
+              done
+              expected+=("pyg_lib-0.8.0+pt${pt}${accelerator}-cp310-abi3-win_amd64.whl")
+            done
+            expected+=("pyg_lib-0.8.0+pt${pt}-cp310-abi3-macosx_11_0_arm64.whl")
+          }
 
-  linux:
-    needs: [trigger]
-    uses: ./.github/workflows/_build_linux.yml
-    with:
-      test-matrix: ${{ needs.trigger.outputs.matrix-linux }}
-      release-type: ${{ inputs.release-type || 'nightly' }}
-    secrets:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          add_wheels 210 cpu cu126 cu128 cu130
+          add_wheels 211 cpu cu126 cu128 cu130
+          add_wheels 212 cpu cu126 cu130 cu132
+          add_wheels 213 cpu cu126 cu130 cu132
 
-  macos:
-    needs: [trigger]
-    uses: ./.github/workflows/_build_macos.yml
-    with:
-      test-matrix: ${{ needs.trigger.outputs.matrix-macos }}
-      release-type: ${{ inputs.release-type || 'nightly' }}
-    secrets:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          mapfile -t wanted < <(printf '%s\n' "${expected[@]}" | sort)
+          mapfile -t actual < <(find wheels -type f -name '*.whl' -printf '%f\n' | sort)
 
-  windows:
-    needs: [trigger]
-    uses: ./.github/workflows/_build_windows.yml
-    with:
-      test-matrix: ${{ needs.trigger.outputs.matrix-windows }}
-      release-type: ${{ inputs.release-type || 'nightly' }}
-    secrets: inherit
+          if [[ ${#actual[@]} -ne 52 ]]; then
+            echo "Expected 52 wheels, found ${#actual[@]}"
+            exit 1
+          fi
 
-  index:
-    if: ${{ always() && (inputs.release-type || 'nightly') == 'nightly' }}
-    needs: [linux, macos, windows]
-    uses: ./.github/workflows/_upload_index.yml
-    with:
-      release-type: ${{ inputs.release-type || 'nightly' }}
-    secrets: inherit
+          if ! diff -u \
+            <(printf '%s\n' "${wanted[@]}") \
+            <(printf '%s\n' "${actual[@]}"); then
+            echo 'Downloaded wheel set does not match the 0.8.0 release matrix'
+            exit 1
+          fi
+
+          while IFS= read -r -d '' wheel; do
+            unzip -tq "$wheel"
+          done < <(find wheels -type f -name '*.whl' -print0)
+
+          mkdir upload
+          while IFS= read -r -d '' wheel; do
+            cp "$wheel" "upload/$(basename "$wheel")"
+          done < <(find wheels -type f -name '*.whl' -print0)
+
+      - name: Upload wheels to GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t existing < <(
+            gh release view 0.8.0 \
+              --repo "$GITHUB_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].name'
+          )
+
+          for wheel in upload/*.whl; do
+            name="$(basename "$wheel")"
+            if printf '%s\n' "${existing[@]}" | grep -Fqx "$name"; then
+              echo "Already uploaded: $name"
+              continue
+            fi
+
+            uploaded=false
+            for attempt in 1 2 3; do
+              if gh release upload 0.8.0 "$wheel" --repo "$GITHUB_REPOSITORY"; then
+                uploaded=true
+                break
+              fi
+              sleep "$((attempt * 5))"
+            done
+            if [[ "$uploaded" != true ]]; then
+              echo "Failed to upload $name"
+              exit 1
+            fi
+          done
+
+      - name: Verify GitHub release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t local_assets < <(
+            find upload -type f -name '*.whl' -printf '%f\n' | sort
+          )
+          mapfile -t remote_assets < <(
+            gh release view 0.8.0 \
+              --repo "$GITHUB_REPOSITORY" \
+              --json assets \
+              --jq '.assets[].name | select(startswith("pyg_lib-0.8.0+"))' \
+              | sort
+          )
+
+          diff -u \
+            <(printf '%s\n' "${local_assets[@]}") \
+            <(printf '%s\n' "${remote_assets[@]}")
+          echo "Verified ${#remote_assets[@]} pyg-lib 0.8.0 release assets"
