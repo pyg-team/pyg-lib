@@ -1,5 +1,9 @@
 [
   {
+    "torch-version": "2.14.0",
+    "cuda-version": ["cpu", "cu126", "cu130", "cu132"]
+  },
+  {
     "torch-version": "2.13.0",
     "cuda-version": ["cpu", "cu126", "cu130", "cu132"]
   },
