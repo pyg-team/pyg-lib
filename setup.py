@@ -4,16 +4,36 @@
 #   Enables use of MKL BLAS (requires PyTorch to be built with MKL support)
 
 import importlib
+import multiprocessing
 import os
 import os.path as osp
 import re
 import subprocess
 import warnings
 
+os.environ.setdefault('MAX_JOBS', str(multiprocessing.cpu_count()))
+
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.9.0'
+
+def _post_tag():
+    # build.sh 已将普通库的 version_tag 减5后通过此变量传入。
+    tag = os.getenv('PYG_LIB_VERSION_TAG', '').strip().lstrip('.')
+    if tag and not re.fullmatch(r'post\d+', tag, re.IGNORECASE):
+        raise ValueError('PYG_LIB_VERSION_TAG must look like postN')
+    return tag.lower()
+
+
+def pyg_lib_version(base_version):
+    tag = _post_tag()
+    base_version = re.sub(r'\.post\d+$', '', base_version, flags=re.IGNORECASE)
+    if not tag:
+        return base_version
+    return f'{base_version}.{tag.lower()}'
+
+
+__version__ = pyg_lib_version('0.9.0')
 URL = 'https://github.com/pyg-team/pyg-lib'
 
 
@@ -57,21 +77,34 @@ class CMakeBuild(build_ext):
         if not osp.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        WITH_CUDA = torch.cuda.is_available()
+        WITH_CUDA = torch.cuda.is_available() and not getattr(
+            torch.version,
+            'hip',
+            None,
+        )
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+
+        WITH_ROCM = torch.version.hip is not None
+        WITH_ROCM = bool(int(os.getenv('FORCE_ROCM', WITH_ROCM)))
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
+            # CMake's execute_process() can misinterpret Python's ``True`` /
+            # ``False`` output as a variable name. Pass the ABI setting as an
+            # integer so libpyg uses the same C++ ABI as the installed Torch.
+            f'-DUSE_CXX11_ABI={int(torch.compiled_with_cxx11_abi())}',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
             # Disable cmake's default CUDA architectures; torch's cmake
             # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
             *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
+            f'-DWITH_ROCM={"ON" if WITH_ROCM else "OFF"}',
             f'-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_RUNTIME_OUTPUT_DIRECTORY={extdir}',
             f'-DCMAKE_BUILD_TYPE={self.build_type}',
-            f'-DCMAKE_PREFIX_PATH={torch.utils.cmake_prefix_path}',
         ]
+
+        prefix_list = [torch.utils.cmake_prefix_path]
 
         if WITH_CUDA and not os.getenv('TORCH_CUDA_ARCH_LIST'):
             # Set TORCH_CUDA_ARCH_LIST from PyTorch's built architectures
@@ -101,6 +134,25 @@ class CMakeBuild(build_ext):
 
             assert os.environ['TORCH_CUDA_ARCH_LIST'] is not None
             print(f'TORCH_CUDA_ARCH_LIST={os.environ["TORCH_CUDA_ARCH_LIST"]}')
+        if WITH_ROCM:
+            rocm_root = os.getenv('ROCM_PATH', '/opt/rocm')
+            prefix_list += [rocm_root, os.path.join(rocm_root, 'lib', 'cmake')]
+            rocm_arch = os.getenv('PYTORCH_ROCM_ARCH') or os.getenv(
+                'AMDGPU_TARGETS',
+            )
+            if not rocm_arch:
+                # Default to the architectures PyTorch itself was built for,
+                # so the extension is compatible with the same GPUs and can be
+                # distributed alongside the PyTorch ROCm wheel.
+                rocm_arch = ';'.join(torch.cuda.get_arch_list())
+            if rocm_arch:
+                rocm_arch = ';'.join(
+                    [x for x in re.split(r'[;,\s]+', rocm_arch) if x],
+                )
+                cmake_args.append(f'-DCMAKE_HIP_ARCHITECTURES={rocm_arch}')
+                print(f'CMAKE_HIP_ARCHITECTURES={rocm_arch}')
+
+        cmake_args.append(f'-DCMAKE_PREFIX_PATH={";".join(prefix_list)}')
 
         if CMakeBuild.check_env_flag('USE_MKL_BLAS'):
             include_dir = f'{sysconfig.get_path("data")}{os.sep}include'
@@ -118,13 +170,13 @@ class CMakeBuild(build_ext):
             )
 
         build_args = []
-
+        num_jobs = os.getenv('MAX_JOBS', str(multiprocessing.cpu_count()))
         subprocess.check_call(
             ['cmake', ext.sourcedir] + cmake_args,
             cwd=self.build_temp,
         )
         subprocess.check_call(
-            ['cmake', '--build', '.'] + build_args,
+            ['cmake', '--build', '.', f'-j{num_jobs}'] + build_args,
             cwd=self.build_temp,
         )
 
@@ -160,7 +212,7 @@ else:
     cmdclass = {}
 
 setup(
-    name='pyg_lib',
+    name='pyg_lib-rocm',
     version=__version__,
     install_requires=install_requires,
     packages=find_packages(),
