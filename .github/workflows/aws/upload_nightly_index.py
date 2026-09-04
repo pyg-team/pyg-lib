@@ -1,6 +1,15 @@
+import re
 from collections import defaultdict
 
 import boto3
+
+
+def natural_sort_key(value):
+    return tuple(
+        int(part) if part.isdigit() else part
+        for part in re.split(r'(\d+)', value)
+    )
+
 
 html = '<!DOCTYPE html>\n<html>\n<body>\n{}\n</body>\n</html>'
 href = '  <a href="{}">{}</a><br/>'
@@ -49,7 +58,7 @@ index_html = html.format(
     '\n'.join(
         [
             href.format(f'{version}.html'.replace('+', '%2B'), version)
-            for version in wheels_dict
+            for version in sorted(wheels_dict, key=natural_sort_key)
         ],
     ),
 )
