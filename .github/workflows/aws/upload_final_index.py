@@ -1,6 +1,15 @@
+import re
 from collections import defaultdict
 
 import boto3
+
+
+def natural_sort_key(value):
+    return tuple(
+        int(part) if part.isdigit() else part
+        for part in re.split(r'(\d+)', value)
+    )
+
 
 bucket = boto3.resource('s3').Bucket(name='data.pyg.org')
 
@@ -78,7 +87,7 @@ index_html = html.format(
                 f'{torch_version}.html'.replace('+', '%2B'),
                 torch_version,
             )
-            for torch_version in wheels_dict
+            for torch_version in sorted(wheels_dict, key=natural_sort_key)
         ],
     ),
 )
