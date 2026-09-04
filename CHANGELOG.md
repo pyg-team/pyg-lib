@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a regression test covering `segment_csr` inputs that need more than one
+  grid ([#718](https://github.com/pyg-team/pyg-lib/pull/718))
+
 ### Changed
 
 ### Deprecated
@@ -18,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropped support for PyTorch 2.11
 
 ### Fixed
+
+- Fixed `segment_csr` kernels silently dropping rows past
+  `gridDim.x * blockDim.x` ([#718](https://github.com/pyg-team/pyg-lib/pull/718))
 
 ### Security
 

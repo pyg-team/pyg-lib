@@ -65,12 +65,14 @@ int threads() {
 }
 
 int blocks(int numel) {
-  const auto props = at::cuda::getCurrentDeviceProperties();
-  const auto blocks_per_sm = props->maxThreadsPerMultiProcessor / 256;
-  const auto max_blocks = props->multiProcessorCount * blocks_per_sm;
+  // NOTE: no occupancy cap here. Unlike `scatter_kernel.cu`, the kernels in
+  // this file are not grid-stride: they compute a single `thread_idx` and
+  // return early when it is out of range. Capping the grid would silently drop
+  // every element past `gridDim.x * blockDim.x` instead of merely serialising
+  // it. This matches upstream `pytorch_scatter/csrc/cuda/segment_csr_cuda.cu`,
+  // whose `BLOCKS(TB, N)` is likewise uncapped.
   const auto max_threads = threads();
-  return std::max(
-      1, std::min(max_blocks, (numel + max_threads - 1) / max_threads));
+  return std::max(1, (numel + max_threads - 1) / max_threads);
 }
 
 // Strided-offset helper specialised for `indptr` row pointers.
