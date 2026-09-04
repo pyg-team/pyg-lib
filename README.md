@@ -25,27 +25,27 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 where
 
 - `${TORCH}` should be replaced by either `2.12.0`, `2.13.0`, or `2.14.0`
-- `${CUDA}` should be replaced by either `cpu`, `cu126`, `cu130`, or `cu132`
+- `${CUDA}` should be replaced by either `cpu`, `cu130`, or `cu132`
 
 The following combinations are supported:
 
-| PyTorch 2.14 | `cpu` | `cu126` | `cu130` | `cu132` |
-| ------------ | ----- | ------- | ------- | ------- |
-| **Linux**    | ✅    | ✅      | ✅      | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      | ✅      |
-| **macOS**    | ✅    |         |         |         |
+| PyTorch 2.14 | `cpu` | `cu130` | `cu132` |
+| ------------ | ----- | ------- | ------- |
+| **Linux**    | ✅    | ✅      | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |
 
-| PyTorch 2.13 | `cpu` | `cu126` | `cu130` | `cu132` |
-| ------------ | ----- | ------- | ------- | ------- |
-| **Linux**    | ✅    | ✅      | ✅      | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      | ✅      |
-| **macOS**    | ✅    |         |         |         |
+| PyTorch 2.13 | `cpu` | `cu130` | `cu132` |
+| ------------ | ----- | ------- | ------- |
+| **Linux**    | ✅    | ✅      | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |
 
-| PyTorch 2.12 | `cpu` | `cu126` | `cu130` | `cu132` |
-| ------------ | ----- | ------- | ------- | ------- |
-| **Linux**    | ✅    | ✅      | ✅      | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      | ✅      |
-| **macOS**    | ✅    |         |         |         |
+| PyTorch 2.12 | `cpu` | `cu130` | `cu132` |
+| ------------ | ----- | ------- | ------- |
+| **Linux**    | ✅    | ✅      | ✅      |
+| **Windows**  | ✅    | ✅      | ✅      |
+| **macOS**    | ✅    |         |         |
 
 ### From nightly
 

@@ -17,13 +17,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cuda-version: [cu126, cu128, cu130, cu132]
+        cuda-version: [cu130, cu132]
         arch: [x86_64, aarch64]
         include:
-          - cuda-version: cu126
-            cuda-number: "12.6"
-          - cuda-version: cu128
-            cuda-number: "12.8"
           - cuda-version: cu130
             cuda-number: "13.0"
           - cuda-version: cu132
