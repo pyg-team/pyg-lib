@@ -27,6 +27,11 @@ where
 - `${TORCH}` should be replaced by either `2.12.0`, `2.13.0`, or `2.14.0`
 - `${CUDA}` should be replaced by either `cpu`, `cu130`, or `cu132`
 
+CUDA wheels built from this version include generic Blackwell PTX so the driver can compile
+kernels for newer devices such as Rubin. A compatible CUDA-enabled PyTorch
+build and NVIDIA driver are also required. When building from source with
+an explicit `TORCH_CUDA_ARCH_LIST`, include `10.0+PTX` to retain this fallback.
+
 The following combinations are supported:
 
 | PyTorch 2.14 | `cpu` | `cu130` | `cu132` |

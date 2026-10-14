@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Include generic Blackwell PTX for Rubin compatibility in CUDA wheels, and preserve PTX and architecture suffixes when deriving build targets from PyTorch
+
 ### Deprecated
 
 ### Removed

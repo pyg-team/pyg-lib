@@ -7,7 +7,7 @@ case ${1} in
     # CUDA 13.0 dropped sm_50 support. Without this, PyTorch's auto-detection
     # fails on CI (no GPU) and falls back to a default list that includes
     # compute_50, causing nvcc to error out.
-    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0+PTX;12.0+PTX"
     ;;
   cu130)
     export FORCE_CUDA=1
@@ -15,7 +15,7 @@ case ${1} in
     # CUDA 13.0 dropped sm_50 support. Without this, PyTorch's auto-detection
     # fails on CI (no GPU) and falls back to a default list that includes
     # compute_50, causing nvcc to error out.
-    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0;12.0+PTX"
+    export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;9.0;10.0+PTX;12.0+PTX"
     ;;
   cu129)
     export FORCE_CUDA=1

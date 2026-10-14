@@ -90,12 +90,19 @@ class CMakeBuild(build_ext):
                 parts = []
                 for x in arch_list:
                     prefix, d = x.split('_', 1)
-                    major = int(d[:-1])
+                    match = re.fullmatch(r'(\d+)([a-z]?)', d)
+                    digits, suffix = match.groups()
+                    major = int(digits[:-1])
                     if major < 6:
                         continue
-                    ver = f'{d[:-1]}.{d[-1]}'
-                    ver += '+PTX' if prefix == 'compute_' else ''
+                    ver = f'{digits[:-1]}.{digits[-1]}{suffix}'
+                    ver += '+PTX' if prefix == 'compute' else ''
                     parts.append(ver)
+
+                # Generic Blackwell PTX also covers newer GPUs, such as Rubin,
+                # whose compute capability is below the 12.0 PTX target.
+                if '10.0' in parts and '10.0+PTX' not in parts:
+                    parts[parts.index('10.0')] = '10.0+PTX'
 
                 os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(parts)
 

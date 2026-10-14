@@ -25,6 +25,11 @@ jobs:
       - name: Setup packages
         uses: ./.github/actions/setup
 
+      - name: Test build configuration
+        run: |
+          uv pip install pytest
+          pytest test/test_setup.py
+
       - name: Configure MKL
         run: |
           mkdir build
