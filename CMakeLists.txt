@@ -135,6 +135,8 @@ if (NOT MSVC)
   target_include_directories(${PROJECT_NAME} PRIVATE ${METIS_DIR}/include)
   set(GKLIB_PATH "${METIS_DIR}/GKlib")
   include(${GKLIB_PATH}/GKlibSystem.cmake)
+  # GKlib's host-specific CPU target is unsuitable for portable wheels.
+  string(REPLACE " -march=native" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
   include_directories(${GKLIB_PATH})
   include_directories("${METIS_DIR}/include")
   add_subdirectory("${METIS_DIR}/libmetis")
