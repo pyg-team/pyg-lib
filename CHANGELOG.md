@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated bundled dependencies, linked current METIS with standalone GKlib, and included Thrust headers explicitly for the CUDA hash map
+
 ### Deprecated
 
 ### Removed

@@ -132,12 +132,14 @@ endif()
 
 if (NOT MSVC)
   set(METIS_DIR third_party/METIS)
+  # Current METIS links a separately maintained GKlib instead of bundling it.
+  # Keep both dependencies static and position independent for libpyg.so.
+  add_subdirectory(third_party/GKlib)
+  set(METIS_LIBRARY_TYPE STATIC)
   target_include_directories(${PROJECT_NAME} PRIVATE ${METIS_DIR}/include)
-  set(GKLIB_PATH "${METIS_DIR}/GKlib")
-  include(${GKLIB_PATH}/GKlibSystem.cmake)
-  include_directories(${GKLIB_PATH})
   include_directories("${METIS_DIR}/include")
   add_subdirectory("${METIS_DIR}/libmetis")
+  set_target_properties(metis PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_link_libraries(${PROJECT_NAME} PRIVATE metis)
 endif()
 

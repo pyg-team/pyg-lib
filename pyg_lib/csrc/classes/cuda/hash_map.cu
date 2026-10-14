@@ -5,6 +5,8 @@
 
 #ifndef _WIN32
 #include <cuco/static_map.cuh>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/tuple.h>
 #endif
 
 namespace pyg {
