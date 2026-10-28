@@ -31,6 +31,7 @@ jobs:
 
     steps:
       - name: Configure AWS
+        if: ${{ inputs.release-type != '' }}
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}

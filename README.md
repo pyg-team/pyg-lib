@@ -12,9 +12,9 @@
 ## Installation
 
 We provide pre-built Python wheels for all major OS/PyTorch/CUDA
-combinations, see [here](https://data.pyg.org/whl). Each wheel supports CPython
-3.10 through 3.14 via CPython's stable ABI. CI checks every repaired wheel with
-`abi3audit --strict` and tests it on each supported CPython version.
+combinations, see [here](https://data.pyg.org/whl). Each wheel uses CPython's
+stable ABI and supports CPython 3.11 through 3.14. CI checks every repaired
+wheel with `abi3audit --strict` and tests it on each supported CPython version.
 
 To install the wheels, simply run
 
@@ -24,10 +24,16 @@ pip install pyg-lib -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 
 where
 
-- `${TORCH}` should be replaced by either `2.12.0`, `2.13.0`, or `2.14.0`
+- `${TORCH}` should be replaced by either `2.12.0`, `2.13.0`, `2.14.0`, or `2.15.0`
 - `${CUDA}` should be replaced by either `cpu`, `cu130`, or `cu132`
 
 The following combinations are supported:
+
+| PyTorch 2.15 | `cpu` | `cu132` |
+| ------------ | ----- | ------- |
+| **Linux**    | ✅    | ✅      |
+| **Windows**  | ✅    | ✅      |
+| **macOS**    | ✅    |         |
 
 | PyTorch 2.14 | `cpu` | `cu130` | `cu132` |
 | ------------ | ----- | ------- | ------- |
@@ -49,7 +55,7 @@ The following combinations are supported:
 
 ### From nightly
 
-Nightly wheels are provided for Linux and support CPython 3.10 through 3.14:
+Nightly wheels are provided for Linux and support CPython 3.11 through 3.14:
 
 ```
 pip install pyg-lib -f https://data.pyg.org/whl/nightly/torch-${TORCH}+${CUDA}.html

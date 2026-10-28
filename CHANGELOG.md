@@ -9,12 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added PyTorch 2.15 support ([#738](https://github.com/pyg-team/pyg-lib/pull/738))
+
 ### Changed
 
 ### Deprecated
 
 ### Removed
 
+- Dropped support for Python 3.10 ([#738](https://github.com/pyg-team/pyg-lib/pull/738))
 - Dropped support for CUDA 12.x and pre-Turing GPU architectures ([#725](https://github.com/pyg-team/pyg-lib/pull/725))
 - Dropped support for PyTorch 2.11
 
