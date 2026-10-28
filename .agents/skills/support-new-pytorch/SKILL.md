@@ -37,9 +37,14 @@ asking the user anything. Collect unavoidable judgment calls in an
   - Python versions for a new torch version: same list as the previous newest
     stable entry in the same matrix file.
   - CUDA versions for a new torch version: same list as the previous newest
-    stable entry, unless the request names CUDA versions that were added or
-    dropped. (PyTorch's actual per-release CUDA set is at
-    https://pytorch.org/get-started/locally/ — check only if network works.)
+    stable entry only when target-release wheel availability cannot be
+    verified. Check the actual `https://download.pytorch.org/whl/<cuda>/torch/`
+    listings for each proposed variant, architecture, and build/test Python
+    version before putting it in a matrix. The generic install selector may
+    lag a new release. Remove unavailable combinations from the new entry
+    while preserving older versions' supported CUDA variants. For example,
+    PyTorch 2.15 has cu132 wheels but no cu130 wheels. Add further CUDA
+    variants within the requested scope, following the prerequisites below.
   - CHANGELOG PR number: if you are opening the PR yourself, create it first
     (or amend after creation) so the real number is used. Otherwise predict
     the next number as
@@ -84,7 +89,8 @@ version** not yet present in
 `.github/workflows/utils/full_matrix_linux.json`. The request usually says so
 (e.g. "2.12 adds cu132"). If it does, the "New CUDA version" section below is
 a prerequisite before that CUDA version may appear in any matrix. If nothing
-indicates a new CUDA version, keep the previous stable's CUDA set.
+indicates a new CUDA version, use the verified supported subset of the
+previous stable's CUDA set, or the defaults above when verification fails.
 
 ## Key convention: the rolling pre-release placeholder
 
@@ -230,8 +236,8 @@ already in place.
    `full_matrix_*.json`, copying the previous newest entry's keys (including
    its Python list if present);
    CUDA list per the defaults rule (macOS is always `["cpu"]`; Linux keeps its
-   `arch` key). Drop CUDA variants only if the request says PyTorch dropped
-   them.
+   `arch` key). Include only verified combinations for the new version;
+   preserve older entries' CUDA variants unless their removal was requested.
 1. Minimal matrices: in all three `minimal_matrix_*.json`, set the newest
    entry's `torch-version` to `X.Y.0` (keep its narrow CUDA list, updating it
    only if a new newest CUDA version was introduced). Leave the oldest entry

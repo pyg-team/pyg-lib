@@ -29,11 +29,11 @@ where
 
 The following combinations are supported:
 
-| PyTorch 2.15 | `cpu` | `cu130` | `cu132` |
-| ------------ | ----- | ------- | ------- |
-| **Linux**    | ✅    | ✅      | ✅      |
-| **Windows**  | ✅    | ✅      | ✅      |
-| **macOS**    | ✅    |         |         |
+| PyTorch 2.15 | `cpu` | `cu132` |
+| ------------ | ----- | ------- |
+| **Linux**    | ✅    | ✅      |
+| **Windows**  | ✅    | ✅      |
+| **macOS**    | ✅    |         |
 
 | PyTorch 2.14 | `cpu` | `cu130` | `cu132` |
 | ------------ | ----- | ------- | ------- |
