@@ -161,6 +161,12 @@ building with Python 3.11 does not itself require changing `cp310-abi3`
 tags, `py_limited_api`, or `requires-python`. Verify interpreter selection
 and the existing ABI audit rather than changing those settings by default.
 
+When the user requests a global Python minimum/ABI tag update, align
+`pyproject.toml` (metadata, classifiers, cibuildwheel selection, Ruff target),
+`setup.py` (`bdist_wheel.py_limited_api`), `CMakeLists.txt` (`Py_LIMITED_API`),
+wheel filename assertions in all build scripts, CI interpreters, README,
+and changelog. Remove any now-redundant per-torch interpreter overrides.
+
 ## Stage 1: Build against PyTorch X.Y nightlies
 
 Usually started to get early signal and/or to ship wheels for a new CUDA
