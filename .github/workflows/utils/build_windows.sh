@@ -2,12 +2,17 @@
 set -ex
 
 CUDA_VERSION="${1:?Specify cuda version, e.g. cpu, cu130}"
-TORCH_VERSION="${2:?Specify torch version, e.g. 2.13.0}"
+TORCH_VERSION="${2:?Specify torch version, e.g. 2.15.0}"
 
 echo "CUDA_VERSION: ${CUDA_VERSION}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"
 
 export CIBW_ARCHS_WINDOWS=AMD64
+# PyTorch 2.15 and newer require Python 3.11; retain 3.10 for older versions.
+IFS=. read -r TORCH_MAJOR TORCH_MINOR TORCH_PATCH <<< "${TORCH_VERSION}"
+if (( TORCH_MAJOR > 2 || (TORCH_MAJOR == 2 && TORCH_MINOR >= 15) )); then
+  export CIBW_BUILD='cp3{11,12,13,14}-*'
+fi
 
 source ./.github/workflows/cuda/Windows-env.sh "${CUDA_VERSION}"
 echo "FORCE_CUDA: ${FORCE_CUDA:-0}"
@@ -15,7 +20,7 @@ echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-}"
 
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install
 # it when building and testing wheels.
-if [[ "${TORCH_VERSION}" == "2.14.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.16.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools packaging && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest packaging && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
 else

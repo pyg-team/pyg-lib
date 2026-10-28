@@ -2,7 +2,7 @@
 set -ex
 
 CUDA_VERSION="${1:?Specify cuda version, e.g. cpu, cu130}"
-TORCH_VERSION="${2:?Specify torch version, e.g. 2.14.0}"
+TORCH_VERSION="${2:?Specify torch version, e.g. 2.15.0}"
 ARCH="${3:-x86_64}"
 case "${ARCH}" in
   x86_64 | aarch64)
@@ -25,8 +25,13 @@ echo "FORCE_CUDA: ${FORCE_CUDA}"
 echo "TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST}"
 
 export CIBW_ARCHS_LINUX="${ARCH}"
+# PyTorch 2.15 and newer require Python 3.11; retain 3.10 for older versions.
+IFS=. read -r TORCH_MAJOR TORCH_MINOR TORCH_PATCH <<< "${TORCH_VERSION}"
+if (( TORCH_MAJOR > 2 || (TORCH_MAJOR == 2 && TORCH_MINOR >= 15) )); then
+  export CIBW_BUILD='cp3{11,12,13,14}-*'
+fi
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-if [[ "${TORCH_VERSION}" == "2.15.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.16.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools MarkupSafe && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
   export CIBW_BEFORE_TEST="pip install pytest MarkupSafe && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/${CUDA_VERSION}"
 else

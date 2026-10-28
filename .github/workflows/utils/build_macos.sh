@@ -1,11 +1,17 @@
 #!/bin/bash
 set -ex
 
-TORCH_VERSION="${1:?Specify torch version, e.g. 2.14.0}"
+TORCH_VERSION="${1:?Specify torch version, e.g. 2.15.0}"
 echo "TORCH_VERSION: ${TORCH_VERSION}"
 
+# PyTorch 2.15 and newer require Python 3.11; retain 3.10 for older versions.
+IFS=. read -r TORCH_MAJOR TORCH_MINOR TORCH_PATCH <<< "${TORCH_VERSION}"
+if (( TORCH_MAJOR > 2 || (TORCH_MAJOR == 2 && TORCH_MINOR >= 15) )); then
+  export CIBW_BUILD='cp3{11,12,13,14}-*'
+fi
+
 # pyg-lib doesn't have torch as a dependency, so we need to explicitly install it when running tests.
-if [[ "${TORCH_VERSION}" == "2.15.0" ]]; then
+if [[ "${TORCH_VERSION}" == "2.16.0" ]]; then
   export CIBW_BEFORE_BUILD="pip install ninja wheel setuptools && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu"
   export CIBW_BEFORE_TEST="pip install pytest && pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu"
 else
