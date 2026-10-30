@@ -25,9 +25,9 @@ asking the user anything. Collect unavoidable judgment calls in an
   and table formatting). When adding a matrix entry or README table, copy the
   entry/table of the previous newest version and edit only the values that
   change.
-- Do not block on network access. Web checks below are optional
-  cross-checks; if they fail or are unavailable, use the documented default
-  and record the assumption.
+- Attempt the release and wheel-index checks below. If network access fails,
+  continue the work that can be done locally, record provisional defaults,
+  and report that release coverage could not be verified.
 - Inspect the current repository before following historical examples below.
   Verified release metadata and available wheels take precedence over
   missing-information defaults. Do not copy an unsupported Python combination
@@ -36,15 +36,10 @@ asking the user anything. Collect unavoidable judgment calls in an
   Assumptions only when actually needed):
   - Python versions for a new torch version: same list as the previous newest
     stable entry in the same matrix file.
-  - CUDA versions for a new torch version: same list as the previous newest
-    stable entry only when target-release wheel availability cannot be
-    verified. Check the actual `https://download.pytorch.org/whl/<cuda>/torch/`
-    listings for each proposed variant, architecture, and build/test Python
-    version before putting it in a matrix. The generic install selector may
-    lag a new release. Remove unavailable combinations from the new entry
-    while preserving older versions' supported CUDA variants. For example,
-    PyTorch 2.15 has cu132 wheels but no cu130 wheels. Add further CUDA
-    variants within the requested scope, following the prerequisites below.
+  - CUDA versions: discover the target release's published variants as
+    described below. Reuse the previous stable entry only as a provisional
+    fallback when release metadata and wheel indices are unreachable; do
+    not describe that fallback as complete support.
   - CHANGELOG PR number: if you are opening the PR yourself, create it first
     (or amend after creation) so the real number is used. Otherwise predict
     the next number as
@@ -84,13 +79,36 @@ add them when requested. A request to check aliases calls for checking both
 the scripts and published final/nightly index URLs when reachable. Distinguish
 missing code from an HTTP failure or an index that has not been regenerated.
 
-Independently, determine whether this PyTorch version introduces a **new CUDA
-version** not yet present in
-`.github/workflows/utils/full_matrix_linux.json`. The request usually says so
-(e.g. "2.12 adds cu132"). If it does, the "New CUDA version" section below is
-a prerequisite before that CUDA version may appear in any matrix. If nothing
-indicates a new CUDA version, use the verified supported subset of the
-previous stable's CUDA set, or the defaults above when verification fails.
+## Discover the target release's CUDA variants
+
+For a request to support a final PyTorch release, include every CUDA variant
+published for that release on the project's supported platforms unless the
+user explicitly narrows the scope. Discover new variants even when the user
+does not name them; the previous matrix is not a complete candidate list.
+
+1. Read the target version's compatibility table in PyTorch's
+   [release matrix](https://github.com/pytorch/pytorch/blob/main/RELEASE.md).
+   Enumerate CUDA index links from the relevant index root: final
+   `https://download.pytorch.org/whl/`, RC `/whl/test/`, or nightly
+   `/whl/nightly/`. A CUDA index can exist without wheels for the target
+   version, so inspect its `torch/` listing as well.
+1. Verify the exact target release's wheels for each discovered CUDA variant,
+   platform, architecture, and selected build/test Python version. Published
+   wheels determine availability; the generic install selector may lag a
+   release. Include published variants labeled prototype or experimental
+   unless the user excludes them, and report that upstream status.
+1. Compare the discovered set with the repository's matrices and CUDA build
+   infrastructure. Complete the "New CUDA version" prerequisites for each
+   missing variant. Existing Docker images or installer cases must not limit
+   discovery or silently narrow the final release's support.
+1. Include all verified combinations in the full matrices and README table,
+   with platform-specific coverage where necessary. Preserve older versions'
+   CUDA variants. Keep nightly work narrow as described in Stage 1; expand
+   coverage when the version goes final, even if an earlier stage was green.
+
+For example, PyTorch 2.15 publishes cu132 and cu134 wheels, but no cu130
+wheels. Final support therefore needs both cu132 and cu134 where published;
+checking only the existing cu130/cu132 matrix would miss cu134.
 
 ## Key convention: the rolling pre-release placeholder
 
@@ -235,9 +253,11 @@ already in place.
 1. Full matrices: ensure `X.Y.0` is the top entry in ALL THREE
    `full_matrix_*.json`, copying the previous newest entry's keys (including
    its Python list if present);
-   CUDA list per the defaults rule (macOS is always `["cpu"]`; Linux keeps its
-   `arch` key). Include only verified combinations for the new version;
-   preserve older entries' CUDA variants unless their removal was requested.
+   CUDA list from target-release discovery (macOS is always `["cpu"]`; Linux
+   keeps its `arch` key). Include every published CUDA variant with verified
+   platform/interpreter combinations, completing new CUDA prerequisites as
+   needed; preserve older entries' CUDA variants unless their removal was
+   requested.
 1. Minimal matrices: in all three `minimal_matrix_*.json`, set the newest
    entry's `torch-version` to `X.Y.0` (keep its narrow CUDA list, updating it
    only if a new newest CUDA version was introduced). Leave the oldest entry
@@ -325,8 +345,12 @@ Prerequisite for putting that CUDA version in any matrix. Examples: PR #614
   new `cuda-version` (`cuNNN`) + `cuda-number` (`"NN.N"`) pair to the matrix
   in `.github/workflows/_build_docker.yml`, and teach
   `.github/workflows/docker/install_cuda.sh` (and `Dockerfile` if needed) the
-  new version. Note in your report that the Docker workflow must be run once
-  (workflow_dispatch) to publish images before Linux CI can use the new CUDA.
+  new version. Verify that each required image tag exists for its target
+  architecture, using registry manifests or successful CI pulls. Workflow
+  configuration alone does not establish image availability. Missing images
+  require running the Docker workflow (workflow_dispatch) before Linux wheel
+  CI can use them; dispatch when authorized, otherwise report this publishing
+  prerequisite. Do not omit the CUDA variant to avoid building its images.
 - Windows: add a `case` arm to `.github/workflows/cuda/Windows.sh` (installer
   URL under https://developer.download.nvidia.com/compute/cuda/) and to
   `.github/workflows/cuda/Windows-env.sh` (PATH + `TORCH_CUDA_ARCH_LIST`),
@@ -353,6 +377,12 @@ rg -n 'TORCH_VERSION.*==|inputs.torch-version.*==' .github/actions/setup/action.
   install branch; Python compatibility conditions are independent of index
   routing. Check that selected build/test and documentation interpreters
   have compatible torch wheels.
+- Stage 3 CUDA coverage: compare the full matrices and README against all
+  target-release CUDA variants discovered upstream, including new variants
+  absent from the previous matrix. The minimal matrices select the newest
+  verified CUDA variant. Confirm Docker images and Windows setup cover the
+  added variants. Explain any exclusions or unresolved prerequisites; do not
+  report complete support while a published variant remains unaccounted for.
 - Stage 4: both `upload_*_index.py` files gained the same alias. Check Python
   syntax and exercise index generation with mocked S3 and temporary output
   files; confirm the patch index links to existing base-version wheels.
