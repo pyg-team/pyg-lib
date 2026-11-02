@@ -62,8 +62,8 @@ class GroupedMatmul(torch.autograd.Function):
     def forward(ctx, args: Tuple[Tensor]) -> Tuple[Tensor]:
         ctx.save_for_backward(*args)
 
-        inputs: List[Tensor] = [x for x in args[: int(len(args) / 2)]]
-        others: List[Tensor] = [other for other in args[int(len(args) / 2) :]]
+        inputs: List[Tensor] = [*args[: int(len(args) / 2)]]
+        others: List[Tensor] = [*args[int(len(args) / 2) :]]
         outs = torch.ops.pyg.grouped_matmul(inputs, others)
 
         # NOTE Autograd doesnt set `out[i].requires_grad = True` automatically
@@ -76,8 +76,8 @@ class GroupedMatmul(torch.autograd.Function):
     @staticmethod
     def backward(ctx, *outs_grad: Tuple[Tensor]) -> Tuple[Tensor]:
         args = ctx.saved_tensors
-        inputs: List[Tensor] = [x for x in args[: int(len(outs_grad))]]
-        others: List[Tensor] = [other for other in args[int(len(outs_grad)) :]]
+        inputs: List[Tensor] = [*args[: int(len(outs_grad))]]
+        others: List[Tensor] = [*args[int(len(outs_grad)) :]]
 
         inputs_grad = []
         if any([x.requires_grad for x in inputs]):
