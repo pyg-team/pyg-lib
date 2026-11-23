@@ -2,7 +2,7 @@ import pytest
 import torch
 
 import pyg_lib
-from pyg_lib.testing import withCUDA
+from pyg_lib.testing import onlyCUDA, withCUDA
 
 
 @withCUDA
@@ -82,3 +82,32 @@ def test_radius_ignore_same_index(device: torch.device) -> None:
     )
     # No self-loops
     assert (out[0] != out[1]).all()
+
+
+@onlyCUDA
+@pytest.mark.parametrize('r', [300.0, 2**-14])
+def test_radius_half_distance_range(r: float) -> None:
+    x = torch.tensor(
+        [[0], [7 * r / 8], [r], [2 * r]],
+        dtype=torch.half,
+        device='cuda',
+    )
+    out = pyg_lib.ops.radius(x, x[:1], r=r)
+    assert out.tolist() == [[0, 0], [0, 1]]
+
+
+@onlyCUDA
+def test_radius_bfloat16_neighbor_limit() -> None:
+    # Summing 512 unit squares in bfloat16 stalls at 256.
+    x = torch.ones(2, 512, dtype=torch.bfloat16, device='cuda')
+    x[1].zero_()
+    out = pyg_lib.ops.radius(x, x[1:], r=20, max_num_neighbors=1)
+    assert out.tolist() == [[0], [1]]
+
+
+@onlyCUDA
+def test_radius_bfloat16_subtraction() -> None:
+    x = torch.tensor([[256], [255]], dtype=torch.bfloat16, device='cuda')
+    y = torch.tensor([[-0.5]], dtype=x.dtype, device=x.device)
+    out = pyg_lib.ops.radius(x, y, r=256.25)
+    assert out.tolist() == [[0], [1]]

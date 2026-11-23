@@ -2,6 +2,7 @@
 #include "utils.cuh"
 
 #include <ATen/ATen.h>
+#include <ATen/OpMathType.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/library.h>
 
@@ -19,13 +20,14 @@ __global__ void radius_cuda_kernel(const scalar_t* __restrict__ x,
                                    const int64_t* __restrict__ ptr_y,
                                    int64_t* __restrict__ row,
                                    int64_t* __restrict__ col,
-                                   const scalar_t r,
+                                   const at::opmath_type<scalar_t> r_squared,
                                    const int64_t n,
                                    const int64_t m,
                                    const int64_t dim,
                                    const int64_t num_examples,
                                    const int64_t max_num_neighbors,
                                    const bool ignore_same_index) {
+  using acc_t = at::opmath_type<scalar_t>;
   const int64_t n_y = blockIdx.x * blockDim.x + threadIdx.x;
   if (n_y >= m)
     return;
@@ -34,13 +36,14 @@ __global__ void radius_cuda_kernel(const scalar_t* __restrict__ x,
   const int64_t example_idx = get_example_idx(n_y, ptr_y, num_examples);
 
   for (int64_t n_x = ptr_x[example_idx]; n_x < ptr_x[example_idx + 1]; n_x++) {
-    scalar_t dist = 0;
+    acc_t dist = 0;
     for (int64_t d = 0; d < dim; d++) {
-      scalar_t diff = x[n_x * dim + d] - y[n_y * dim + d];
+      const acc_t diff = static_cast<acc_t>(x[n_x * dim + d]) -
+                         static_cast<acc_t>(y[n_y * dim + d]);
       dist += diff * diff;
     }
 
-    if (scalar_lt(dist, r) && !(ignore_same_index && n_y == n_x)) {
+    if (scalar_lt(dist, r_squared) && !(ignore_same_index && n_y == n_x)) {
       row[n_y * max_num_neighbors + count] = n_y;
       col[n_y * max_num_neighbors + count] = n_x;
       count++;
@@ -90,9 +93,8 @@ at::Tensor radius_cuda(const at::Tensor& x,
             x.data_ptr<scalar_t>(), y.data_ptr<scalar_t>(),
             ptr_x_v.value().data_ptr<int64_t>(),
             ptr_y_v.value().data_ptr<int64_t>(), row.data_ptr<int64_t>(),
-            col.data_ptr<int64_t>(), (scalar_t)(r * r), x.size(0), y.size(0),
-            x.size(1), ptr_x_v.value().numel() - 1, max_num_neighbors,
-            ignore_same_index);
+            col.data_ptr<int64_t>(), r * r, x.size(0), y.size(0), x.size(1),
+            ptr_x_v.value().numel() - 1, max_num_neighbors, ignore_same_index);
         C10_CUDA_KERNEL_LAUNCH_CHECK();
       });
 
