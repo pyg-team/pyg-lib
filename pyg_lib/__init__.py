@@ -38,7 +38,11 @@ load_library('libpyg')
 import pyg_lib.ops  # noqa
 import pyg_lib.partition  # noqa
 import pyg_lib.sampler  # noqa
-import pyg_lib._fake  # noqa
+
+# Fake kernels can only be registered once the operators are defined, which
+# is not the case if the shared library was not loaded (e.g., in docs builds):
+if hasattr(torch.ops.pyg, 'scatter_sum'):
+    import pyg_lib._fake  # noqa
 
 
 def cuda_version() -> int:
