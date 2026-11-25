@@ -82,3 +82,30 @@ def test_radius_ignore_same_index(device: torch.device) -> None:
     )
     # No self-loops
     assert (out[0] != out[1]).all()
+
+
+class Radius(torch.nn.Module):
+    def forward(self, x: torch.Tensor, ptr: torch.Tensor) -> torch.Tensor:
+        return pyg_lib.ops.radius(x, x, r=1.5, ptr_x=ptr, ptr_y=ptr)
+
+
+@withCUDA
+@pytest.mark.parametrize('strict', [True, False])
+def test_radius_export(strict: bool, device: torch.device) -> None:
+    module = Radius()
+    x = torch.randn(20, 3, device=device)
+    ptr = torch.tensor([0, 10, 20], device=device)
+
+    # The number of points is dynamic, the number of edges depends on the data:
+    exported_module = torch.export.export(
+        module,
+        (x, ptr),
+        dynamic_shapes=({0: torch.export.Dim('num_points')}, None),
+        strict=strict,
+    ).module()
+
+    assert torch.equal(exported_module(x, ptr), module(x, ptr))
+
+    x = torch.randn(30, 3, device=device)
+    ptr = torch.tensor([0, 12, 30], device=device)
+    assert torch.equal(exported_module(x, ptr), module(x, ptr))

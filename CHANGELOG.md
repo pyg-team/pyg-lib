@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added fake kernels for all tensor operators such that they can be captured by `torch.export` and `torch.compile(fullgraph=True)` ([#742](https://github.com/pyg-team/pyg-lib/pull/742))
 - Added PyTorch 2.15 support ([#738](https://github.com/pyg-team/pyg-lib/pull/738))
 
 ### Changed

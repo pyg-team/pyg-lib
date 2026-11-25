@@ -38,6 +38,7 @@ load_library('libpyg')
 import pyg_lib.ops  # noqa
 import pyg_lib.partition  # noqa
 import pyg_lib.sampler  # noqa
+import pyg_lib._fake  # noqa
 
 
 def cuda_version() -> int:
